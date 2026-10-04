@@ -35,9 +35,12 @@ env:
   # 刻意在 workflow 层覆盖，而不是依赖 config_center 里的本机默认值 ——
   # 这样 CI 完全不依赖任何 F:\ 绝对路径。
   PYTHON_EXE: ${{ vars.PLATFORM_CI_PYTHON || 'python' }}
-  # 本机存在 http_proxy，会让 urllib 把 127.0.0.1 也送去代理（502）→ 必须排除
+  # 本机存在 http_proxy，会让 urllib 把 127.0.0.1 也送去代理（502）→ 必须排除。
+  # ⚠️ 这里只能写一个 NO_PROXY：GitHub 对环境变量名**大小写不敏感**，
+  #    再补一行 `no_proxy` 会直接判为 "Invalid workflow file: 'no_proxy' is already defined"
+  #    （整份 workflow 失效、run 里没有任何 job）。Windows runner 上环境变量本就
+  #    大小写不敏感，Python 的 urllib 也能正常读到 NO_PROXY，无需再写小写形式。
   NO_PROXY: 127.0.0.1,localhost
-  no_proxy: 127.0.0.1,localhost
   PYTHONUNBUFFERED: "1"
 
 jobs:
