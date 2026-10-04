@@ -63,6 +63,38 @@ python _ci/l1_smoke.py --keep
    也可用仓库变量 `PLATFORM_CI_PYTHON` 指向别的解释器。
 3. **无需** MongoDB / Colyseus / 游戏 / 真实游戏素材 —— L0/L1 都不依赖。
 4. node 可选；缺失时前端往返测试台会自动 skip（不计为失败）。
+5. 不需要 `pwsh`（PowerShell 7）：workflow 全部步骤用 `shell: powershell`（5.1，Windows 自带）。
+
+## 本机 runner 实况（2026-10-05 注册，H 项前置条件已就绪）
+
+| 项 | 值 |
+|---|---|
+| 位置 / 版本 | `F:\actions-runner` · runner **2.337.0**（win-x64 官方包） |
+| 名称 | `lenovo-win11-dev`（`agentId=2`） |
+| 标签 | `self-hosted, Windows, X64` —— 即默认标签集，命中 `runs-on: [self-hosted, Windows]` |
+| 服务 | `actions.runner.lal438916245-sudo-unified-test-platform.lenovo-win11-dev` · `Auto` 启动 · 账户 `NT AUTHORITY\NETWORK SERVICE` |
+| 状态 | `Running`；`_diag` 日志显示 `Listening for Jobs` |
+
+安装命令（管理员权限一次性完成注册 + 装服务，本版本已无 `svc.cmd`，改用 `--runasservice`）：
+
+```powershell
+F:\actions-runner\bin\Runner.Listener.exe configure --unattended `
+  --url https://github.com/lal438916245-sudo/unified-test-platform `
+  --token <注册token> --name lenovo-win11-dev `
+  --labels self-hosted,Windows,X64 --work _work --replace --runasservice
+```
+
+要点 / 踩坑：
+
+- **服务账户是 `NETWORK SERVICE`，只取机器级 PATH**。本机机器 PATH 含 `F:\Anaconda3` →
+  workflow 默认的 `PYTHON_EXE=python` 能解析到 `F:\Anaconda3\python.exe`（fastapi/uvicorn/pydantic/pytest/httpx 齐全）。
+  若换机器且解释器只挂在**用户级** PATH 上，服务会找不到 → 需设仓库变量 `PLATFORM_CI_PYTHON` 为绝对路径。
+- **改配置要先 remove**：runner 拒绝在「已配置」状态下重复 `configure`
+  （报 `Cannot configure the runner because it is already configured`）→ 先 `bin\Runner.Listener.exe remove --local` 再配置。
+- 生成物 `.runner` / `.credentials` / `.credentials_rsaparams` / `_diag` / `_work` 均在 `F:\actions-runner` 下，
+  **不在仓库内**，不受 `.gitignore` 影响；`_diag\Runner_*.log` 不会记录注册 token（已实测）。
+- ⚠️ **该仓库是公开仓库**，而 GitHub 官方不建议在公开仓库上挂 self-hosted runner（分叉 PR 可在你机器上执行代码）。
+  当前 workflow 只有 `workflow_dispatch`（需写权限才能触发），风险可控；**一旦以后加 `push` / `pull_request` 触发器，须先评估**。
 
 ## 隔离契约（L1 每次执行都会自证）
 
