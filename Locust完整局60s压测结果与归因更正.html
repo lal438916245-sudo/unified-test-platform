@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="jYE9rFvZIeoggjd6GbXdPZ">
+<head data-page-node-id="XNm9UrOARPBMXjC5RR70ip">
+<meta charset="UTF-8" data-page-node-id="SC997FtCaaI61GxxSGwzGH">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="Ivb7U6axFRrJqejc6AEsHI">
+<title>Locust 完整局压测（60s）结果与一处归因更正</title>
+<style>
+  :root{--bg:#f6f8fa;--panel:#fff;--panel2:#eef2f6;--line:#d7dee6;--fg:#1b2229;--muted:#5d6b7a;
+        --accent:#1f6feb;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--chip:#e7edf4}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:36px 24px 72px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px}
+  h1{font-size:24px;margin:0 0 8px}
+  h1 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+  h2{font-size:17px;margin:30px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:15px;margin:18px 0 8px;color:#2b3641}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;background:var(--panel)}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#2b3641;font-weight:600}
+  code{background:#eef2f6;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+    font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#0b4f9e}
+  pre{background:#0f1720;border:1px solid #24313d;border-radius:8px;padding:12px 14px;overflow:auto;
+    font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#d7e3ef;line-height:1.6}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:2px 10px;font-size:12px;margin:0 6px 6px 0;color:#33414f}
+  .ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}.warn{color:var(--warn);font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+  .card.hl{border-left:4px solid var(--ok)}.card.warnbox{border-left:4px solid var(--warn)}
+  ul,ol{margin:8px 0 8px 22px;padding:0}li{margin:4px 0}
+  footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body data-page-node-id="rnZ4GxiAd8pgUdZUxyA9Mf">
+<div class="wrap" data-page-node-id="QlbGq5DleejHj7wdoE5WPA">
+<header data-page-node-id="yLQeIiatOHcFWFuYubr9DW">
+  <h1 data-page-node-id="wWd1w29GhDsIMRGpD6EExT">Locust 完整局压测（60s）结果与一处归因更正<span class="sub" data-page-node-id="39Fivy1F8DyzXOFkyBFkXA">2026-10-01 · PlanRun #23</span></h1>
+  <p class="muted" data-page-node-id="S1BlCvIbQMit28jcoCkOdy">按用户要求：<code data-page-node-id="RZ1oePGrphyelXYr8uMAaw">run_time=60s</code>、<code data-page-node-id="LXHJECC9NIty35wWmV9tQu">users=3</code>、<code data-page-node-id="zXzd2WC4qtomBkOkFaFuyQ">spawn_rate=1</code>。
+  被测服务端由用户启动（我只做只读身份判别），平台用新建计划 id=15 经既有 Runner 发起。</p>
+  <p data-page-node-id="jUPGyOdPHCEbKDCM3A9tgW"><span class="chip" data-page-node-id="mwhEjBq1ZDALpSGhK69ubM">PlanRun #23 success</span><span class="chip" data-page-node-id="BU4R0mqv3l6GXAmHvImABM">671 请求 / 0 失败</span>
+     <span class="chip" data-page-node-id="DwhcMAtVBaFWFenmHbOPCl">login 6/6 成功</span><span class="chip" data-page-node-id="KJWtZ0vyUeW8cef89doCLD">但每连接 ~7s 被中止</span></p>
+</header>
+
+<div class="card hl" data-page-node-id="s3GY2wIyjPoVZqqcAIC0cb">
+<h3 style="margin-top:0" data-page-node-id="X1jFf9UxxZY3xiCwhCd49y">结论</h3>
+<p data-page-node-id="PATCbqBraoDIWAGZ2JdubB"><b data-page-node-id="lSJDwLm1JYGwvlC83AHxjl">本轮拿到了 10s 版拿不到的两项实质进展</b>：<code data-page-node-id="UEJZRMxhhHdJv3Fa5jIgKC">/users/login</code> 的成功路径（6/6）与 <b data-page-node-id="VbhjaW3FFCbtVh94QR99dI">30s 登录冷却</b>机制都被真实覆盖。
+<br data-page-node-id="m67nwzwNr9EaxHbPE8CcFE"><b data-page-node-id="VSjbc56LvCqu3iqledESAg">但同时也推翻了上一轮的一个归因</b>：<code data-page-node-id="L8n0VWKh9gJQsfX8S8ZhUI">WinError 10053</code> <b data-page-node-id="qOwuLGMpw7KSVs4d04vtkn">不是</b>关停副产物 —— 60s 窗口下
+<b data-page-node-id="WSIob2360VN6KIiTgepZ6T">9 条 WebSocket 连接逐条都在约 7 秒时被中止</b>，每轮对局（脚本设定 10~20s）都没跑完，<code data-page-node-id="zRTaMzefm1RI0lHwHFFFur">游戏结束</code> 仍为 0 次。
+这是<b data-page-node-id="NHw6DTqe4B2TG4nDoXtC4a">独立于 run_time 的系统性现象</b>，需要与被测服务端一起定位。</p>
+</div>
+
+<h2 data-page-node-id="O7FH6KdNEHuzxKCoXEKVsA">1. 本轮配置与执行</h2>
+<table data-page-node-id="U68RNVSoNr7MyL4IYceWew">
+  <thead data-page-node-id="CnTqi1DWVZU6fFaqT1a4VU"><tr data-page-node-id="Ko2bnkXhLRfkDsxQu0zwYB"><th data-page-node-id="qWgZDAq4oMq45eupES5GBC">项</th><th data-page-node-id="hiCrfSmgG52YfhQiR37d8D">值</th></tr></thead>
+  <tbody data-page-node-id="gUsRqQwMqxtqh8mM40LFmA">
+    <tr data-page-node-id="u9NcutIWDc8e6yAGLIlgXy"><td data-page-node-id="BMUJoQd2E4pGDGNvDF0uON">计划</td><td data-page-node-id="zRFrKSvrvVhzBTwulEQmNn"><b data-page-node-id="x9wSpO87QF4NhKXHbfwQlZ">新建 id=15</b> <code data-page-node-id="Jf3NSWqwLBXJ2ct0mzZLYu">Locust-Colyseus 完整局(60s)</code>（rev=1，单步 locust，fail_fast=true）<br data-page-node-id="oDDOzMPpnKWR8fJHB27xHd">
+      <span class="muted" data-page-node-id="rdCUAovl0KvsfGnYmw1YLs">刻意不修改 id=10（10s 基线），两者可并存对照；受控配置沿用 env=1 <code data-page-node-id="fRWbTDkbYAchcHTfKK0DBG">local</code> / exec=3 <code data-page-node-id="aeQiCTZWo3PVV7OHdJXUiH">anaconda-locust</code> / asset=4 <code data-page-node-id="3EP9qwvuJQ0G8EbbdT540o">locust-colyseus</code></span></td></tr>
+    <tr data-page-node-id="e5Y0EGu64AP16QTofiWPAW"><td data-page-node-id="yPmyJfRFnZ1TzWU6LBcgu6">参数</td><td data-page-node-id="iIPTFOSqr3dzRb3elZwhQs"><code data-page-node-id="P18g8Yd1hxTdUB31Ntpah4">users=3, spawn_rate=1, run_time=60s, csv_full_history=false, timeout_sec=180</code></td></tr>
+    <tr data-page-node-id="Mar8hFW3Hvc1xmP8JePz7M"><td data-page-node-id="xQyt26VUrMXYqgI6pHViXt">执行前预检</td><td data-page-node-id="JsJQeBFfrp52e5IR20sdwk">服务端未起时 <code data-page-node-id="ws8yBH1QzsVilpECUW7EOu">ok=False, missing=['被测环境不可达']</code>；服务端起来后 <code data-page-node-id="HC5dYumDezuSKl7Pp8KmtC">ok=True, missing=[]</code>（TCP 连通性 ✓）—— <b data-page-node-id="lZ79DrM219cXf3Bc0cVk7M">预检如实反映状态，未假装可跑</b></td></tr>
+    <tr data-page-node-id="uUICb2rsBcKVo90sejDE6F"><td data-page-node-id="Gk5C25gc8fmNJsyvFl9v4k">状态转换</td><td data-page-node-id="o61na0QpWDEeiPURebPkLj"><code data-page-node-id="V0ZY6AmgmpUa0TerCBAqjI">PlanRun#23 queued → running → success</code>（11:14:44 → 11:15:46，62.2s）<br data-page-node-id="qI9BEmoL4P2hLNK5nPhSC6">
+      <code data-page-node-id="eSO31iPPLWPmqz1p6Jnke2">Job#28 locust queued → running → success</code>，exit_code=0，无 timeout / cancel / skip</td></tr>
+    <tr data-page-node-id="0E7cSMWYJLSmjqbm6HInMe"><td data-page-node-id="BOITI8FIEKjECAuhW3CYVA">计划快照指纹</td><td data-page-node-id="Hng83ZrimUvoIfFSf0I4gv"><code data-page-node-id="S3Pd1cKi61q9SiXVnicIMJ">96885f59a1b6</code></td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="6R5pPAbDAsgTOwsoQ2vi5Z">2. 本轮真实覆盖到的行为（相对 10s 轮的增量）</h2>
+<table data-page-node-id="tZYykh6BiRwYVoQ5BtAp5o">
+  <thead data-page-node-id="1CMkaiVWnQXtiYxi6k7RtH"><tr data-page-node-id="8kPTdBaLwA1U1uOvJgTHqJ"><th data-page-node-id="nlRfKaUFJgM0G1MxQd4A4Z">行为</th><th data-page-node-id="TEeQ8TVLIBQsduI6fqeHrG">10s 轮（#22）</th><th data-page-node-id="6Fh9BAJkf8zDjjAdLlB8TD">60s 轮（#23）</th></tr></thead>
+  <tbody data-page-node-id="A3HFYsiHoNQxG0m4C00gqY">
+    <tr data-page-node-id="xk90CTXvaTGeu1fQSrStvO"><td data-page-node-id="JHec3d80dofcioGPSZRULd"><code data-page-node-id="C1GM7ql0fdzwy4JqpCouHB">POST /users/signup</code>（注册 + 拿 seat）</td><td data-page-node-id="mMuOBO72Pzad2wTqR13EZI">3 次 ✓</td><td data-page-node-id="OC54KTTMFqjlkP2wZatLbl">3 次 ✓（avg 82ms）</td></tr>
+    <tr data-page-node-id="5Kiq11Z8E3CcEr5EsBI1ze"><td data-page-node-id="j0vfmjn3qPquhOzxBfIUGJ"><code data-page-node-id="KicL45sQOYDQnt4bSnKFUE">POST /users/login</code>（<b data-page-node-id="sEQHabDC8uYX4uGVocVDdF">登录成功路径</b>）</td><td class="bad" data-page-node-id="M1FeIA3T8xsxtydXHmZHK4">0 次（窗口不够）</td><td data-page-node-id="eRXXyaXQFDMoznQRkNeLGx"><b class="ok" data-page-node-id="LmYhEoGx2Ttsdlh0a4ju7W">6 次全成功</b>（3 bot × 第 2、3 轮，avg 65ms）</td></tr>
+    <tr data-page-node-id="VdbCfXNCzfZp7eReX4y3DX"><td data-page-node-id="ATyYBqavpTQxYYHPsHgjLQ">WebSocket 连接</td><td data-page-node-id="vrWRdoKGJgTVlujhd0CC6a">3 次</td><td data-page-node-id="v1R9J4G5BpusuNFcESVhgQ">9 次（3 bot × 3 轮）</td></tr>
+    <tr data-page-node-id="e8DflFykMzqEEpMpQ8vkHG"><td data-page-node-id="1z3O5hIYr8rtIg3CdvfOXc"><b data-page-node-id="9ZNt99ZU9thS00D6jyuShO">30s 登录冷却</b>（<code data-page-node-id="7clWOyb3Sf5C0Cvuu2XFvm">pendingSessionTimestamp</code>）</td><td class="bad" data-page-node-id="wtS69w7oUHtr9yspQucqeE">未触发</td><td data-page-node-id="0n7GYJgDSjY3gOAaePi5lr"><b class="ok" data-page-node-id="vKxevItiZHYckQLSJm8Kp8">5 次「等待登录冷却 27~29s」</b></td></tr>
+    <tr data-page-node-id="4p9s7N6eqSqA3uewCNFy5M"><td data-page-node-id="WKS2TYObYs2sLpYeAgnJ2R"><code data-page-node-id="fVtcBurBFLimhCJ5ZMjw5t">entityUpdate</code> 二进制发包</td><td data-page-node-id="OAkj4K60WR9FWmtUMTPJda">199~202 次</td><td data-page-node-id="K2OlkQol6WHOp6l8l61Cr7">653 次</td></tr>
+    <tr data-page-node-id="77bxQSw03FfgRqA6E9mLCc"><td data-page-node-id="hoOV2dYEleXVEAaphTep8Y"><b data-page-node-id="uE5ZJWsTpnCPArR4U0baEh">完整跑完一局</b>（<code data-page-node-id="FoSlUEFD0EtafGrHGd1A95">游戏结束</code>）</td><td class="bad" data-page-node-id="Y7HmEBTKzpI4fDiZAmsDqe">0 次</td><td class="bad" data-page-node-id="sZEXcAwZkqxssEer4I4vr6">0 次</td></tr>
+  </tbody>
+</table>
+<pre data-page-node-id="WW4ktfX3i68Dlg7Dt84cYS">脚本行为日志（节选，不含时间戳）
+[Round 1] 使用注册 seat: gx8QG7D7j / SYibQ0dmD / WJ2J-jk-m
+[Round 2] 使用登录 seat: fT-MgaoVw / muSy9vQYN / _LuGctBIx
+[Round 3] 等待登录冷却 28.8s... / 27.3s... / 27.4s...
+[Round 3] 使用登录 seat: iofD9X1ag / zk58maa5O / xddlA4To0
+[Round 4] 等待登录冷却 28.4s... / 27.7s...
+[ERROR] Gameplay error: ConnectionAbortedError: [WinError 10053] ×8（日志内共 9 条）</pre>
+
+<h2 data-page-node-id="FgcGoHZKYtxqL9DNeAzEgo">3. 关键发现：每连接约 7 秒被系统性中止</h2>
+<div class="card warnbox" data-page-node-id="0OqzYE8d6M1PnB8KGbwURi">
+<p data-page-node-id="TjFa4LNtSRwotALpEChB84"><b data-page-node-id="LSZRnUgD5x69Dah3aKaoX1">算术</b>：653 次 <code data-page-node-id="JkPGzvDsBR8dTGXXuF4eQr">entityUpdate</code> ÷ 9 条连接 ≈ <b data-page-node-id="MI02ngOI7AZjBpZJrMDMzF">72.6 次/连接</b>；循环内是 <code data-page-node-id="EWApFFdVO8Szz7Mtuqi7eo">send + time.sleep(0.1)</code>（≈10 次/秒）
+→ 每条连接实际只维持约 <b data-page-node-id="7M8h7rxgTdPlSmcFUM4qvc">7.2 秒</b>，而脚本设定单局 <code data-page-node-id="BLvOnvANA14cQ57Uz3rTZi">random.randint(10, 20)</code> 秒。
+每隔约 7 秒就抛一条 <code data-page-node-id="C2d2Hnsjv9YyQQy8unvyhB">10053</code>，<b data-page-node-id="vGCPQmWiUYtO0FMHdHRZBF">9/9 无一例外</b>。</p>
+<table style="margin-top:8px" data-page-node-id="mkwoKuLQgdiFVEWzZiHhtD">
+  <thead data-page-node-id="P2TnSwQ5EhS8trQobrAqg3"><tr data-page-node-id="7orA90iADrESdLFWw9fFGK"><th data-page-node-id="C1JaNoQKEOH5Ycy4uJmBFv">Locust 统计（本轮）</th><th data-page-node-id="yzMPaOVtRPHn6Di1zUjPPV">请求数</th><th data-page-node-id="I4TjxgrD7aD4YhByxBCOto">失败</th><th data-page-node-id="dFPUVgAt1hNsmt82D3J6a7">中位</th></tr></thead>
+  <tbody data-page-node-id="x33OEIgy5to3ko2Usvd47N">
+    <tr data-page-node-id="EPpwyzjGF0p7wg81CtwD2g"><td data-page-node-id="W1yL48P4NCJTNJdsgUtTrn">POST <code data-page-node-id="ijeA0gQZCsekXWLLcAYQb9">/users/signup</code></td><td data-page-node-id="H1CmZ5bKiAQa7nDPCc8Oh1">3</td><td data-page-node-id="rydoQsbmskqD73ZX28vEOq">0</td><td data-page-node-id="HwQNpOYFFyA5BHeyn6OK6A">63ms</td></tr>
+    <tr data-page-node-id="AzHXQxOB7m2TYM4qti7o4m"><td data-page-node-id="FkvsqDeK0v2xn7VZq1GcAQ">POST <code data-page-node-id="qbZczeuJUMVp2seHmBbQHt">/users/login</code></td><td data-page-node-id="oXXoIAOR8ulH3T7mJcpFMT"><b data-page-node-id="68Bfimt8jHMepGUaVEuMu1">6</b></td><td data-page-node-id="ms8dVIUSrmDH0uS5fYRFvv"><b class="ok" data-page-node-id="BrIUo8fvpNPg7Y0xKULfoi">0</b></td><td data-page-node-id="FqPHxWA7KIHGjwlzmOr5aI">65ms</td></tr>
+    <tr data-page-node-id="y1EmsIGUGYI6xjOW9Piczm"><td data-page-node-id="yuqDjNZJXbWP782NMIPeY0">WebSocket <code data-page-node-id="orxBxwlfG0eLj4YHVovnKb">[1] Connect</code></td><td data-page-node-id="d8YmmaTodBp9fIRuECqqEB">9</td><td data-page-node-id="pycDvMXOA6KUFmSJ0NqCuq">0</td><td data-page-node-id="IPARB5BKBLz6AcV20zpAGI">3ms</td></tr>
+    <tr data-page-node-id="eqPGEJvaeeSZiPQ42by4AX"><td data-page-node-id="WYMUfzkgLzcsHj9FBTYC5K">WebSocket <code data-page-node-id="3XYQDgI7GLaqHtYEFSEGib">[2] Send entityUpdate</code></td><td data-page-node-id="790cKsZYJMko0pyt36fgTS">653</td><td data-page-node-id="fKS4ZrmkZvfmPaZYIOb75M">0</td><td data-page-node-id="pMG3ytOHh8X4dJ59xLwsgg">0ms</td></tr>
+    <tr data-page-node-id="8oGUHUtgraA5zPyW3WsRKa"><td data-page-node-id="ANlFLMWCpybZCqD0DWJ4Tn"><b data-page-node-id="ZpMHB3WmRA2vaoIjI3pYW9">Aggregated</b></td><td data-page-node-id="qcVprzgbazS9gIoYFAbhTA"><b data-page-node-id="KPkbmp68zrBTMYCUmaNQQ4">671</b></td><td data-page-node-id="QnCrtM49qLso4PT4XckrJ4"><b class="ok" data-page-node-id="BSOQv793NsUxqHk7GvaWwY">0 (0.00%)</b></td><td data-page-node-id="qZBMzFi8Jfk0NvccG5gCjW">0ms · P95 1.31ms</td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="xCBA2pohNK75NYuGxcmtyl">注意：那 9 条 10053 <b data-page-node-id="rRN6doCgWta8GoUr2XfkDV">没有</b>进入 failures —— 脚本在对局 <code data-page-node-id="qJs4XQLYaNAyXbSaQwqU7k">except</code> 里只 <code data-page-node-id="dVCSQuJV6QNVDohakMPlG9">print</code>，
+不调用 <code data-page-node-id="FfBf8VbqagBYkK81ibBLNf">events.request.fire(exception=…)</code>。所以「0 失败」的口径仍是「Locust 可见请求失败 = 0」。</p>
+</div>
+
+<h3 data-page-node-id="7A8VhOYkEiROz4hOVeNXQR">3.1 一处必须更正的归因</h3>
+<table data-page-node-id="KcTbzAo6XzY7kZ7bevPZ5f">
+  <thead data-page-node-id="bh6zXPcqB7YCdv7C8mABsN"><tr data-page-node-id="eVFKJYK9vPjJQsJwNiYdrM"><th data-page-node-id="uMc1l7CNPpfYvON43CSRZy">上轮（10s）我的说法</th><th data-page-node-id="omBqgYZVCjtBlilNZeBkuz">本轮（60s）的事实</th></tr></thead>
+  <tbody data-page-node-id="VPLk6fTwfBRb4TBqECxTzC">
+    <tr data-page-node-id="sN4HmrzxEXNj1hBYWhLh3p">
+      <td data-page-node-id="B1RolDCxetW7XID3avO38X">「2 条 10053 是 <b data-page-node-id="D1c6uXGMdH2Nf0Q3dGEiNr">run_time 到点关停</b>导致连接被切断的副产物」</td>
+      <td data-page-node-id="6FkUDXC8FzzGYW0RdOzqot"><b class="bad" data-page-node-id="P7sXnjlN0TqNXwRlALLw47">不完整</b>：60s 窗口下每条连接仍在约 7 秒被中止，<b data-page-node-id="QJGnVPivy8AyapG1uuBcDZ">与关停无关</b>。上轮因为窗口太短（每条连接最多只活 7~9 秒）恰好掩盖了这一点。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="dskX6JaVfGFuC5Jn5msnbD">3.2 已排除的方向：不是载荷/契约问题</h3>
+<table data-page-node-id="cQNovGsODfMpFUo0YcFlkA">
+  <thead data-page-node-id="JBPNA8mFv2sktEURT48UOZ"><tr data-page-node-id="IDPIOHuanBoNKKa54Sia8o"><th data-page-node-id="r0gkDEaANEzScvTemSL214">核查点</th><th data-page-node-id="DXofFFQSEMxNlmKGeQXgEg">源码证据</th><th data-page-node-id="7VAc1DbOEkJYApGjF8v6y0">结论</th></tr></thead>
+  <tbody data-page-node-id="FfAcOgfFvj9pBlYvK0fVss">
+    <tr data-page-node-id="HUxTwtOzfzXT4Dq2NmHloD"><td data-page-node-id="SdSpA3oYFNorTHJZTG8hTN"><code data-page-node-id="JELDGMRU3xepxmYwGe0pyG">entityUpdate</code> 里的属性名</td>
+      <td data-page-node-id="QmRFB1HWTiNILNng1f5eXR"><code data-page-node-id="l5Eu7cg1CVg0E1GZvjRW5W">RoomState.ts:10-12</code>：<code data-page-node-id="dDIyRZe0RprPUflg9q5fAr">xPos</code>/<code data-page-node-id="zeZjxxB8WnAg6aSKctVoSa">yPos</code>/<code data-page-node-id="UORnmhrATHfIM4yCgGTamj">zPos</code> 都声明为 <code data-page-node-id="DV8qEnbLLuFrcwraTP8kQR">@type("number")</code></td>
+      <td data-page-node-id="GQ6rDuDaEsvA4PLqhu4sin">脚本发的 <code data-page-node-id="kR7g5TVTp4rLmE0hC2RKWq">["xPos", x, "yPos", 0, "zPos", z]</code> 与声明一致 ✓</td></tr>
+    <tr data-page-node-id="3uMAAcxLA9NfTByJTQc4e7"><td data-page-node-id="c5SIEzynPC0WGygPvJrGMD">事件 id 的对齐</td>
+      <td data-page-node-id="1bQnZUnmStKBW1aqAYPJvY"><code data-page-node-id="Wa9l0JjKoTzECIr8xJ4MPY">MMORoom.ts:119</code> 用 <code data-page-node-id="n9slUC6gfL3n6N8g2zmnqZ">client.id</code> 作为 <code data-page-node-id="oCZJMjutsAV31j9uLyXjB4">networkedUsers</code> 的 key；<code data-page-node-id="NkvzP7C9HnzLCIJOVLT97q">:282</code> 用 <code data-page-node-id="oPxXWCaK1EtAhANFN5DZkB">entityUpdateArray[0]</code> 比对</td>
+      <td data-page-node-id="Sku9mSGILmgsdB4BAKEvdy">脚本发的 seat <code data-page-node-id="UhQQ0iMEzK4aIcb59tIoFl">sessionId</code> 即 <code data-page-node-id="7MZi4hzp0LWlPfi6jtiyhZ">client.id</code> ✓</td></tr>
+    <tr data-page-node-id="kucpMaJME5ckCYmN2mshx5"><td data-page-node-id="WxG4a9VXB1E0VwmOZfneAW">服务端处理是否抛错</td>
+      <td data-page-node-id="bHE18kcBEnBF47DKq5WI5i"><code data-page-node-id="NpL1v9qNRxESjE7VS5L8HA">MMORoom.ts:170-194</code>：找不到 id 只 <code data-page-node-id="JFIVj4YV0sOYlHZsmpTyVd">logger.info</code> 后 <code data-page-node-id="HnxlEcISV2cERNu8E6pgCY">return</code>，不抛异常</td>
+      <td data-page-node-id="umKILOudqhnGvxEBdgSvJo">不会因载荷不符而崩溃 ✓</td></tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="vgCH0dCrs2hi3lGTTeXmlW">3.3 最可能的方向（待证实，不作为结论）</h3>
+<ul data-page-node-id="aDvEmTI1t9ge48P5ISpHvY">
+  <li data-page-node-id="hzjs7ciDTT2MgjOGIcQsht"><b data-page-node-id="4XiLo9G2n2llKxBcGFXmiS">脚本「只发不读」</b>：对局循环里只有 <code data-page-node-id="kG7uC12Wy4rjOcMaOobI5k">ws.send</code>，<b data-page-node-id="UlActeL5UPChGWThMjkjzo">从不 <code data-page-node-id="aN5ZMinHC9nkSNS5N4FiLj">recv</code></b>。而 MMORoom 会持续向客户端广播状态补丁 →
+  接收缓冲区积压，达到临界后连接被中止（约 7 秒的稳定间隔符合"积压到阈值"的行为）；</li>
+  <li data-page-node-id="sDQr7BFXDXwLAhavGhoxQv">旁证：本仓库 <code data-page-node-id="SsaF5CqpULNULtZTqNBEIg">Server/loadtest/</code> 用的是官方 <code data-page-node-id="FeiU4Zq5UtCn4sl9hpaus5">colyseus-loadtest</code> 客户端（会消费状态），
+  与压测脚本的"裸 socket 只写"行为不同；</li>
+  <li data-page-node-id="xViFFubpQju3Mdy5ENokuu"><b data-page-node-id="ldnoA3rrWnzWAuFnS9ocHp">决定性证据在服务端侧，而它只写 console、不落文件</b>（<code data-page-node-id="9cO8DudrUmOB5hped3HIEv">helpers/logger.js</code> 仅 <code data-page-node-id="Q6SedpjUrNRvTLcW9pqR1B">winston.transports.Console</code>）→
+  需要看<b data-page-node-id="D1916BnZWxWCPGl1kywQzX">你启动服务端那个终端</b>，重点找：<code data-page-node-id="OEcJvzlpWRFlscduaLER5N">Attempted to update client with id …</code>（MMORoom.ts:174）、onLeave / 断连 / 站内异常。</li>
+</ul>
+
+<h2 data-page-node-id="BKhEtiy8lJkINiYJj60cPO">4. 数据安全与不变性</h2>
+<table data-page-node-id="SjCLRYI9M22zK2pkdGLUGg">
+  <thead data-page-node-id="4nUReLhyd92yxcYU5yeC5L"><tr data-page-node-id="jCeEMQolKwuhOh6xiVIQv3"><th data-page-node-id="yXtajGmWdcUhevh7NePuPr">检查</th><th data-page-node-id="LZP9PCbHo9czHGSyzSpYM5">结果</th></tr></thead>
+  <tbody data-page-node-id="6FltMFUloN44VoS9MEzlbx">
+    <tr data-page-node-id="25Cwr3XMIUCEJiHQXjIjw7"><td data-page-node-id="LgB7ZwIr3tRULtO5ajRZ5q"><code data-page-node-id="Wwnh8NVUDYVvrZqZET1C4E">plan_runs#1–19</code> / <code data-page-node-id="VreBudr7Cz8w9QQEDaL1sa">jobs#1–23</code> 与 11:11 备份</td><td data-page-node-id="nJ3C5hytxepv30HEEFyA5Q"><b class="ok" data-page-node-id="S7oBRp1B6hOaKKHYXJNuKc">逐行一致</b></td></tr>
+    <tr data-page-node-id="Y5hlFSZr0lFTjMhWlVWyy4"><td data-page-node-id="nEKazKYtPq4bjb6vmeQi2x">此前各轮未被改写</td><td data-page-node-id="YtMatsrjSQ9yAJYUNOAAo5">#20 <code data-page-node-id="3yBbOPm0VhF6fAIYGOcyMO">failed</code>、#21 <code data-page-node-id="DyJ6oczQqG0ICmkrjApxJK">success</code>、#22 <code data-page-node-id="K71R7TlBAFIIGjKNHZCEDV">success</code>；Job#24 <code data-page-node-id="DhHAPgNLwQzoLAG4rJWLG7">failed</code> / #25 <code data-page-node-id="YFYvmQdXot4DzOsOuhbJrJ">skipped</code> / #26 <code data-page-node-id="Cj7hEH6uCiXH0K1c8pgXMt">success</code> / #27 <code data-page-node-id="WI7vvBzkl8AzY75CUeNvey">success</code> —— 状态全部保持</td></tr>
+    <tr data-page-node-id="yHOxs5IVQ2DM9aCqxHG2oe"><td data-page-node-id="GSRqNwvKGoazcVGsFPdPDM">本轮增量</td><td data-page-node-id="OGhSGBltWEa7rFCINkGUzT">新增计划 1 条（id=15）；plan_runs 22→<b data-page-node-id="ieJEZUn61TDp5pUFK9fltI">23</b>、jobs 27→<b data-page-node-id="qGu3M1NubTjzAaHGjxCUHt">28</b>、reports 25→<b data-page-node-id="PDmeJbSaxhlDhcpSfcDGbw">26</b>、report_index 25→<b data-page-node-id="48FaiUhk0OrYfXfHVGtfJz">26</b></td></tr>
+    <tr data-page-node-id="3mAx4om8CFHWHfQzAjZJSE"><td data-page-node-id="wmSJ3NRcoBQg6rwqI8SbQE">被测脚本 / 平台代码</td><td data-page-node-id="7NWx7CExV39z8IOQ3TJBbc"><b class="ok" data-page-node-id="OQWVuXUWCL8X4bYznN5Qid">未修改</b>：<code data-page-node-id="XMEOY1UBfy8JaokZKdBTG3">locustfile.py</code> mtime 仍 2026-08-04 16:44:27；本轮未改任何平台源码</td></tr>
+    <tr data-page-node-id="MuVJd6KGG0JpE3qtrhAqwz"><td data-page-node-id="DfuFNifm8e8yi7BLWGsDnB">真实视觉资产</td><td data-page-node-id="dMk2pZUfKgBlroY2bqwPIR">未变（tpl 23 张）</td></tr>
+    <tr data-page-node-id="eKsyqh4SAkV7onIwvaiKWH"><td data-page-node-id="EqNRZczb8WGAdfWlyWoIMP">报告链路</td><td data-page-node-id="kFvF6jn57s0nBmhC810OQv"><code data-page-node-id="NxCoN93HqeADWfSxymgnHd">data/reports/run_23/job_28/</code>：report.json + 5 个 Locust 产物；日志 <code data-page-node-id="SdAJ1W9AZ87AnIHsrq9oN4">data/logs/job_28.log</code>；Report Center 索引 <code data-page-node-id="FV1WciF2IXLJbQbSXCBmKq">job_id=28 / plan_run_id=23</code>（total 25→26）</td></tr>
+    <tr data-page-node-id="bXSowuUB5yBkMYAwLxg6Zi"><td data-page-node-id="3JR98zZ7tRpYUyrLmyQ6Ac">被测侧写入</td><td data-page-node-id="1zDbDcfJcAuZpdMR5ouJK2">再次新增 <b data-page-node-id="pPDCTTejE3DNGstgISOQJs">3 个</b> <code data-page-node-id="HvG2gmLd9zm4pVMNyJvM8b">locust_*@test.com</code> 测试账号（累计 6 个）—— 脚本固有行为</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="kzsszCpYr5vG9YIw0CUUaK">5. 现在可以说 / 不能说</h2>
+<table data-page-node-id="B8axFI3ufyaEUxQ5NKbh7w">
+  <thead data-page-node-id="slUNqmWePrzUGuskg15s80"><tr data-page-node-id="Ep8OsbBVy3AySHCjUeGQ81"><th data-page-node-id="QfzBBPuEZ8DCiBUlSNMyd0">表述</th><th data-page-node-id="IpFWnP217zUqD8DD2hbjSj">成立？</th></tr></thead>
+  <tbody data-page-node-id="b4YM1biZf3zZ3N8ySmdaMt">
+    <tr data-page-node-id="Es1BicHaZOmPamCJ6UAh4l"><td data-page-node-id="0YaZOrHPtm6mCaYddBxbF3">「平台能发起 60s 级真实压测并正确归档报告与产物」</td><td data-page-node-id="OGEUJPtzb3WuitAA68AxdW"><b class="ok" data-page-node-id="iSQZDrjtDTFU34VJBlKh9j">成立</b></td></tr>
+    <tr data-page-node-id="SkGWF9QLMHAYNJAxLFnIfq"><td data-page-node-id="qzp1L4gY9741ZFkF6djg0y">「注册、登录（含成功路径）、seat 复用、30s 冷却、WS 连接、二进制高频发包 —— 全部被真实执行过」</td><td data-page-node-id="qqFj7JKxrVAAy9RnQR5jTE"><b class="ok" data-page-node-id="MJ3wn9Dmnq3iTO3kAHfs2T">成立</b></td></tr>
+    <tr data-page-node-id="DN1O0txSlmJgymITQMFFwV"><td data-page-node-id="IPPkeB5JWgAqXzkMlCfjEZ">「已能稳定支撑完整对局（打满 10~20s 一局）」</td><td data-page-node-id="ROMOsALYLf968hdLGPEXfa"><b class="bad" data-page-node-id="Tvxe950udWyNGQtD0kkj9Q">不成立</b> —— 每连接约 7s 被中止，<code data-page-node-id="eYFF7oWxVf3cuOwvF4fCUQ">游戏结束</code> 0 次</td></tr>
+    <tr data-page-node-id="Z3VdRcXqbCDVsxDkCXVDOO"><td data-page-node-id="aqTPwHlIeaI0wDwFHMg5dV">「压测报告里的 0 失败 = 全部正常」</td><td data-page-node-id="pDS29favP7fVmKqvHIpHla"><b class="bad" data-page-node-id="au9c2CbhTqr96xQe1m6QmC">不成立</b> —— 口径仅覆盖 Locust 可见请求，9 条连接中止未计入</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="OiCfvVWDiwEWMl7o9qyBIL">6. 下一步建议（按优先级）</h2>
+<ol data-page-node-id="hmM6whPAzRoYxhhCfRpX9d">
+  <li data-page-node-id="EetMkd16qO1qy9Wwz8g3Po"><b data-page-node-id="ePZ0525OoKgYX8RckZqsi3">查服务端终端日志</b>（零成本，最快）：在你启动 <code data-page-node-id="F4Wq3DHSlRiCfy2N6E2e35">npm start</code> 的那个窗口里找断连/异常记录与 <code data-page-node-id="txxCRmmBqFTb7k0QklHovF">Attempted to update client with id …</code>。</li>
+  <li data-page-node-id="aPTM3G1VzqDs6V5swvlf2J"><b data-page-node-id="837hQAy0Yc3oXOTBb1XEHe">（可选，需授权改被测资产）</b>在脚本对局循环里加一次非阻塞 <code data-page-node-id="3bAw41k2m0xv0XGQSaObwj">ws.recv()</code> 排空接收缓冲，验证 §3.3 假设；同时把对局异常接进 <code data-page-node-id="4ueQnNFsojnTFuQsC85oIQ">events.request.fire(exception=…)</code>，让中止进入失败统计。</li>
+  <li data-page-node-id="jV5EtH5dqyiLbgnQ7g0X6m"><b data-page-node-id="dC4zh2R1jn7Av0EMAmRiJ1">平台侧无需改动</b>：本次两个"问题"（每连接中止、统计口径）都在被测资产与其运行环境侧。</li>
+  <li data-page-node-id="DAASG6CQRzlmAtYneCnUq0"><b data-page-node-id="CE5B6IPCafulox6eYQSUHj">PrivaHigh 侧收尾</b>：其「49 passed」仍未过平台留档（平台最新 pytest 记录仍是 #20 的 46 passed / 3 failed）。</li>
+</ol>
+
+<footer data-page-node-id="utkY8qAxDljwPKmSidmXM8">
+本轮：被测服务端由用户启动（我只做只读身份判别，未代启）；平台经既有 Runner 发起，未改任何代码与被测脚本。
+报告内所有数字来自本轮实际命令输出与归档产物；未执行项（服务端日志取证、脚本改造验证）已明确标注为待办。
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>测试计划编辑器 + 不可变执行快照 · MVP 实现报告</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#171c22; --panel2:#1d232b; --line:#2a323c;
+    --fg:#e6ebf1; --muted:#93a1b1; --accent:#4c8dff; --ok:#38b48b;
+    --warn:#e0a83a; --bad:#e0605e; --chip:#232c36;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:36px 24px 72px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:28px}
+  h1{font-size:26px;margin:0 0 8px}
+  h1 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+  h2{font-size:18px;margin:34px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:15px;margin:20px 0 8px;color:#cdd7e3}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#cdd7e3;font-weight:600;white-space:nowrap}
+  code{background:#11161c;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#9fd0ff}
+  pre{background:#11161c;border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+    overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#c7d3e0}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:1px 9px;font-size:12px;color:var(--muted);margin:2px 3px 2px 0}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  .pass{color:var(--ok);font-weight:600}
+  ul{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  ol{margin:8px 0;padding-left:22px} ol li{margin:6px 0}
+  .kv{display:grid;grid-template-columns:170px 1fr;gap:4px 14px}
+  .kv div:nth-child(odd){color:var(--muted)}
+  .note{border-left:3px solid var(--warn);background:#1c1a13;padding:10px 14px;border-radius:6px;margin:10px 0}
+  .note.ok{border-color:var(--ok);background:#111c18}
+  .files li{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+  footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>测试计划编辑器 + 不可变执行快照 <span class="sub">MVP 实现报告</span></h1>
+  <p class="muted">在三引擎接入、任务控制、报告中心、环境与资源配置中心之上，让用户以受控表单创建 / 编辑 / 复制 / 预检由 pytest、Locust、MatchEval 步骤组成的测试计划；计划只引用 Environment / Executor / AssetSource 的 ID/key；每次执行固化不可变的计划版本与计划快照。</p>
+  <div>
+    <span class="chip">只管理 计划/执行/报告/配置</span>
+    <span class="chip">不做用例编辑器 / 脚本在线编辑 / 拖拽大屏</span>
+    <span class="chip">不做鉴权 / 多租户 / 分布式调度</span>
+    <span class="chip">不擅自填入或连接真实 Colyseus/Unity/识别资产</span>
+    <span class="chip">不落明文密钥与绝对路径</span>
+  </div>
+</header>
+
+<h2>1. 计划数据模型与迁移</h2>
+<p>计划由 <code>plans</code>（计划定义）与 <code>plan_runs</code>（每次执行的固化快照）两张表承载；迁移增量、非破坏，旧库启动即自动升级，不重建、不改写历史行。</p>
+
+<h3>表结构变更</h3>
+<table>
+  <thead><tr><th>表</th><th>新增列</th><th>语义</th></tr></thead>
+  <tbody>
+    <tr><td><code>plans</code></td><td><code>revision INTEGER DEFAULT 1</code></td><td>计划版本号；创建为 1，每次用户编辑 +1</td></tr>
+    <tr><td><code>plans</code></td><td><code>created_at</code> / <code>updated_at</code></td><td>创建 / 最近更新时间戳（既有列，编辑器展示）</td></tr>
+    <tr><td><code>plan_runs</code></td><td><code>plan_revision INTEGER</code></td><td>执行时固化的计划版本号（可空）</td></tr>
+    <tr><td><code>plan_runs</code></td><td><code>plan_snapshot TEXT</code></td><td>执行时固化的完整计划快照 JSON（可空）</td></tr>
+  </tbody>
+</table>
+
+<h3>迁移策略</h3>
+<ul>
+  <li><b>只补列、不重建</b>：<code>db.init_db</code> 用 <code>PRAGMA table_info</code> 检测缺失列后 <code>ALTER TABLE … ADD COLUMN</code>；旧 <code>plans</code> 行补 <code>revision</code> 默认 1，旧 <code>plan_runs</code> 行 <code>plan_revision</code>/<code>plan_snapshot</code> 保持 <code>NULL</code>。</li>
+  <li><b>不伪造历史</b>：缺新字段的历史执行记录一律留空（<code>NULL</code>），不填充、不猜测；报告索引侧沿用既有 <code>metadata_incomplete=1</code> 降级标记。</li>
+  <li><b>版本号不被迁移污染</b>：预置与旧库回填调用 <code>db.update_plan(..., bump_revision=False)</code>，仅用户编辑才递增 <code>revision</code>；预置计划初始 <code>rev=1</code>。</li>
+  <li><b>兼容读取</b>：<code>_plan_row</code> 把 <code>revision</code> 归一为整数（缺省 1）；<code>_run_row</code> 把 <code>plan_snapshot</code> JSON 字符串解析为字典，非法 JSON 视作无快照、不阻断历史读取。</li>
+</ul>
+
+<div class="note ok">
+<b>快照职责划分（互不重复泄露）</b>：<code>plan_runs.plan_snapshot</code> 只含<b>计划定义</b>（名称 / 版本 / 引用 ID / 步骤与白名单参数 / fail_fast / 非敏感指纹）；<code>jobs.config_snapshot</code> 只含<b>环境 / 执行机 / 资产的脱敏视图与指纹</b>。两者都只保留受控 ID/key 与脱敏信息，绝不落明文密钥或绝对路径。
+</div>
+
+<h2>2. 计划编辑器交互</h2>
+<p>新增路由 <code>#/plan-editor/{id}</code>（新建用 <code>new</code>）。计划列表页提供：一键执行、预检、编辑、复制、新建计划。</p>
+
+<div class="grid">
+  <div class="card"><b>新建 / 编辑</b><p class="muted">受控表单填写基础信息与步骤；编辑已保存计划时展示 <code>rev</code> 与 <code>created_at/updated_at</code>，每次保存 <code>revision +1</code>。</p></div>
+  <div class="card"><b>复制</b><p class="muted"><code>POST /api/plans/{pid}/copy</code> 生成独立副本：<code>revision</code> 重置为 1，名称可显式指定（默认「X (副本)」）；复制仍需通过引用 / 步骤校验，编辑副本不影响源计划。</p></div>
+  <div class="card"><b>查看版本信息</b><p class="muted">编辑器头部与基础信息卡展示 <code>rev / 创建 / 更新</code>；执行详情展示当次固化的 <code>plan_revision</code>。</p></div>
+  <div class="card"><b>一键执行</b><p class="muted">「保存并执行」保存后触发，进入对应 PlanRun 详情；执行列表页也可一键执行。</p></div>
+</div>
+
+<h3>基础字段</h3>
+<p>名称、说明、Environment、Executor、AssetSource、<code>fail_fast</code>（失败即停）。下拉项只来自<b>启用</b>的配置实体；AssetSource 按步骤引擎类型过滤（仅展示 <code>locust</code> / <code>matcheval</code> 兼容项）。</p>
+
+<h3>步骤管理</h3>
+<ul>
+  <li>支持<b>新增 / 删除 / 上移 / 下移</b>；默认<b>串行</b>执行，顺序即列表顺序。</li>
+  <li>每个步骤引擎只能是 <code>pytest</code> / <code>locust</code> / <code>matcheval</code> 三种已注册引擎；切换引擎后旧参数不再适用，自动重置。</li>
+  <li>每步骤可选 <code>requires_exclusive</code>（独占执行机，UI/Unity 类）与 <code>timeout_sec</code>。</li>
+  <li><b>不实现删除计划</b>，避免误删仍被历史记录引用的计划。</li>
+</ul>
+
+<h2>3. 三引擎表单字段与白名单</h2>
+<p>每种引擎使用<b>专用表单字段</b>与<b>后端白名单</b>；前端不提供任意 JSON / 命令 / 路径 / 解释器输入框。<b>前端校验只改善体验，后端是唯一可信校验边界</b>（<code>validate_step_params</code> 对非白名单键一律拒绝）。</p>
+
+<table>
+  <thead><tr><th>引擎</th><th>允许参数键</th><th>约束</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>pytest</code></td>
+      <td><code>args</code> · <code>cwd</code>/<code>cwd_root</code> · <code>timeout_sec</code> · <code>asset_source_id</code></td>
+      <td><code>args</code> 仅允许<b>相对测试选择器 / 开关</b>（如 <code>demo/test_platform_demo.py -o addopts= --tb=short</code>）；拒绝绝对路径、盘符（<code>C:</code>）、<code>..</code>、shell 元字符（<code>; | &amp; $ ` &lt; &gt; \</code>）与 <code>.exe</code>。<code>cwd/cwd_root</code> 必须是受控工作目录根 key。</td>
+    </tr>
+    <tr>
+      <td><code>locust</code></td>
+      <td><code>locustfile</code> · <code>users</code> · <code>spawn_rate</code> · <code>run_time</code> · <code>csv_full_history</code> · <code>timeout_sec</code> · <code>asset_source_id</code></td>
+      <td><code>locustfile</code> 必须是受控场景引用 key（<code>http-fixture</code> / <code>colyseus-bot</code>）；<code>users</code>/<code>spawn_rate</code>/<code>timeout_sec</code> 为整数；<code>run_time</code> 为时长串（如 <code>15s</code>/<code>1m</code>）。</td>
+    </tr>
+    <tr>
+      <td><code>matcheval</code></td>
+      <td><code>dataset</code> · <code>algorithm</code> · <code>threshold</code> · <code>output_level</code> · <code>timeout_sec</code> · <code>asset_source_id</code></td>
+      <td><code>dataset</code> 必须是受控 dataset 引用 key（<code>fixture-small</code> / <code>fixture-empty</code>）；<code>algorithm</code> 白名单 <code>tpl | mstpl | kaze | brisk | akaze | orb</code>；<code>threshold</code> 必须是 <b>0..1 的数字</b>；<code>output_level</code> 只能是 <code>full | summary</code>。</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+<b>安全边界</b>：拒绝未注册引擎（如 <code>shell</code>）、拒绝任意命令型参数键（如 <code>command</code>）、拒绝绝对路径 / shell 元字符 / 可执行文件 / 非受控 <code>cwd_root</code> / 非受控 <code>locustfile</code> / 非受控 <code>dataset</code> / 越界或非数值 <code>threshold</code> / 非白名单 <code>algorithm</code> / 非法 <code>output_level</code> / 空步骤。仅<b>启用</b>的 Environment / Executor / AssetSource 可被引用（只认 ID）。
+</div>
+
+<h2>4. 计划预检 / 执行预览</h2>
+<p>两个入口复用同一套后端校验逻辑：<code>POST /api/plans/precheck</code>（草稿，不落库）与 <code>POST /api/plans/{pid}/precheck</code>（已保存）。<b>不创建 PlanRun、不创建 Job、不拉起子进程、不发起压测或完整测试</b>。</p>
+
+<pre>{
+  "entity": "plan", "id": 7, "name": "三步骤组合", "revision": 1,
+  "ok": true | false,
+  "steps": [ {
+      "index": 0, "engine": "pytest", "name": "smoke",
+      "requires_exclusive": false, "params": { ... },
+      "engine_registered": true, "params_ok": true, "params_errors": [],
+      "executor_allows": true, "deps_ready": true, "ready": true
+  }, ... ],
+  "config": { "environment": {…}, "executor": {…}, "asset_source": {…} },
+  "missing": [ "步骤1 执行机缺少 locust 依赖", ... ],
+  "next_steps": [ "为执行机解释器安装 locust 依赖，或改用依赖齐备的执行机。", ... ],
+  "concurrency": { "executor_id": 4, "exclusive_lock_held": false,
+                   "holder_job_id": null, "run_in_progress": false },
+  "fail_fast": { "enabled": true, "behavior": "首个步骤失败后，其后尚未执行的步骤将置为 skipped…" },
+  "fingerprint": "a1b2c3d4e5f6",
+  "no_side_effects": true
+}</pre>
+
+<table>
+  <thead><tr><th>维度</th><th>判定规则</th><th>缺失时的下一步</th></tr></thead>
+  <tbody>
+    <tr><td>步骤顺序 / 解析引擎</td><td>按列表顺序输出 <code>steps</code>，标注每步引擎</td><td>引擎只能选已注册的 pytest / locust / matcheval</td></tr>
+    <tr><td>参数合法性</td><td><code>params_ok</code> 复用 <code>validate_step_params</code></td><td>修正为受控白名单字段（不接受任意命令 / 路径）</td></tr>
+    <tr><td>执行机是否允许该引擎</td><td><code>executor_allows</code>（<code>allowed_runners</code> 判定）</td><td>在 Executor 加入该引擎，或改用允许该引擎的执行机</td></tr>
+    <tr><td>依赖就绪度</td><td><code>deps_ready</code>（解释器可导入 pytest / locust / cv2+numpy）</td><td>安装缺失依赖，或改用依赖齐备的执行机</td></tr>
+    <tr><td>配置就绪度</td><td><code>config</code> 汇总 Environment / Executor / AssetSource 预检</td><td>按各配置预检的 <code>next_steps</code> 修复</td></tr>
+    <tr><td>锁 / 并发提示</td><td><code>concurrency.exclusive_lock_held</code> / <code>run_in_progress</code></td><td>等待独占锁释放；平台当前为全局串行</td></tr>
+    <tr><td>fail_fast 预期行为</td><td><code>fail_fast.enabled</code> + 行为说明</td><td>——</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+<b>诚实预检</b>：缺少真实 Colyseus/Unity 环境、Airtest 资产或解释器依赖时，返回明确的 <code>missing</code> + <code>next_steps</code>（须用户录入），<b>不伪装为可运行</b>；预检全程 <code>no_side_effects=true</code>。
+</div>
+
+<h2>5. 快照不可变性与职责划分</h2>
+<p>触发计划时，后端先 <code>build_plan_snapshot(plan)</code> 固化「执行时的计划定义」，再 <code>db.create_run(plan_revision, plan_snapshot)</code> 写入 PlanRun；<b>已创建 PlanRun 的计划结构、步骤参数、fail_fast、配置引用不因后续编辑 Plan 而改变</b>。</p>
+
+<div class="kv">
+  <div>固化内容</div><div>名称、说明、<code>revision</code>、引用 ID（Environment/Executor/AssetSource）、步骤（顺序/引擎/名称/独占/参数）、<code>fail_fast</code>、<code>owner</code>、<code>snapshot_fingerprint</code></div>
+  <div>指纹</div><div><code>_h("plan", plan_id, revision, steps_json, env_id, exec_id, asset_id, fail_fast)</code> —— sha256 前 12 位，非敏感、稳定</div>
+  <div>Job 快照</div><div><code>jobs.config_snapshot</code>（环境/执行机/资产脱敏视图与指纹）在 Job 创建时同样固化，与 PlanRun 快照互补</div>
+</div>
+
+<h3>不可变性验证（verify_plan_editor.py 场景 8 + 单测）</h3>
+<ol>
+  <li>创建计划 <code>PE-snap-A</code>（pytest→locust，fail_fast=true）并执行 → PlanRun 固化 <code>plan_revision=1</code> 与完整 <code>plan_snapshot</code>，带非敏感指纹。</li>
+  <li>随后编辑原计划：<b>改名</b>、<b>换步骤</b>（改为单步 matcheval）、<b>关 fail_fast</b>、<b>换 AssetSource 引用</b> → 原计划确已变为 <code>rev=2</code> 且定义变化。</li>
+  <li>再次读取历史 PlanRun → <code>plan_revision</code> 仍为 1、<code>plan_snapshot</code> 名称/步骤/fail_fast 不变、<code>snapshot_fingerprint</code> 一致。</li>
+  <li>历史 Job 的 <code>config_snapshot.snapshot_fingerprint</code> 不漂移；执行列表与报告中心的计划名均取自执行时快照（后续改名不漂移）。</li>
+</ol>
+
+<div class="note ok">
+<b>报告联动</b>：历史报告 / 对比使用<b>执行时快照</b>（PlanRun 计划快照 + Job 配置快照），不读取当前 Plan 定义；从编辑器触发后进入 PlanRun 详情，展示当次 <code>plan_revision</code> 与<b>只读 <code>plan_snapshot</code></b>。
+</div>
+
+<h2>6. 验证结果</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>验证</th><th>覆盖</th><th>结果</th></tr></thead>
+    <tbody>
+      <tr><td><code>verify_plan_editor.py</code></td><td>旧库迁移（只补列不改历史）· 创建/编辑/连续编辑 revision 递增 · 复制（独立副本 rev=1、显式命名、不影响源）· 步骤排序（增删/上下移）· 非法参数与非法引擎拒绝 · 停用/不存在配置不可引用 · 预检零副作用 · 执行固化快照且后续编辑不漂移 · 三步骤组合实跑</td><td class="pass">ALL PASS</td></tr>
+      <tr><td><code>backend/tests</code>（pytest 单测）</td><td>计划编辑器/版本化/快照/预检/参数白名单 + 既有配置中心/报告中心/任务控制单测</td><td class="pass">52 passed</td></tr>
+      <tr><td><code>verify_config_center.py</code></td><td>catalog 脱敏 · 三引擎就绪度 · 三类 CRUD/启停/预检 · 非法输入拒绝 · 步骤参数白名单 · 快照不可变</td><td class="pass">ALL PASS</td></tr>
+      <tr><td><code>verify.py</code></td><td>计划→子进程→日志→报告→产物 纵向闭环</td><td class="pass">ALL PASS</td></tr>
+      <tr><td><code>verify_control.py</code></td><td>成功/失败/取消/超时/竞争/重试/独占锁互斥，锁无残留</td><td class="pass">ALL PASS</td></tr>
+      <tr><td><code>verify_locust.py</code></td><td>fixture 压测成功 · 失败即停 · 真实不可达诚实 failed · 取消 · 超时</td><td class="pass">ALL PASS</td></tr>
+      <tr><td><code>verify_matcheval.py</code></td><td>真实 fixture 评估 · 非法参数拒绝 · 脚本失败诚实归档 · 三引擎组合成功 · 取消 · 超时</td><td class="pass">ALL PASS</td></tr>
+      <tr><td><code>verify_report_center.py</code></td><td>迁移/筛选/分页/严格对比兼容性/引擎专项指标方向/旧记录降级</td><td class="pass">ALL PASS</td></tr>
+    </tbody>
+  </table>
+</div>
+<p class="muted">本轮验证均在<b>隔离 SQLite + 独立数据目录 + 非 8000 端口</b>进行，不污染运行中的平台服务，也不连接任何真实 Colyseus/Unity/识别资产。</p>
+
+<h3>本轮修复（实现与验证过程中发现并修正）</h3>
+<ul>
+  <li><b>pytest args 白名单误伤合法相对选择器</b>：原逻辑把含 <code>/</code> 的相对选择器（如 <code>demo/test_platform_demo.py</code>）当作绝对路径拒绝。修正为只拒绝绝对路径、盘符、<code>..</code>、shell 元字符（<code>; | &amp; $ ` &lt; &gt; \</code>）与 <code>.exe</code>。</li>
+  <li><b>MatchEval threshold 缺数值范围校验</b>：新增 <code>0..1</code> 数值校验（越界 / 非数值均拒绝）。</li>
+  <li><b>迁移操作误递增计划版本</b>：预置与旧库回填改用 <code>bump_revision=False</code>，保证 <code>revision</code> 只反映用户编辑。</li>
+</ul>
+
+<h2>7. 改动文件</h2>
+<ul class="files">
+  <li>backend/app/db.py — <code>plans.revision</code> / <code>plan_runs.plan_revision,plan_snapshot</code> 增量迁移；<code>create_plan</code>/<code>update_plan(bump_revision)</code>/<code>create_run</code>/<code>_run_row</code>/<code>get_active_executor_lock</code></li>
+  <li>backend/app/config_center.py — <code>build_plan_snapshot</code>/<code>plan_snapshot_name</code>/<code>precheck_plan</code>/<code>_executor_engine_state</code>；<code>validate_step_params</code> 白名单与 <code>threshold</code> 数值校验</li>
+  <li>backend/app/api/router.py — 计划复制 <code>POST /plans/{pid}/copy</code>、草稿/已保存预检、<code>run_plan</code> 固化 <code>plan_revision</code>+<code>plan_snapshot</code>、执行列表计划名取快照</li>
+  <li>backend/app/report_center.py — 索引计划名优先取执行时 PlanRun 快照，后续改名不漂移历史</li>
+  <li>backend/app/orchestration/scheduler.py — 归档时索引计划名同样取执行时快照</li>
+  <li>backend/preset.py — 预置计划带 <code>revision</code>；回填配置引用时 <code>bump_revision=False</code></li>
+  <li>backend/tests/test_plan_editor.py — 计划编辑器 / 版本化 / 快照 / 预检 / 参数白名单单测（12 项）</li>
+  <li>verify_plan_editor.py — 计划编辑器隔离集成验证（自包含，含三步骤组合实跑）</li>
+  <li>frontend/index.html — 计划编辑器（新建/编辑/复制/版本信息/一键执行；步骤增删上下移；三引擎专用表单；预检面板）；PlanRun 详情只读计划快照</li>
+</ul>
+
+<h2>8. 如何创建第一份真实三引擎计划</h2>
+<p>平台<b>不擅自配置、连接或压测真实环境</b>；凭据只登记引用名，不存明文。按以下步骤录入后即可在 Web 内创建并预检真实三引擎计划：</p>
+
+<ol>
+  <li><b>录入真实被测环境（Environment）</b>：新增 <code>kind=colyseus/http</code> 环境，填 host / port / 协议；如有鉴权，只登记<b>环境变量名</b>或外部 secret 引用名，绝不填明文；点预检确认 TCP 连通。</li>
+  <li><b>登记真实 Locust 场景与识别资产（受控 key）</b>：把真实 locustfile 登记为受控场景引用；把真实 dataset / 模板目录 / 场景目录 / 真值约定登记为受控引用；Airtest-master 目录经 <code>PLATFORM_AIRTEXT_DIR</code> 或受控引用登记。</li>
+  <li><b>配置执行机（Executor）</b>：选择具备 <code>pytest + locust + cv2 + numpy</code> 的解释器引用（如 <code>locust-venv</code> / 三引擎专用执行机），选择受控 <code>cwd_root</code>，<code>allowed_runners</code> 勾选 <code>pytest/locust/matcheval</code>；点预检确认解释器与依赖就绪。</li>
+  <li><b>建立资产源（AssetSource）</b>：新增 <code>kind=matcheval</code>（引用上一步登记的 dataset / Airtest 目录）与 <code>kind=locust</code>（引用受控场景）；点预检确认资产结构完整。</li>
+  <li><b>新建计划</b>：在「测试计划」页点「新建计划」，填名称 / 说明，选择上述 Environment / Executor / AssetSource，按需勾选 <code>fail_fast</code>。</li>
+  <li><b>添加三个步骤</b>：<code>pytest</code>（相对测试选择器 + 受控 <code>cwd_root</code>）→ <code>locust</code>（受控场景 + <code>users/spawn_rate/run_time</code>）→ <code>matcheval</code>（受控 dataset + 白名单 <code>algorithm</code> + <code>threshold</code> + <code>output_level</code>）；用上移/下移调整串行顺序。</li>
+  <li><b>预检 / 执行预览</b>：点「预检 / 执行预览」，确认 <code>ok=true</code>、<code>missing</code> 为空、无独占锁占用、fail_fast 行为符合预期。<b>此步不产生任何副作用</b>。</li>
+  <li><b>保存并执行</b>：点「保存并执行」进入 PlanRun 详情，查看当次固化的 <code>plan_revision</code> 与只读 <code>plan_snapshot</code>；随后在报告中心按引擎筛选查看三引擎报告，同配置两两对比。</li>
+</ol>
+
+<div class="note">
+当前隔离环境下，三引擎 <b>fixture</b> 链路已全绿（三引擎专用执行机 + <code>locust-fixture</code> 环境 + matcheval fixture 资产），<code>verify_plan_editor.py</code> 场景 9 已实跑 pytest→locust→matcheval 组合计划并聚合为 <code>success</code>。但<b>真实 Colyseus/Unity 环境、真实 Locust 场景与真实识别资产尚未录入</b>，因此真实业务趋势须待上述信息录入并预检通过后方可产生。
+</div>
+
+<footer>
+测试计划编辑器 + 不可变执行快照 MVP · 报告生成于 2026-09-28 · verify_plan_editor / verify_config_center / verify / verify_control / verify_locust / verify_matcheval / verify_report_center 与全部单测全绿
+</footer>
+
+</div>
+</body>
+</html>

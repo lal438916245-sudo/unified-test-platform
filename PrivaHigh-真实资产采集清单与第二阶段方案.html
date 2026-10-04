@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="niv2nnhg35BlXYuJF8ip1L">
+<head data-page-node-id="fdCXILPlmpPcLaoJD7725E">
+<meta charset="UTF-8" data-page-node-id="1qFZSDAEQsxHCf1tpxFKmS">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="r6INtI6Qy4V845N3jfT4ml">
+<title>PrivaHigh 真实资产采集清单与第二阶段方案</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#171c22; --panel2:#1d232b; --line:#2a323c;
+    --fg:#e6ebf1; --muted:#93a1b1; --accent:#4c8dff; --ok:#38b48b;
+    --warn:#e0a83a; --bad:#e0605e; --chip:#232c36;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:36px 24px 72px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:28px}
+  h1{font-size:26px;margin:0 0 8px}
+  h1 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+  h2{font-size:18px;margin:34px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:15px;margin:20px 0 8px;color:#cdd7e3}
+  h4{font-size:14px;margin:16px 0 6px;color:#cdd7e3}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#cdd7e3;font-weight:600;white-space:nowrap}
+  code{background:#11161c;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#9fd0ff}
+  pre{background:#11161c;border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+    overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#c7d3e0}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:1px 9px;font-size:12px;color:var(--muted);margin:2px 3px 2px 0}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  .pass{color:var(--ok);font-weight:600}
+  ul{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  ol{margin:8px 0;padding-left:22px} ol li{margin:6px 0}
+  .kv{display:grid;grid-template-columns:190px 1fr;gap:4px 14px}
+  .kv div:nth-child(odd){color:var(--muted)}
+  .note{border-left:3px solid var(--warn);background:#1c1a13;padding:10px 14px;border-radius:6px;margin:10px 0}
+  .note.ok{border-color:var(--ok);background:#111c18}
+  .note.bad{border-color:var(--bad);background:#1c1313}
+  footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body data-page-node-id="iLInSm7Z12dpFYxU9dlYPN">
+<div class="wrap" data-page-node-id="NGrUYkRSMWYkV4rzFyZZaz">
+
+<header data-page-node-id="iG41cNc1yQhaRnousLEIe3">
+  <h1 data-page-node-id="IjLaDP2XuDcczgYczbAH9G">PrivaHigh 真实资产采集清单 <span class="sub" data-page-node-id="7IJ42RYFbQshqtsoHCJQWl">路线 A · 功能 / 视觉评估 · 第二阶段执行方案</span></h1>
+  <p class="muted" data-page-node-id="CN9qfWO9h0WS4Oj9rS1sXA">按你的选择执行路线 A：对《私立高中校长》PrivaHigh 做<b data-page-node-id="VAP2Fk9RT7M3ZeY9QmCnz7">功能评估</b>（后端业务逻辑 pytest）+ <b data-page-node-id="TA0iPKnJQaBVlHxiHwByOv">视觉评估</b>（match_eval 图像识别）。本文件给出：连通性核实结果、资产采集清单、真值设计方案、以及需要你启动的动作。</p>
+  <div data-page-node-id="PJCoKmuQoxs7CE7oiEZq94">
+    <span class="chip" data-page-node-id="uMrD779RzK7gWoU2ZZd5P2">非生产环境（已确认）</span>
+    <span class="chip" data-page-node-id="tXhhRAUIBF3geJA9x2ra37">服务端由用户启动</span>
+    <span class="chip" data-page-node-id="cRF0ycGpRZhLn0ukVYm2gw">游戏由用户启动</span>
+    <span class="chip" data-page-node-id="5LeLcYD3VIrPeOmZvGvc1B">不需修改任何算法或业务脚本</span>
+  </div>
+</header>
+
+<div class="note bad" data-page-node-id="jYGlGCtVEPtu9Ts7LP8kYH">
+<b data-page-node-id="swudaJ5NSjXX0UXoGUGRTc">先更正一处此前错误</b>：前几版盘点用 <code data-page-node-id="KtCTqF4cQARUuh1rVS8wad">netstat</code> 判断端口，但本环境里 <code data-page-node-id="yVz4taOoDEDDclXTQscmsc">netstat</code> <b data-page-node-id="otPjPY4PkQdgFOIlK3t5Go">静默返回空</b>（连一条 LISTENING 都数不到），导致我把「服务在跑」误判为「无监听」。改用 <b data-page-node-id="oOJQxH7yB1Zpj2IsBdkeHH">socket 直连</b>复测后，实际状态如下——服务端确实是通的。
+</div>
+
+<h2 data-page-node-id="46FIXjDpB0hBFMugIQiwH7">1. 连通性核实（socket 直连复测）</h2>
+<table data-page-node-id="z6fbf0jGJgTBIVZ4TWgvYD">
+  <thead data-page-node-id="T5oH7NzkCaFHM0ulOQJmvg"><tr data-page-node-id="BnYzZIJ69P3gQHSr15STJc"><th data-page-node-id="Nx4jlvHNIkDxXuHqw5MWla">端口</th><th data-page-node-id="y5GgJxtrqqrxduAYhfV3G2">用途</th><th data-page-node-id="sZYDG1Zh4FDNoeJzHjgcbr">实测</th><th data-page-node-id="z3fQVVC6xRQRQ75ZGmG1hz">说明</th></tr></thead>
+  <tbody data-page-node-id="jv5jJeL55uME4kxXBOFyDX">
+    <tr data-page-node-id="C6zAvCyEGd9GEq2y11wZ8C"><td data-page-node-id="tS5pTKoccwESGC7ZU46Uh9">2567</td><td data-page-node-id="UfA2PAAGNK3Zp7sOF7JA0Y">Colyseus 服务端</td><td data-page-node-id="HM4ujGc2q4dEKrSwZX7S0z"><span class="ok" data-page-node-id="ecoPq0N0vXvZOZeUaMhyTR">可达</span></td><td data-page-node-id="9rFGUknmU0cZePKv6TGDbN">你的服务端已起，符合「已启动」</td></tr>
+    <tr data-page-node-id="FYNX3BG7Zw1Hn6lNyznhW6"><td data-page-node-id="taST6naTWK0rv2mtbsnkoP">27017</td><td data-page-node-id="QASgx8ciFOwKqwYbz3B3FR">MongoDB</td><td data-page-node-id="PdpCBGNEKxQnL2QzWgfbye"><span class="ok" data-page-node-id="FTSDRp7V2f1RCnECjgTFeH">可达</span></td><td data-page-node-id="oZifeRYh50cxPYHBWimR3n">已起（窗口列表里也有 <code data-page-node-id="x1c7SqP9UOrogXTXb2xLB4">Mongodb</code> 控制台）</td></tr>
+    <tr data-page-node-id="RkjNANO5ZxipJfFxa6BjDA"><td data-page-node-id="mbjKid0TxAZQKM2NauHkHU">8765</td><td data-page-node-id="Cn5pUT33McGGEW3jPPzDjf">PrivaHigh 后端（FastAPI）</td><td data-page-node-id="hBIMdJcXw7SXh3e3k5ljXZ"><span class="bad" data-page-node-id="DpX5TRdHdcfPrn0c0C2tVL">不可达</span></td><td data-page-node-id="1YfloqbGUqld25EihX84fY"><b data-page-node-id="GPo4GGkbFuYEWFFZDuOANa">正常</b>：该后端由 <code data-page-node-id="YgOXiJ8Ecv3HiSQGpgG4kx">PrivaHigh.exe</code> 启动时以随机端口 + 一次性令牌拉起，游戏没开就不会在 8765</td></tr>
+    <tr data-page-node-id="X2OHtdf48vhbH4rEzjpNyG"><td data-page-node-id="fsXVAWGUlpmUdRkq7GCh6q">5001</td><td data-page-node-id="FA7DB47yGZb4xGs4EPr8GV">Poco / Unity</td><td data-page-node-id="9hpbMkn8qVGltnGUaAk5gG"><span class="bad" data-page-node-id="DsiaXhFCJR0n1GfkGoFKtQ">不可达</span></td><td data-page-node-id="BE1jHjLZBAJ3ceFzxUb3Ug"><b data-page-node-id="mZKtWKzWzfYmXpljCdh0wR">正常</b>：PrivaHigh 未启动（你已说明）</td></tr>
+  </tbody>
+</table>
+
+<div class="note" data-page-node-id="kmIBy2Tw9IFmeRDDYQZVdM">
+<b data-page-node-id="7vB8Grcbuf0Z8vYPuYe0rA">需要你注意的一处口径差异</b>：你启动的 <code data-page-node-id="GPKCfyJnCqZiIq0lcmm2ac">:2567</code> 属于 <b data-page-node-id="qPwEffVzHFHaStXj7yNqg8">Colyseus 联机线</b>（<code data-page-node-id="5XIg8oRrepWhY9KIpQxH5h">colyseus-demo-server</code> + <code data-page-node-id="x2kK2jrBoeztpmEYcdMzl0">ColyseusTechDemo-MMO</code>），不是 PrivaHigh 的服务端。
+PrivaHigh 是独立的一套：Unity 6 客户端 + 自带 FastAPI 后端（Auto 拉起）。<b data-page-node-id="gCUkIyTfQo6fMwWDdLABBE">PrivaHigh 的功能/视觉评估不需要 2567</b>；<code data-page-node-id="9QmgUS7ReaJdhTEM7uKFKK">:2567</code> 会在后续 Colyseus 线计划里用到。
+</div>
+
+<h2 data-page-node-id="dX3GGysvjZYPKVyv5AU4cO">2. 功能评估（可立即验证，不需要游戏）</h2>
+
+<div class="note ok" data-page-node-id="gn25CiJfKb8PHcmJ401z6R">
+<b data-page-node-id="RZ3ZrMJoWyvGECTVhVVy7V">好消息：PrivaHigh 的功能评估现在就能跑，且不需要启动游戏、不需要服务端。</b>
+</div>
+
+<table data-page-node-id="0ZkaDxNHgXPraFMo9ofR2Z">
+  <thead data-page-node-id="PBcleEiZFakuM4b5CSOggp"><tr data-page-node-id="xn9lmp9a8p0tDNzo7iiuGA"><th data-page-node-id="KiKCoeqpfMckb81OLrNnrl">项</th><th data-page-node-id="xVFIrnA6c19pcEuBKxVEOY">实测结果</th></tr></thead>
+  <tbody data-page-node-id="xpH2dqmffppBp2Fn61sDuo">
+    <tr data-page-node-id="MMMh7wUznVvClsHEhaAdDu"><td data-page-node-id="YXXHPAJNtoSfqJCl9NW5wF">测试套件</td><td data-page-node-id="GInepuztyP01qghct0QcbG"><code data-page-node-id="mwCqg9Hh2JyulaBZkhmRNJ">PrivaHigh\backend\tests\</code>：<code data-page-node-id="AbTASiWyp1JERUEQj1lOVx">test_api.py</code>（接口契约）+ <code data-page-node-id="QLIW95sMrWW3EU1yn8sAYB">test_simulation.py</code>（学期/师资/建筑/声望/地图规则）</td></tr>
+    <tr data-page-node-id="h9fYcOX27uOnAnWLCBe0MK"><td data-page-node-id="pzhbpn0kBhxpA4Rti43X7a">用例数量</td><td data-page-node-id="zzB0gSVkFgDkoFtSaGqrte"><code data-page-node-id="fUjc1wyrEXGVHIKyXRRzD0">--collect-only</code> 实测 <b data-page-node-id="fT0VgnQcI8TjDYZ82aWpr5">49 条</b>，收集零错误</td></tr>
+    <tr data-page-node-id="L6Tf8B5757hUDl4ohADpUL"><td data-page-node-id="zxjz1txCLXm4fQLLdzsBs4">连接方式</td><td data-page-node-id="MUioFiWEsOl26iKBCHnCDX">用 <code data-page-node-id="xEr4le7zGMU86WGaF89L7G">fastapi.testclient.TestClient</code> <b data-page-node-id="hRj4gfF4U7K9nKMiufhfIZ">进程内</b>构造应用（临时 DB 于 <code data-page-node-id="Di5D7r3LGU9EKMYD042A6I">tmp_path</code>），<b data-page-node-id="NJhoOtPqD0Rlc3q7YdQEDA">不依赖外部服务</b>——这与「不连生产」完全契合</td></tr>
+    <tr data-page-node-id="WT9L0eq3AJATzoEhqxW2KO"><td data-page-node-id="GGYh5BspOwizWhcrSUK4gz">受控解释器</td><td data-page-node-id="hkBPG3yDvx7WL6ZbmBFoFL"><span class="ok" data-page-node-id="LNW1QnUHYy6R3vyAPTmYlQ">沿用 <code data-page-node-id="69ZKLqnemVllxxu3xBXs5d">anaconda</code></span>：pytest 8.4.2（符合其 <code data-page-node-id="e7YaElzrhVv9vzARbZaFPd">pytest&gt;=8.0,&lt;9.0</code> 约束）、fastapi 0.141.1、httpx 0.28.1（均符合其 requirements 区间）</td></tr>
+    <tr data-page-node-id="K6rEiaokRGpM0M2WQXGjTJ"><td data-page-node-id="8V99zWDBANedE2CbjyvoNe">需要的 cwd</td><td data-page-node-id="tFTq2Hg8b0hnp4QY0UniwY"><code data-page-node-id="6dGt8ztr1MdLGJsdF8V8kZ">PrivaHigh\backend</code>（测试内 <code data-page-node-id="2lfdM8yNIQN6eRkh9noz9K">from app.config import …</code>）</td></tr>
+    <tr data-page-node-id="4dMmso9F5qDFR412am3HEv"><td data-page-node-id="tSevtVwBDfc6AdQIwTkyFb">拟用选择器</td><td data-page-node-id="twp2C0gaZt7Vxhn3TOMT0I"><code data-page-node-id="TCin3SbbSQQMBG2opdVycn">args=[&quot;tests/&quot;, &quot;-o&quot;, &quot;addopts=&quot;, &quot;--tb=short&quot;]</code></td></tr>
+  </tbody>
+</table>
+
+<div class="note" data-page-node-id="nW4H7OEvrkKdOmbemPb9xn">
+<b data-page-node-id="cf8BW5tZaXjdvJsdcMerll">为什么这里不需要 <code data-page-node-id="BCSUrPJWFwPw8TZg793cIr">-o addopts=</code> 的替代方案</b>：PrivaHigh 后端无 <code data-page-node-id="KRACUWERblbOFcVDxOJzSN">pytest.ini</code>，但仍显式带上，以屏蔽任何上层 ini 干扰（平台既有风格一致）。
+</div>
+
+<h2 data-page-node-id="JGa0n4aw13wWpfQOP4YmZv">3. 视觉评估（match_eval）：素材必须现在产出</h2>
+
+<p data-page-node-id="zBiNBDPovZBym2KG9mEknp">PrivaHigh 的 UI 全部由 <b data-page-node-id="YD9fiJpXsUd6CINFNm7GaI">UI Toolkit</b> 渲染，界面定义在单文件 <code data-page-node-id="ReXGDkGJLXKz1b1D5AtHSi">Assets\UI\Main.uxml</code>，<code data-page-node-id="dZBt9lH7DDqcLZbjNQPzQH">Assets</code> 内<b data-page-node-id="ohPt5aGLsj4Nvd1DiCQtmF">没有任何 UI 图片素材</b>（只有地形贴图与一张 <code data-page-node-id="m4EHeXtOQpdex838HQSDu4">教学楼.png</code>）。因此：</p>
+<div class="note bad" data-page-node-id="8nu0hQgJp7QIBSKE46pUZl">
+<b data-page-node-id="8nj6XDYTcgDLmciQun2mn8">模板小图无法从素材目录获取，只能从游戏实机渲染画面裁剪。</b>
+这正是需要你启动游戏的原因。
+</div>
+
+<h3 data-page-node-id="ldUnBr6TlIBHU6w7ukhzFK">3.1 分辨率约定（关键，先定后采）</h3>
+<div class="note" data-page-node-id="nVs98wzutICAa9gGHEqmbC">
+模板匹配对<b data-page-node-id="6P6bHseuy3Nb9lqTgFG5i5">尺度敏感</b>（<code data-page-node-id="sYyAJdOV5I0aaob8XvLRnt">mstpl</code> 多尺度稍好，其余 5 种算法都吃尺度）。因此：
+<ul data-page-node-id="SwEH2RYBjEcH4iMOBXtmUK">
+  <li data-page-node-id="cdZrxkShmo4UOlXxH7JS1c"><b data-page-node-id="UXtopdZFCGA1HefBbtbJdV">模板与场景必须在同一窗口分辨率下采集。</b></li>
+  <li data-page-node-id="tsZ97GVL7eAAyFAS7b5NKk">建议先在游戏内「设置」中把分辨率定为 <b data-page-node-id="Kl4pT5TPUR9kXsrhgtiPvl">1920×1080</b>（该选项存在：1280×720 / 1600×900 / 1920×1080 / 2560×1440），后续所有采集与评估都用它。</li>
+  <li data-page-node-id="iFkkimfcQ3lfpHs8tMyK8A">采集前用 <code data-page-node-id="rueeK51kQovyYILqlkvoEJ">capture.py list --filter PrivaHigh</code> 核对客户区尺寸确实是 <code data-page-node-id="rA5EyTdNrePYXz9bRZGc4h">1920x1080</code>。</li>
+</ul>
+</div>
+
+<h3 data-page-node-id="HEJrLyH0kkd98o5Es0Hhe1">3.2 采集工具（已就绪并自检通过）</h3>
+<p class="muted" data-page-node-id="3lZzIRvMYO8p5ixGfT1b1h">位置：<code data-page-node-id="hSyXpDGbj89YNWiG6Hs2L7">F:\测试平台\_real_asset_capture\capture.py</code>。这是<b data-page-node-id="rtivZ2pIeP9TOYFTjoBQfH">一次性资产生产工具，不属于平台功能</b>，不改任何业务脚本、不注入游戏进程，只读屏幕像素并落盘。</p>
+<pre data-page-node-id="q7sZOkCLsM3fxH96M6GEf8"># 列出窗口，确认游戏窗口与客户区分辨率
+F:/Anaconda3/python.exe F:/测试平台/_real_asset_capture/capture.py list --filter PrivaHigh
+
+# 抓取游戏窗口客户区整屏 → 场景图（自动置前、按客户区裁剪、排除标题栏）
+F:/Anaconda3/python.exe F:/测试平台/_real_asset_capture/capture.py shot \
+    "F:/测试平台/real_assets/privahigh/scenes/scene_overview.png" --window PrivaHigh
+
+# 从整屏图裁出模板（x,y,w,h 为相对源图像素）
+F:/Anaconda3/python.exe F:/测试平台/_real_asset_capture/capture.py crop \
+    "…/scenes/scene_overview.png" "…/tpl/tpl_set_overview.png" --box 120,300,180,60</pre>
+<p class="muted" data-page-node-id="2mdruqybacMnPYnDsLm3OF">子命令 <code data-page-node-id="iFOP6JsgAv4zC4cw5FoEYc">list</code> / <code data-page-node-id="nsTyvZYgSFbT865QAeH81g">crop</code> / <code data-page-node-id="CcSB7MhyU31FxNmmGYxPQS">timestamp</code> 均已实测通过。</p>
+
+<h3 data-page-node-id="SEj5baZ1pQJbRHElbm80EX">3.3 待采集场景清单（scenes）</h3>
+<table data-page-node-id="fOeMHtAEbJGueNNowwGT8e">
+  <thead data-page-node-id="5e8bdtdj40ZEaEMiuCQfaR"><tr data-page-node-id="etLiI8oGuWBSMR31YoVZ5F"><th data-page-node-id="owsMs49IQ0mBrWNC2qM97c">建议文件名</th><th data-page-node-id="CrNImfdxPV8JWQ6s1vs82m">游戏界面</th><th data-page-node-id="Et3wCeGpxktEatOhTOVbH1">如何进入</th><th data-page-node-id="81WlHmSyGoiLKzsyZ67yDq">状态</th></tr></thead>
+  <tbody data-page-node-id="ifVbFpktMxaJFwQoEJmWDO">
+    <tr data-page-node-id="1jGLslJDxCyHN1Gbq3KKqQ"><td data-page-node-id="WvntLMEZPHXGVFVsbKZcGZ"><code data-page-node-id="JXSPBxAU9zxjdn4Bg9ji5z">scene_start.png</code></td><td data-page-node-id="svwSRixeAUTkQePU72EL9i">开始页（选择存档 / 新建学校）</td><td data-page-node-id="jigupVACXH8t2V8rgDd2oD">启动即到</td><td data-page-node-id="8sDDAySbiUWAO8xCDpWOmv"><span class="warn" data-page-node-id="4OiDeS2U9AzhH13AQ897Na">待采集</span></td></tr>
+    <tr data-page-node-id="VVJsS3bzP4Wqa35so19wx1"><td data-page-node-id="g1rEKOsdd1n0NQoLArQpdH"><code data-page-node-id="p6Rf1qyTtOHGyugIDvoaBY">scene_overview.png</code></td><td data-page-node-id="RHgQbEgVqkgHn2kHdwaFFH">学校总览（指标卡 + 本学期决策 + 校务待办）</td><td data-page-node-id="5GDmRCLd7JPJ5GGyo52EYE">左栏「学校总览」</td><td data-page-node-id="q7oA2YWhHexcWKHzFI9ilk"><span class="warn" data-page-node-id="mBvQNnUWPSFoXgImvGIPZI">待采集</span></td></tr>
+    <tr data-page-node-id="PssmEn0zwjS7poQSaC08qK"><td data-page-node-id="8wqPRuK8rDjnEp92G93prg"><code data-page-node-id="Er3WuPv5cX5X2MxdeoRTMn">scene_cohorts.png</code></td><td data-page-node-id="i96AQfqLOykPiGHj7dwRuW">招生与班级（概况 4 项统计 + 班级列表 + 特级教师）</td><td data-page-node-id="Kk7cOnpkyZEsfiktqnO6og">左栏「招生与班级」</td><td data-page-node-id="uY5nb0MBjgB5IMI9ATQ8QG"><span class="warn" data-page-node-id="osQsK4QBOq04nwxDWLvCGh">待采集</span></td></tr>
+    <tr data-page-node-id="g4As6hFLk1FFbzRJubju83"><td data-page-node-id="oLIo3cZsNX57b04zGFSXo7"><code data-page-node-id="FU0yHHOBdYi0avWnswmJDE">scene_campus.png</code></td><td data-page-node-id="qU4kSCccVlJLBoINMYsQpD">校园与师资（师资概况 + 招聘教师 + 教师列表）</td><td data-page-node-id="NHzdrVeAWCoyBumraZFXtc">左栏「校园与师资」</td><td data-page-node-id="I1LzS9MzyfLU4yrmDFVkol"><span class="warn" data-page-node-id="r9kTHtU9sLighWGrDe7cZH">待采集</span></td></tr>
+    <tr data-page-node-id="GpyGLw8DagovGk7ehLfAzo"><td data-page-node-id="qatqiAwTVjx3YZp5KC3unO"><code data-page-node-id="PdKlvHXcfQAxxP1egHdywf">scene_report.png</code></td><td data-page-node-id="KxiE09j0hCVPSuv2HtyJ4t">学期结算报告弹窗（支出/收入细则 + 净额）</td><td data-page-node-id="MgmW92jdTv7ClyTa9uDML4">点「结算本学期」后弹出</td><td data-page-node-id="vO2tUDsATauXjUpFlA3nhg"><span class="warn" data-page-node-id="KVvQCaI3r0DK7B2fNSjxqp">待采集</span></td></tr>
+    <tr data-page-node-id="XFfqenZlWlK5ILrTP9Ws20"><td data-page-node-id="TFBJmNMqcrwtnxhulYSkfW"><code data-page-node-id="sDmjHUBgQ2GFgGLOlslQuc">scene_settings.png</code></td><td data-page-node-id="yhhwRU70doiGyKqfbjDM7r">设置弹窗（分辨率 + 全屏切换 + 退出）</td><td data-page-node-id="NUOgJY2mos27uPduXm5Lj2">右上「设置」</td><td data-page-node-id="g8cfAXqE8sbhwrt13V2G7p"><span class="warn" data-page-node-id="hLkTveAKfh7od4iOncf9q7">待采集</span></td></tr>
+    <tr data-page-node-id="hF7B7LNTcqDGVnpgLSFHLg"><td data-page-node-id="RRyQmZvgBpKHsQ3UZgUZ3K"><code data-page-node-id="UEuUdKwJJkKiaprJQJ3BTG">scene_build.png</code></td><td data-page-node-id="42M1r81XuQAwYoGRMzCCVN">建筑放置栏 + 地图 HUD（学校规模/声望/师资力量）</td><td data-page-node-id="CockNb37KDEHLgp2CgG2Sm">点任一「建设…」后</td><td data-page-node-id="yPF1L1MHhGCrvGAT48s4AB"><span class="warn" data-page-node-id="Lr4Qcg3P48aaV2tkoP8vx2">待采集</span></td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="tDOeZNphBSE9WC70wynnJV">建议 6–7 张。数量不必多，但要覆盖<b data-page-node-id="t6X5uAmfhx3mCChRr6uHML">不同界面</b>，这样同一模板在不同场景下的「该/不该出现」才能形成有效的正负样本。若某界面难以稳定复现（如新手引导），可跳过。</p>
+
+<h3 data-page-node-id="vbfn9eIMqFvwxNj7wyyMsb">3.4 待裁模板清单（tpl）</h3>
+<p class="muted" data-page-node-id="ockvAMxuJhchJBbDKWF32b">以下元素均来自 <code data-page-node-id="GhiBIs0nw8J8iG0OQaZdr6">Main.uxml</code>，文本稳定、不随数值变化，适合做模板。括号内为建议的裁剪来源场景。</p>
+<table data-page-node-id="m3HEjknKyQuZF0zYotOD70">
+  <thead data-page-node-id="aEFbTtm1Lz9dAOcpwBgSOs"><tr data-page-node-id="7lcEdhihUu0OFfeqxHSHDp"><th data-page-node-id="LTRhFTAZyVTa5DsoqQ2sGp">UI 元素（文本）</th><th data-page-node-id="SxbNHT68iqO9DZC1RAw7bH">建议模板文件名</th><th data-page-node-id="oDv7ilQSFVn7PvkYhHhFJH">来源场景</th><th data-page-node-id="1RC9SFdMfeQjFAwWltjyfP">用途</th></tr></thead>
+  <tbody data-page-node-id="4SDwbTnewOYEcQlO26iZOF">
+    <tr data-page-node-id="82TVLdizWqOFwmQaGZjoqe"><td data-page-node-id="UBhMAldXEcSi8zolp2qAgI">左栏导航「学校总览」</td><td data-page-node-id="a0h55wBkBGfuptCBOZODCm"><code data-page-node-id="QVULDAR8Q8YDrktXWG0IsY">tpl_nav_overview_overview.png</code></td><td data-page-node-id="5a8dxZniZ8LOL2Mvp7l4o8">scene_overview</td><td data-page-node-id="0DBDvsaTFB6eCQDpAFR0bE">正样本（overview 必出现）</td></tr>
+    <tr data-page-node-id="qelvx1n7R5pU6ljfF4YbOj"><td data-page-node-id="LCa0wPecw03tfBBTnXsYcL">左栏导航「招生与班级」</td><td data-page-node-id="ivBinB6GJ1YQN0GdtJ8mOY"><code data-page-node-id="U8FdDaKjnfkR8qHRXj8McX">tpl_nav_cohorts_cohorts.png</code></td><td data-page-node-id="2EGAsYsUMcFN4DStnWu5PR">scene_cohorts</td><td data-page-node-id="DUhFsC9i9HU8btJCJrf2pG">正样本（cohorts 必出现）</td></tr>
+    <tr data-page-node-id="vRp18RfHRGHWIVyB9rwHyb"><td data-page-node-id="tIQZ0HORF2jaEiXtDtWO1Z">左栏导航「校园与师资」</td><td data-page-node-id="McPnkh8i8FwKFiceM6Pije"><code data-page-node-id="9o3G4ZrPUJJ4y72fcVpf4d">tpl_nav_campus_campus.png</code></td><td data-page-node-id="asNeIKcTRnNRNvecPNmNrO">scene_campus</td><td data-page-node-id="QVVGEWlKBoJ1qp3ZAMF1RH">正样本（campus 必出现）</td></tr>
+    <tr data-page-node-id="fBExX1Ya7m9F6KstYHsWIb"><td data-page-node-id="jKnIlG9P2s4APuBXrNRzGz">按钮「设置」</td><td data-page-node-id="EQn17PX2Bh33S0GV2GNGQo"><code data-page-node-id="GnTpYT7TPazV4QY6AhGeI1">tpl_btn_settings_overview.png</code></td><td data-page-node-id="AtavwwHfRaXlxvBBwIqo7a">scene_overview</td><td data-page-node-id="G0E97vMZr3IOb6YMu14wbE">正样本（overview 顶部）</td></tr>
+    <tr data-page-node-id="gGlwBH3b4y6TwOXVeBH1jq"><td data-page-node-id="6VE3GgrrnGUkJNEdAYPnqF">按钮「招聘普通教师」</td><td data-page-node-id="eRKZBp7Su2D7hEXyhAWbM2"><code data-page-node-id="W4EcVyla9RdZYWxvDoM5Lx">tpl_btn_hire_regular_overview.png</code></td><td data-page-node-id="478WwDN3YIc5b1D2tQqeOk">scene_overview</td><td data-page-node-id="eOyQAjvGpADKcGyArHA8xn">正样本；在 campus 场景为负样本</td></tr>
+    <tr data-page-node-id="br2gjLVsClVVJszDhB9FhF"><td data-page-node-id="jZz5GZ2s3rTsSlQFCSjmUR">按钮「招聘特级教师」</td><td data-page-node-id="7xJzSzEgDg8cfPQhDu59lW"><code data-page-node-id="lShq0H215VwUCswQImMitw">tpl_btn_hire_senior_overview.png</code></td><td data-page-node-id="Ywa8YeS4QH4BDncM9atyvC">scene_overview</td><td data-page-node-id="79rpIvpWHPSlhcRLUyr0eX">正样本；在 campus 场景为负样本</td></tr>
+    <tr data-page-node-id="LSvOyzJLFcRHqXz8VXQc57"><td data-page-node-id="xoFVmLYz7dX4mRAifZRdpm">按钮「结算本学期」</td><td data-page-node-id="phl0qmVGgSYUFes6H01eak"><code data-page-node-id="CinNZqmpE1a9NqncIXtq5e">tpl_btn_advance_overview.png</code></td><td data-page-node-id="X7h1l8LGYQjyEjQquFHtGZ">scene_overview</td><td data-page-node-id="gfpvkhHEF46ODFpZKcrfIM">正样本（overview 底部）</td></tr>
+    <tr data-page-node-id="3RWbZU9V9Ni9LCxOclwQCu"><td data-page-node-id="VvncJmgnEIQdHZ13J04g0i">面板标题「本学期决策」</td><td data-page-node-id="NTiLWL55Zok06ZCyYBpC1c"><code data-page-node-id="mKutL33cCvjQoFCzZ9RyIq">tpl_panel_decisions_overview.png</code></td><td data-page-node-id="R9CIqt8ANgj60QxmmhZNbv">scene_overview</td><td data-page-node-id="KARdhEPwEBvQJCvowWG1Vf">正样本</td></tr>
+    <tr data-page-node-id="mhnwjyj0scgHK85m0gJHlC"><td data-page-node-id="DAJ4mwxUPWlZN8kHB4aAlZ">面板标题「校务待办」</td><td data-page-node-id="kOs8Y7cK0gDk5jyMAfUSYC"><code data-page-node-id="oUb1fkiKVtYGr9ZoQBMCuL">tpl_panel_todo_overview.png</code></td><td data-page-node-id="PScBwGtkDFmEqKDTBIh1Bi">scene_overview</td><td data-page-node-id="ypMf8fAdcIfPsqBPTKIH1e">正样本</td></tr>
+    <tr data-page-node-id="LoweNTM3tlNab4UK69IvGp"><td data-page-node-id="R0PzMrr5QdJeVayU44tCZg">统计标题「在校学生」</td><td data-page-node-id="emdVxKhF4tjgnW1A6KYPDk"><code data-page-node-id="PZV2MDchagCp8C1tZeU5No">tpl_stat_active_cohorts.png</code></td><td data-page-node-id="jVGTP0hbNABmNZMYhxyNtF">scene_cohorts</td><td data-page-node-id="dDtFea7rmzLc7LO63FYQ2D">正样本；在 overview 为负样本</td></tr>
+    <tr data-page-node-id="qaXPUOYjD4ArFmC7oaWoET"><td data-page-node-id="ERmOZbysZaTqdAE4UpXhSA">面板标题「师资概况」</td><td data-page-node-id="jiRldjxXL1gd7FL0Q5GDCZ"><code data-page-node-id="CVgGNPmFEr2RrZEUBlmdO8">tpl_panel_faculty_campus.png</code></td><td data-page-node-id="k6BhwFRCfl3QKZ3AEAZZbO">scene_campus</td><td data-page-node-id="CJcJP2FrWnPzx18Fz9sSz1">正样本</td></tr>
+    <tr data-page-node-id="aFoCYIFLx5LH6fhdjqMK0A"><td data-page-node-id="cTnZ8AZ0j3faDdqQy4TBTD">按钮「招聘普通教师 ¥30,000」</td><td data-page-node-id="F2h71oL2qnuOO1jQKLsuN6"><code data-page-node-id="noA5QY3IlPDiPndBfSL7sR">tpl_btn_campus_hire_campus.png</code></td><td data-page-node-id="gQZuJxkweOUOH3ALdfCsDW">scene_campus</td><td data-page-node-id="Q7y03ZTLOSoDVKVxagNYMk">正样本</td></tr>
+    <tr data-page-node-id="IEtrIKUwDhGqrGzCKTd9J0"><td data-page-node-id="GGvMYZwYrFm4b2eNbhbsmm">弹窗标题「学期结算报告」</td><td data-page-node-id="Rd63YpjEgUkjCnCscsxpeU"><code data-page-node-id="u6WYksyGrPNQUAwxFr3tPw">tpl_report_title_report.png</code></td><td data-page-node-id="LI1AQaY4vNYADRZxSs1X3g">scene_report</td><td data-page-node-id="NomkmysDuXssk6GY0814t5">正样本（仅弹窗场景）</td></tr>
+    <tr data-page-node-id="wJZGALTf3hNPmG8nJuLuMs"><td data-page-node-id="Nt6ExSxkoi6sAr44v19RIW">按钮「知道了」</td><td data-page-node-id="hmmkk4hTkcgvfDfqDc8j4b"><code data-page-node-id="8hczIFDv3nB5M7eGonVYlP">tpl_btn_report_close_report.png</code></td><td data-page-node-id="5SaZRIvFqlGZgWgLa4anKb">scene_report</td><td data-page-node-id="ZthhSc1A0cBSr76wwljTnd">正样本（仅弹窗场景）</td></tr>
+    <tr data-page-node-id="OxdshiiGEnn0YDGDL5kSq9"><td data-page-node-id="XxWDEIjmFmlo6TAqMxCTP5">按钮「退出游戏」</td><td data-page-node-id="Sx0my8tFxfUKTDgOnoECei"><code data-page-node-id="26RERpTdKjuaH4f77Q8a6L">tpl_btn_quit_settings.png</code></td><td data-page-node-id="n2o89WVlhuDtdvCrFAx5Qd">scene_settings</td><td data-page-node-id="Ouy9RIj8HDB7EnGvHNJwpX">正样本（仅设置弹窗）；在其它场景为负样本</td></tr>
+    <tr data-page-node-id="Sgk9rr2hjAvrUZiVta17RU"><td data-page-node-id="jBPVAy0clfNDmARHY9N8EQ">品牌标题「PRIVAHIGH」</td><td data-page-node-id="TgVfDZFj2eHZmJz3Pd7vG4"><code data-page-node-id="roMgKEwCgBBh2W5cR4jcs3">tpl_brand_start.png</code></td><td data-page-node-id="Ti8pwEIg6kFnbPvO3R0X8H">scene_start</td><td data-page-node-id="Ab9LKCtlnE2A9cJVsAoUJX">正样本（开始页与左栏均出现）</td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="OcAid9bCExmf5qXWnpe5d9">16 个模板 × 7 个场景 ≈ 112 格，样本量足够看出 precision / recall / F1 的差异。你也可按实际界面增减；<b data-page-node-id="r15BNu3ilDrKzkmjTVCbbH">我已按 <code data-page-node-id="8H3ZBtAy6aH0uzHtvBlwno">Main.uxml</code> 的元素名规划好命名，采集时只改坐标即可</b>。</p>
+
+<h3 data-page-node-id="CjUyYfOYDLLjxoqLnN75pD">3.5 真值设计（关键：<b data-page-node-id="YpsSi7PkvXHVXEX6xVC7zr">零逻辑改动</b>方案）</h3>
+<div class="note ok" data-page-node-id="n5zr0QbOJIcUkn6iib0X9F">
+<b data-page-node-id="FvQSQmXeZQuPActIcSJgZN">采用现有 <code data-page-node-id="qVDRmf3FWJWx7ExIr6CZX5">fixture-filename</code> 约定即可，不需要改 match_eval 真值判定逻辑。</b>
+<p data-page-node-id="3Vw5OIrnkJc5Iupcdd0OH7">约定：模板名 <code data-page-node-id="kS7Xd5uMKve1HBEjSDZQXd">tpl_{id}_{scene}.png</code> → 该模板<b data-page-node-id="c3v8xCGHgR4DYdXCCgEQy2">只在</b>场景文件 <code data-page-node-id="W33lZQJiZWvsKEG1d2nxDV">scene_{scene}.png</code> 中视为「真存在」。</p>
+<p data-page-node-id="OpC9jebKFbivAPZuJQQ3c9">妙处在于：<b data-page-node-id="CdNxn5nGixeQuiZCcgfb79">每个模板会对所有场景逐格实跑</b>。于是同一个模板——
+「在它命名的那个场景里命中」= 正确正类；
+「在别的场景里命中」= <b data-page-node-id="G6Eehs4UHpPEhn56NekvC4">假阳性 FP</b>（真值说它不该在那儿）。
+这样就自然同时产出正负样本，precision / recall / F1 才有判别意义。</p>
+<p class="muted" data-page-node-id="pOo8pAgcaRSLRYmiZyxP2j">例：<code data-page-node-id="EAw5R9wtBIMKWBjljmeXjG">tpl_btn_quit_settings.png</code> 只在 <code data-page-node-id="b8CkpfLiBkROeJvUs0Fvj4">scene_settings.png</code> 里算真值；若它在 <code data-page-node-id="KXq9iwx08Odc8gvhkmjbtj">scene_overview.png</code> 里也命中，就算 FP。</p>
+<p data-page-node-id="BfMUyxmizRuGEwLXRKbTjA"><b data-page-node-id="65yYBIlsLjbJa5CdbTyryr">命名注意</b>：<code data-page-node-id="IGXdGJZDC0TUHvkZJDt0mA">{id}</code> 段内可含下划线，但<b data-page-node-id="aZQWLsAqg4SRFjcKCCufvw">最后一段必须是场景 key</b>（如 <code data-page-node-id="gt0kuP4pU3jbh9EnkOPCUv">settings</code>），且场景文件名必须是 <code data-page-node-id="InipEHTHO9rZhUTSDjAllD">scene_&lt;key&gt;.png</code>。</p>
+</div>
+
+<h2 data-page-node-id="Nr7SSFkwM3oPNoQNufo82z">4. 需要改动的平台配置（最小集合）</h2>
+
+<table data-page-node-id="LegRx3K3xATOXalvINewvL">
+  <thead data-page-node-id="55BDBrQhg9KmrhKX3pvF9P"><tr data-page-node-id="pwYg80TwJw9eWsXB3tnUbE"><th data-page-node-id="ixPOcIKiuZD8qYsK2breBn">#</th><th data-page-node-id="gBx0rREAv7worusUD1K9zF">位置</th><th data-page-node-id="HVChPxSFQLZ7HRfbgKNwcv">改动</th><th data-page-node-id="JluToGpt9C5mYQ7cuEW1ld">性质</th></tr></thead>
+  <tbody data-page-node-id="jNHsxYdi3Cfk8jW9VEeghF">
+    <tr data-page-node-id="xCE7rtZCltjAz1IDtnG4R9">
+      <td data-page-node-id="DLEuR3pcUHWWdB3s0pYVea">1</td>
+      <td data-page-node-id="DCAeBggM3B7mhg0wKg0ZPN"><code data-page-node-id="vYQCy6GtNyjPfSnOTA5oNO">config_center.WORKDIR_ROOTS</code></td>
+      <td data-page-node-id="wUBv6tzMuFGVxPsSsIbVho">新增 <code data-page-node-id="L32U9XQK0d78GzxQsjQmnt">privahigh-backend</code> → <code data-page-node-id="wX1ggTnM5NGrh9iWofeCr6">F:\Colyseus_SDET_Project\PrivaHigh\backend</code></td>
+      <td data-page-node-id="HGBJxKaMDqdHSxqhTbj7Lj">登记受控目录根（功能评估的 cwd）</td>
+    </tr>
+    <tr data-page-node-id="47tNh51FAFNvXDSB3Llkx1">
+      <td data-page-node-id="gPZ8flrWIqyaJkNmnEzTmT">2</td>
+      <td data-page-node-id="GqsTRTqeOLALcsmJNcWI3c"><code data-page-node-id="4tlNnPaIlW4XWn2dVpW4aS">config_center.TPL_DIRS / SCENES_DIRS / DATASET_REFS</code></td>
+      <td data-page-node-id="wmrV8FgJBwbd89BALtPN19">新增真实素材受控 key（如 <code data-page-node-id="oz9MCmSPoF7aGX00vvKMhf">privahigh-real-tpl</code> / <code data-page-node-id="7LBoOAaslqVKMRXbFLfWxw">-scenes</code> / dataset <code data-page-node-id="PFpLAQGkMZLysDAnsiBT16">privahigh-real</code>，<code data-page-node-id="FUmvL4HDd6fSVcjIw5zb5w">ground_truth="fixture-filename"</code>）</td>
+      <td data-page-node-id="PuZekWW9x0cAp8D7pk4GJl">登记受控资产 key</td>
+    </tr>
+    <tr data-page-node-id="Ssr1bOE123tzT9cLbVoE9U">
+      <td data-page-node-id="ZMfjzWSQxN1v19zIGkHOJE">3</td>
+      <td data-page-node-id="Lvq4YAOyzKZO9I6HeFraPO"><code data-page-node-id="HnfdWn168LG24jDEvFiYXE">matcheval_runner._DATASETS</code></td>
+      <td data-page-node-id="lGvhgFbT6keCRUVo9IZF3X">新增同名 dataset 条目，指向新 <code data-page-node-id="RL2xca1b3Tf3UFvHcssUPK">tpl</code> / <code data-page-node-id="mEpv7n2AklxR6WrhsatWcH">scenes</code> 目录</td>
+      <td data-page-node-id="OZynaK06uHFLpx6PDDyECc">Runner 侧白名单同步（<b data-page-node-id="N0YJ3GVeTevCLjEnxRMerx">不改判定逻辑、不改算法</b>）</td>
+    </tr>
+    <tr data-page-node-id="LiGp3mGHhRHtqU0eJg0PVa">
+      <td data-page-node-id="arHULmwlk0AquHJ1lww0HO">4</td>
+      <td data-page-node-id="ccXFuhnVQU3O55nHFv0Yh0"><code data-page-node-id="G3xAYC8VH6WIjmaStJF8Oc">config_center.AIRTEXT_DIRS</code></td>
+      <td data-page-node-id="pfdpoROijLkjnfFf91LiUq">把 <code data-page-node-id="K65FPxNU9cUwFj2hoyeZqg">airtest-master</code> 默认路径改指向 <code data-page-node-id="UDSH2iyhhHz6yV3YcDTw2X">F:\Colyseus_SDET_Project\Airtest-master</code>（现默认指向不存在的 <code data-page-node-id="oczRUGP6Zzh7mzcOVFe9bU">F:\测试平台\Airtest-master</code>）</td>
+      <td data-page-node-id="AQ7epdciw3SHH0Zals7iOf">修正默认路径（可选，若要用 airtest 引用）</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note" data-page-node-id="CMGcf3iPZkkzunQFVtArQz">
+<b data-page-node-id="yLHd8MgItzp3Oyp8frhWr2">明确不做的事</b>：不新增平台功能、不改任何算法、不改 <code data-page-node-id="LiWzTyjElDajPmK93GFBi7">match_eval.py</code>、不改 <code data-page-node-id="XV7S6g5cJYPwUTMRyp5ZQW">locustfile.py</code>、不改 <code data-page-node-id="y8cnxZvr2q5XkhN1EK59BQ">GameAutoTest-Pro</code>、不改 PrivaHigh 任何代码。
+以上 4 项均为<b data-page-node-id="TK8rhY7LhBjg2ryIFqdDJu">白名单登记</b>与<b data-page-node-id="AOlqbVJ8S4rpAMZDoIGLfo">默认路径修正</b>，属于「把真实资产接入受控体系」的必要登记动作。
+<b data-page-node-id="IhW6eNOAiTHp2H4CMuglJo">待你确认后我才动手</b>。
+</div>
+
+<h2 data-page-node-id="pp7v8noZAzi0q4WXeUJMFb">5. 拟创建的首轮计划（草案）</h2>
+
+<table data-page-node-id="dl9xF5PsNT7sywlq52Tg8B">
+  <thead data-page-node-id="MnqLKayzUKPKT6Fh1UhUD6"><tr data-page-node-id="pGDtAdsww83m4ZOnrvmG9s"><th data-page-node-id="FW55VOFMGsIbAIDi0aqLt1">顺序</th><th data-page-node-id="znILyFl6pCvHkhKPGE6ZyH">引擎</th><th data-page-node-id="kVD3FQ5rlA3qhgbYVwkjzJ">步骤名</th><th data-page-node-id="5TgugCuNhRk84ejiRm4AYK">拟用参数</th><th data-page-node-id="Lf83WpWu5lwTTLDpnetADp">预期结果</th></tr></thead>
+  <tbody data-page-node-id="V7WzQYBHHHEwP9qNHSHLU5">
+    <tr data-page-node-id="RO3IQwtWkUPV8EEjUIJcH0">
+      <td data-page-node-id="Q2ILWxP5tKCvCoY99HQUVU">1</td><td data-page-node-id="Qddw5DwnjGGF029omEGGd9">pytest</td><td data-page-node-id="Gm1zYvoH4ofmynJPzH2YLX">privahigh-functional</td>
+      <td data-page-node-id="4REaHw6frxAM8S1ONx9ceo">cwd_root=<code data-page-node-id="bsveqjABYZIuraSGo36VnE">privahigh-backend</code>，<code data-page-node-id="GwxQOoiE7jAanfcvcK5x85">args=["tests/", "-o", "addopts=", "--tb=short"]</code>，timeout 300s</td>
+      <td data-page-node-id="SFWQS3n192b9aisZVviCRH">49 条用例；<span class="ok" data-page-node-id="CF8oBUbLK4MmFurJBHjGpu">应全部通过</span>（业务真实成功）</td>
+    </tr>
+    <tr data-page-node-id="RMZICQFbSY6KnyVYNKhZJF">
+      <td data-page-node-id="w6jrYNJFuFujTRPjLvCZtF">2</td><td data-page-node-id="eYzHPSZWBMCtvMJYrHKIwo">matcheval</td><td data-page-node-id="Z5R4MbllEMH4sYjEwIDkbv">privahigh-visual</td>
+      <td data-page-node-id="1KHi65f0e7KbYsbYn90u03">dataset=<code data-page-node-id="EtgRSB98sjmPmdBSwmsATc">privahigh-real</code>，algorithm=<b data-page-node-id="zXTGWituGU7NpsxgsDSjgQ">建议全 6 种</b>（<code data-page-node-id="D3FlWKJ5ma6Kta2TC5CCOF">tpl,mstpl,kaze,brisk,akaze,orb</code>），threshold=<b data-page-node-id="8rt8RMtXiupMaewecTirqC">0.8</b>，output_level=<code data-page-node-id="qAggBzI2tUGCPh3oZUBsf7">full</code>，timeout 600s</td>
+      <td data-page-node-id="am5tyLFM44IGeJyv0HEI8I">112 格评估；产出 precision / recall / F1 + 热力图 + 错误样本</td>
+    </tr>
+    <tr data-page-node-id="Rov18MGCc1hvxnUPw3VlA3">
+      <td data-page-node-id="7fej2HsGoGAlTYUO5nRDRs">—</td><td data-page-node-id="CVl802DRE9bF1CBG49rUrC">fail_fast</td><td data-page-node-id="YC1PkjOnXFDFnFGcvounVn">—</td><td data-page-node-id="VpuZSSIE6IwkDzLtDP8yk4"><code data-page-node-id="H48tRCSruaSn5ebHHwxeXN">true</code></td><td data-page-node-id="2HOMKfflxsZgTaIGHdpkHY">功能失败即停，不进入视觉评估</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note" data-page-node-id="JuGREp9CVEVpxMM1Sjwhsz">
+<b data-page-node-id="BEsHirTWZ4lusZCWkCqwkN">环境/执行机选择</b>：功能步骤需 pytest+fastapi（<code data-page-node-id="BN3YVMiUU1kH2h2fAIusms">anaconda</code> 可）；视觉步骤需 <code data-page-node-id="fHyH9HtkisEzaexzYHRDp0">cv2</code>+<code data-page-node-id="Gvx1mC0g385Xtnlqg5YaYn">numpy</code>（<code data-page-node-id="8hfEfoAfIoE1CHlbbdbvbo">anaconda</code> 亦可）。
+两者都能由 <code data-page-node-id="CE45yFBOd9wmIBITjjmkzM">anaconda</code> 承担，故可复用 <code data-page-node-id="R6qjfpyeAHcpsU11KBolKW">anaconda-python</code> 执行机，但需把其 <code data-page-node-id="UYsDzmYPu3Gh3hoFgaS7j7">allowed_runners</code> 扩为 <code data-page-node-id="664RfIEuv0b0EocKjPR6sY">[pytest, matcheval]</code>；
+或直接新增一台 <code data-page-node-id="VM7C8dRiFxotBGeHPfCltk">privahigh-anaconda</code> 执行机（推荐，避免影响既有执行机语义）。
+Environment 对这两步<b data-page-node-id="DadDNluJAhNOw7lB6ytyyB">无实际依赖</b>（功能走进程内 TestClient，视觉是离线评估），可沿用 <code data-page-node-id="F6k9h1FfhweVoaaWBPnSX9">offline-eval</code>。
+</div>
+
+<h2 data-page-node-id="TY3fzSBiTozGNI9i4wfAj4">6. 现在需要你做的两件事</h2>
+
+<div class="note ok" data-page-node-id="URhLGxnUrjlwfWDA24BRKx">
+<b data-page-node-id="1ksct4OMPwOsWrGdGJUuWW">① 启动游戏（你说你来）</b>
+<ol data-page-node-id="3K7SUN8sRNU31ug6WO8Rgc">
+  <li data-page-node-id="qGz9Gs0FOOIBr738o3Im4P">运行 <code data-page-node-id="Mvwqqi1gOqYtVllWtQMIxy">F:\Colyseus_SDET_Project\build\windows\PrivaHigh.exe</code>（它会自动拉起自带后端）。</li>
+  <li data-page-node-id="5tERRUw1GRmBcyYV7iTGwJ">进入游戏后，<b data-page-node-id="7BhXRDwcHRsZu5nLmOeqEK">在「设置」里把分辨率定为 1920×1080</b>，并保持窗口不被最小化。</li>
+  <li data-page-node-id="qYuQ6O7zFxyPcBNnFVOnWz">告诉我「游戏已启动」，我会先跑 <code data-page-node-id="VPVgOmdVCgQKVvclJfU7ZI">capture.py list --filter PrivaHigh</code> 核对窗口与分辨率，再开始采集。</li>
+</ol>
+你也可以自己按 §3.2 的命令采集；但由我来做更省事，也能当场核对裁剪坐标。
+</div>
+
+<div class="note" data-page-node-id="1xM1vLGG4RB75BFhHXcdg2">
+<b data-page-node-id="zxwP21BFFafRckl7nFOztz">② 授权 §4 的 4 项登记改动</b>
+确认后我就动手（只动白名单与默认路径，不碰算法与业务脚本）。
+</div>
+
+<h2 data-page-node-id="GpQfSeLGHAIFZwH3Y9h9lc">7. 本轮已做 / 未做</h2>
+<h4 data-page-node-id="iURgHUQxOJTziZlLbqQtE0">已做（均为只读或工作区内新建工具）</h4>
+<ul data-page-node-id="qf0Fz26VE89VYTp9jQeLMF">
+  <li data-page-node-id="GfSHDb4DEv02DS6HXVG5bL">socket 直连复测端口，更正此前 netstat 误判。</li>
+  <li data-page-node-id="Hza46MYzKqRbCSHGAblREv">核对 PrivaHigh 后端测试可运行性：<code data-page-node-id="kIZGB6aftePBSlSajdHovV">--collect-only</code> 收集 <b data-page-node-id="QcTmZDfEejMiGqrLmXcZwj">49 条</b>、零错误；确认 <code data-page-node-id="Izd8NiMZhvd9iRzUL0FqkS">anaconda</code> 依赖满足其 requirements 区间。</li>
+  <li data-page-node-id="WKsDjFvvYDQ4vZhjNEmWcx">读取 <code data-page-node-id="cGFRV6nYBFsBYLmddUxW7A">Main.uxml</code>，据此规划 7 个场景 / 16 个模板与命名；设计零逻辑改动的真值方案。</li>
+  <li data-page-node-id="S3DzsKDzXQqjD5M2r0TAzN">新建并自检采集工具 <code data-page-node-id="CFnTR8zHIwLhlBopmpww5t">F:\测试平台\_real_asset_capture\capture.py</code>（<code data-page-node-id="32eYAFk4EuiyDAdLvicV5J">list</code>/<code data-page-node-id="gRjqW45OYpgKfSPx3Z4uAS">shot</code>/<code data-page-node-id="weHAIzY9VEUsYDr8mw6kEs">crop</code>/<code data-page-node-id="WEFyN8rbSXC3dw8ngzDpoI">timestamp</code>）。</li>
+</ul>
+<h4 data-page-node-id="IZ1ECR7RvkUuthnsAqqJt9">未做（等你授权/启动）</h4>
+<ul data-page-node-id="R4ml0sgySmzc9P5NFYqb6W">
+  <li data-page-node-id="rtFotgzGWzCa1wCFQkKbou">未执行任何测试（功能评估只做了 <code data-page-node-id="468WtlP5BK6SJ6Jzik99yL">--collect-only</code>，未运行用例）。</li>
+  <li data-page-node-id="No7hiZvCdBQzl7VUETKLyO">未启动游戏、未抓取任何屏幕内容。</li>
+  <li data-page-node-id="CTEjhkiiuJAkWspfYW9Sb5">未创建/修改任何平台配置或代码（§4 的 4 项均未动手）。</li>
+  <li data-page-node-id="xxcdJovHbTvXjxz1pBuBtl">未创建任何 PlanRun / Job，未发起压测。</li>
+</ul>
+
+<footer data-page-node-id="YMBl77XQFiSqVDXhQGT9c2">
+PrivaHigh 真实资产采集清单 · 路线 A · 生成于 2026-09-28 ·
+下一步：你启动 PrivaHigh 并确认 §4 登记授权 → 我采集素材 → 录入配置 → 预检 → 逐项确认后执行首轮计划
+</footer>
+
+</div>
+</body>
+</html>

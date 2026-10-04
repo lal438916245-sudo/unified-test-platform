@@ -1,0 +1,90 @@
+# ============================================================
+# 统一游戏测试平台 —— Git 卫生规则
+# 仓库根 = platform/     （git init 于本目录）
+#
+# 本文件必须在 `git init` 之前定稿：
+#   若不先排除，`git add .` 会把 321MB / 8445 文件的 .venv-locust、
+#   真实运行库 platform/data/db.sqlite、39 个历史报告目录一次性写进
+#   Git 历史，之后无法简单清除。
+# ============================================================
+
+# ---------- 1. 虚拟环境（.venv-locust 约 321MB / 8445 文件）----------
+.venv/
+.venv-locust/
+venv/
+env/
+ENV/
+
+# ---------- 2. 运行数据：真实库 / 日志 / 报告产物 ----------
+# 真实运行库、PlanRun/Job 日志、report.json 与 heatmap 等产物全部在此
+data/
+data_verify_*/
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.log
+logs/
+
+# CI 专用隔离数据目录与落盘日志
+.ci-data/
+_ci_out/
+
+# ---------- 3. 备份 / 基线快照（含本机绝对路径，仅本机使用）----------
+_v0.2_backup_*/
+_v0.2_current/
+_v0.2_baseline/
+_v0.2_backup_dir
+_v0.2_change_ts
+# 上一轮会话遗留的内部记账文件（点前缀，非项目内容）
+.v0.2_backup_dir
+.v0.2_change_ts
+.v0.2_*
+# 由 dump_real_input.py 从本机真实库导出，内容含本机绝对路径与真实实体
+_v0.3_baseline/fe_input.json
+_v0.3_baseline/legacy_steps.json
+*.bak-*
+*.tmp
+
+# ---------- 4. Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# ---------- 5. Node ----------
+node_modules/
+npm-debug.log*
+
+# ---------- 6. IDE / 编辑器 / 系统临时文件 ----------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ---------- 7. 凭据：严禁入库 ----------
+# 平台自身只登记「凭据引用名」，不保存明文；此处再兜一层，防误提交
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials*

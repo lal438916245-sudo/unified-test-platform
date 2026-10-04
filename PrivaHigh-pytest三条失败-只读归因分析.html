@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="vDVJFDKGw9NxOQ1h18YjFk">
+<head data-page-node-id="pm4HHDTAdH7igK74DgiTPY">
+<meta charset="UTF-8" data-page-node-id="OVX6sADpUy3Kn23U42sjyR">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="xXvjAF8MgRzvKAbwEmmV0P">
+<title>PrivaHigh 三条 pytest 失败 · 只读归因分析</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#171c22; --panel2:#1d232b; --line:#2a323c;
+    --fg:#e6ebf1; --muted:#93a1b1; --accent:#4c8dff; --ok:#38b48b;
+    --warn:#e0a83a; --bad:#e0605e; --chip:#232c36;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:36px 24px 72px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:28px}
+  h1{font-size:25px;margin:0 0 8px}
+  h1 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+  h2{font-size:17px;margin:30px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:15px;margin:18px 0 8px;color:#cdd7e3}
+  h4{font-size:14px;margin:14px 0 6px;color:#cdd7e3}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#cdd7e3;font-weight:600;white-space:nowrap}
+  code{background:#11161c;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#9fd0ff}
+  pre{background:#11161c;border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+    overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#c7d3e0}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:1px 9px;font-size:12px;color:var(--muted);margin:2px 3px 2px 0}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  .pass{color:var(--ok);font-weight:600}
+  ul{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  .note{border-left:3px solid var(--warn);background:#1c1a13;padding:10px 14px;border-radius:6px;margin:10px 0}
+  .note.ok{border-color:var(--ok);background:#111c18}
+  .note.bad{border-color:var(--bad);background:#1c1313}
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body data-page-node-id="0jsEZw4mVQY2dWnqOIpScq">
+<div class="wrap" data-page-node-id="8uDBI4oaNQctlDPRUtJzLb">
+
+<header data-page-node-id="pOc5UasiFksJEUfbTaRZVk">
+  <h1 data-page-node-id="LDzCxYPfsUMv6CyU9AgMBd">PrivaHigh 三条 pytest 失败 <span class="sub" data-page-node-id="PDOS0q6yM6HRrX2bIY9QdK">只读归因分析</span></h1>
+  <p class="muted" data-page-node-id="A1C9oeKfsWWyxphVySi3V4">分析对象：PlanRun #20 / Job #24（46 passed · 3 failed · 0 errors · 0 skipped）。
+  本轮<b data-page-node-id="a5c9BojCJPOB9KPRouur8y">仅阅读源码与既有产物</b>，未修改任何代码、测试、业务逻辑、Runner、数据库或资产，未重新执行任何测试。</p>
+  <div data-page-node-id="IM8WeDICuNL4tZdQFyce1x">
+    <span class="chip" data-page-node-id="zi4eaRwWHM3ou7wOfqWwxP">只读分析</span>
+    <span class="chip" data-page-node-id="qjQBqTewUcm5SUCyGRqEXN">未执行任何测试</span>
+    <span class="chip" data-page-node-id="M1by3cLDS4cJR6w08sztgs">未修改任何文件</span>
+  </div>
+</header>
+
+<div class="note ok" data-page-node-id="b4U0uxeGZ5WmGaICmd5uE7">
+<b data-page-node-id="YNmAI3ZLL4vPdaLDezzKuN">结论先给</b>：三条失败<b data-page-node-id="gtD43JGX2l9LgV6lmKcphG">同源</b>，根因是 <b data-page-node-id="oA2bmEQ6bqzkprCm9qAR9S">PrivaHigh 事件池由 3 个扩充到 10 个</b>，
+而这三个测试把「<code data-page-node-id="Tfz4aNbhLgn2tTtsU2jPSZ">(seed + semester) % len(choices)</code> 的除数写死成 3」——
+<code data-page-node-id="qwB1TBCUD0APZC1r2vP0AQ">seed=3, semester=2</code> 在除数 10 下命中 index 5「实验设备老化」，不再是 index 2「骨干教师去留」。
+<b data-page-node-id="iY9Roe1NitVLiPig1DgNKq">业务代码无 Bug，平台无关</b>，属<b data-page-node-id="yWXdscEbNj27Nb6qKmZsXR">测试与当前业务版本不一致</b>。
+</div>
+
+<h2 data-page-node-id="Ktn7FCr0UWyuNrERgErHYY">1. 三个失败概览</h2>
+<table data-page-node-id="is0yibM3hdPBVeywkYF0u9">
+  <thead data-page-node-id="M99ljh6FQyj8EBbEPZYHLM"><tr data-page-node-id="8fXlyoOCmH9fTGhndKWXUY"><th data-page-node-id="8lLCbUX7KfbTdo2WVH3UI0">测试</th><th data-page-node-id="bQcCQS7KdMV7Rf0BcAyBSj">失败现象</th><th data-page-node-id="AzCyaHVcNeijtr2Qsq6x50">直接原因</th><th data-page-node-id="lTLKOFtACWKDEaMCDT6ClS">初步归因</th></tr></thead>
+  <tbody data-page-node-id="hYnr6xBhQvkzCpDlyxsnEU">
+    <tr data-page-node-id="H6TVxwtwWoo2BSNNPyicUF">
+      <td data-page-node-id="LhtDuFOmMdGRdIbUZvs0bL"><code data-page-node-id="kWXM1GXEz79rGKpzgNs8PF">test_transition_dismisses_a_senior_teacher</code><br data-page-node-id="BfpGKluBulsDXRFpbHKHSS"><span class="muted" data-page-node-id="W9Buruc94ssi4N3q7KOcOU">test_simulation.py:177</span></td>
+      <td data-page-node-id="2214gZgoyVkFOD4L0yCKeF"><code data-page-node-id="0u5xJMmRLsaCpckbEI3pOK">AssertionError: assert '实验设备老化' == '骨干教师去留'</code></td>
+      <td data-page-node-id="xxkF1kbRZZDbsqNvOvHh82"><code data-page-node-id="vBu09a5XWQPxMzDADyioGR">_event_for(state)</code> 返回了 index 5「实验设备老化」，而测试断言它是「骨干教师去留」</td>
+      <td data-page-node-id="0y2cEG5GuUlpelDeN4FoJq">测试写死事件身份 + 事件池除数变化</td>
+    </tr>
+    <tr data-page-node-id="GZIOXmYqTYP5TADvtgrF1v">
+      <td data-page-node-id="ysBDDG3sMoEmI848FvCcRJ"><code data-page-node-id="B7rRoEnwVdRudRu8GAIs75">test_transition_without_senior_teacher_dismisses_regular</code><br data-page-node-id="aD6111kCNHyH1bOEPPfa2f"><span class="muted" data-page-node-id="Rq1ewbR6Ig2ysbWHMsHzgQ">test_simulation.py:195</span></td>
+      <td data-page-node-id="mIdO5KAuhHNFh7Vx5M34gb"><code data-page-node-id="FHRwbq14r3RD6m5nsJhb1x">SimulationError: 未知事件选项。</code>（<code data-page-node-id="pyo3TAu5jwGRBEd0IpbJ7q">app/simulation.py:360</code>）</td>
+      <td data-page-node-id="M3UpHFPNpd8w1mzoVsFX6o">拿「实验设备老化」的 event 去解析 option <code data-page-node-id="mTsqMRfsuYQ94lWphq2UlQ">"transition"</code>，而该事件的选项只有 <code data-page-node-id="SqHwMVq7e8tE1LtnZkUhN5">buy</code>/<code data-page-node-id="EHxjdhxaz0UP572O6yU1UB">cut</code></td>
+      <td data-page-node-id="CjpmEukWwfdqq3QXXGOgbK">同上（连锁失败）</td>
+    </tr>
+    <tr data-page-node-id="PACSBZ1FHcEAUqZbNxHfnx">
+      <td data-page-node-id="fY46cQ4GYgPP3UBOtEgSsk"><code data-page-node-id="PdzJ6VJyRnbEYdD9AAtCrG">test_transition_with_no_teachers_is_noop</code><br data-page-node-id="sMuUycRoxhjEuBkpNYGCKA"><span class="muted" data-page-node-id="Q3cA8DwXKBOqi5VNOTL04I">test_simulation.py:209</span></td>
+      <td data-page-node-id="bOiCNj9XEMr8m2fDrlGOBQ"><code data-page-node-id="0j1wYOWmBHJclGCM4kEdg5">SimulationError: 未知事件选项。</code>（<code data-page-node-id="sD4DY9GNOXQaY4YVLlQ7gu">app/simulation.py:360</code>）</td>
+      <td data-page-node-id="7AF5GJEaothDmMNM9JveKs">同上，完全相同</td>
+      <td data-page-node-id="DprU9a6m9qbnPSb7JBl4H9">同上（连锁失败）</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="Bv5y4XlSUX07fbZjiRQzWi">2. 相关源码调用链</h2>
+
+<h3 data-page-node-id="3hjQYDm5AAxILWU9YMpF4W">2.1 生产代码路径（事件从哪来）</h3>
+<pre data-page-node-id="dmA0rTbC3C9CnxiobVfvqP">advance_semester(state, version)                 app/simulation.py:429
+  └─ result["pending_events"] = [_event_for(result)]     app/simulation.py:520
+       └─ _event_for(state)                              app/simulation.py:276
+            └─ choices[(state["seed"] + state["semester"]) % len(choices)]   ← app/simulation.py:349</pre>
+
+<h3 data-page-node-id="4gakLcPFdfTePLCjfquSNo">2.2 失败测试 #1 的路径</h3>
+<pre data-page-node-id="celiL4mRcaIeiBrrJL1uom">test_transition_dismisses_a_senior_teacher        tests/test_simulation.py:172
+  ├─ create_game("致远高中", seed=3)                        :174   → state["seed"] = 3
+  ├─ state["semester"] = 2                                 :175
+  ├─ _event_for(state)                                     :176   （直接调用私有函数）
+  │     └─ choices[(3 + 2) % len(choices)]
+  │            len(choices) = 10（当前）→ choices[5] → 「实验设备老化」
+  │            len(choices) = 3（测试编写时）→ choices[2] → 「骨干教师去留」
+  └─ assert event["title"] == "骨干教师去留"                :177   ✗ AssertionError</pre>
+
+<h3 data-page-node-id="Wtl3LN1J0us9Kz19OUAL9e">2.3 失败测试 #2 / #3 的路径</h3>
+<pre data-page-node-id="SDIit3WW2W1v200a5auBuM">test_transition_without_senior_teacher_dismisses_regular    tests/test_simulation.py:187
+test_transition_with_no_teachers_is_noop                    tests/test_simulation.py:202
+  ├─ create_game("致远高中", seed=3) + semester = 2
+  ├─ _event_for(state)                       :193 / :207   → 「实验设备老化」（含 id="lab-2"）
+  ├─ state["pending_events"] = [event]       :194 / :208
+  └─ resolve_event(state, version, event["id"], "transition")   :195 / :209
+        └─ resolve_event(...)                             app/simulation.py:352
+             ├─ event = next(e for e in pending_events if e["id"] == event_id)   :355  ✓ 命中 lab-2
+             ├─ option = next(o for o in event["options"] if o["id"] == "transition")  :358
+             │      实验设备老化的 options = ["buy", "cut"]  →  返回 None
+             └─ raise SimulationError("未知事件选项。")                     :360  ✗</pre>
+
+<h2 data-page-node-id="SVPQ8wdVcB9prf3XgSMaX3">3. 当前事件池</h2>
+<p data-page-node-id="goZ25EORPWmXzPdZE5hreq">事件池唯一存在于 <code data-page-node-id="TeTTdFDZEHCrdU3l8JaGeD">app/simulation.py:277–348</code> 的 <code data-page-node-id="OpCDLssI3K84LuVp3Bkm6h">_event_for</code> 内，共 <b data-page-node-id="Syr21CjaQ3EF24ISIBv0IY">10 条</b>，顺序如下：</p>
+<table data-page-node-id="0HzCD5EKLBVKsYiRfdwxJ5">
+  <thead data-page-node-id="FWSlBGXuHNZOifK6DeQv95"><tr data-page-node-id="aqynoeosIUrPCFEVaDB4EQ"><th data-page-node-id="WMdUnuJRRyuSR81qizOwxZ">index</th><th data-page-node-id="adyFfenog7S64kl61LodND">事件</th><th data-page-node-id="AO2Qms6P80AOzvMDPzo0jh">是否存在</th><th data-page-node-id="1Rqfyft6tbE8EmGRi8SUEb">options（含特殊标记）</th><th data-page-node-id="g7DMQFH2CAl8JUPcvZLh4p">证据位置</th></tr></thead>
+  <tbody data-page-node-id="AhKCKLYP57aPypPJQqfYCF">
+    <tr data-page-node-id="PZ6IwC0bGYpRmLzcRt9E9k"><td data-page-node-id="MEGPXOy0mfJpFC07Ag2Vgr">0</td><td data-page-node-id="PvbLQecrGSCZ6d5TUe7eBY">晚自习突发停电</td><td data-page-node-id="Tn48hH07E2T2tVLyEYKpRK">存在</td><td data-page-node-id="ajpa2O7VqBv9NhjQgfKwzA"><code data-page-node-id="fgQptvrrJpbHUt04aaL0LY">generator</code> / <code data-page-node-id="OlR1I8XkJ73uAYUaO3R6rC">reschedule</code></td><td data-page-node-id="FXNfNp2jzhGmTwnEddU9Lu"><code data-page-node-id="fNDMC8rRyzbigjZVpAXJjs">simulation.py:279</code></td></tr>
+    <tr data-page-node-id="tlmpb2tm57LqzUI5YONVFL"><td data-page-node-id="vsg1TrTyR4fRVS5KRdNCWf">1</td><td data-page-node-id="1oCh7UziNcJY08L1oDo8Lq">考试压力反馈</td><td data-page-node-id="veXYmjLFAblhj9lR6tDEh7">存在</td><td data-page-node-id="jN90uPLhHVj3i2I6ZzuOHi"><code data-page-node-id="8mQ7lHsQdZm4Rn83TAGLdk">workshop</code> / <code data-page-node-id="OCcsiEEJhO4I9iEMUNOhrR">continue</code></td><td data-page-node-id="tiSrrx621GkAktOADKdFPc"><code data-page-node-id="SDGRwTA9xgVhdrjxt03Vbr">simulation.py:286</code></td></tr>
+    <tr data-page-node-id="avRnDdvcSLHOJbsU6fkJ0m"><td data-page-node-id="lf9AyVsiRnjh3bOkr3Vh7Y"><b data-page-node-id="SI8S1UD7EekXwRizyTYdIB">2</b></td><td data-page-node-id="Q8b0wXIL4saYkZUPO6ZEIP"><b data-page-node-id="j0g5T2BshK7SjySVev9DOh">骨干教师去留</b></td><td data-page-node-id="vhdsFewiqAYDnADH57qg1Q"><b data-page-node-id="xxM2WipNeMnuGBi0PXFVY7">存在</b></td><td data-page-node-id="3BgBrSkDIr1hPVOt89Npff"><code data-page-node-id="F8KyPEw0ta6eXnMrRn98x6">retain</code> / <b data-page-node-id="0NmsiA7H6LX4nhUq4XaHAQ"><code data-page-node-id="fbTQ6caG6LOInq1eiuKXw4">transition</code></b>（<code data-page-node-id="BSglQGEUrWH0IwxL0SoeMO">dismiss_teacher=True</code>）</td><td data-page-node-id="o42A5Y2JKwRjDtd5op1yBH"><code data-page-node-id="v5ZwoOq2rfgSxTjQzxxOIc">simulation.py:293</code></td></tr>
+    <tr data-page-node-id="2ncIDwmJOMgmLXyoODTR5C"><td data-page-node-id="lw8TRGUGHfqybsWnFqv0kr">3</td><td data-page-node-id="mr2Rv68poEGwCRh6FNO52h">食堂卫生突击检查</td><td data-page-node-id="42FXpFOVriVtmFaoy3EtWQ">存在</td><td data-page-node-id="J2a2EkAU5nLy1TGxF0Ouw7"><code data-page-node-id="nJipfyYeqNyTzJ6Lq8ug3G">renovate</code> / <code data-page-node-id="WUfDjG27iqwSAUpNrhJBgI">patch</code></td><td data-page-node-id="wRGtbKPd9rux2MF4Rec2Cu"><code data-page-node-id="YzwHP9IjFketVxermXXbtY">simulation.py:300</code></td></tr>
+    <tr data-page-node-id="pWPs86LWsF7Hpqk9G2XM0t"><td data-page-node-id="OahEy6I75vsObHDzZA9fpH">4</td><td data-page-node-id="djIKmD1366FYGiMPhGJyRw">流感季节来袭</td><td data-page-node-id="4AUVuFFIpislBq0E4kERb8">存在</td><td data-page-node-id="kXTZcfWrM7VMYxbbrNCSFn"><code data-page-node-id="2HTAn5lLn43IG1iTjuaIls">vaccinate</code> / <code data-page-node-id="WlMCHTu9YzMl4bW5RtQaCT">normal</code></td><td data-page-node-id="HNOUkKLSPHjG6qezf7Ux7d"><code data-page-node-id="KMivstGqRzf9zZDK0YfTwu">simulation.py:307</code></td></tr>
+    <tr data-page-node-id="kjM2ByBQjrnTtC0L1IL3AC"><td data-page-node-id="1YSkYBO2NaHu5DKHJy2B65"><b data-page-node-id="1VxG32QuFPVnJvddatN16L">5</b></td><td data-page-node-id="7EB6oQfENAPwq1S8CAE6mu"><b data-page-node-id="BUedEz7lAHGco3NwzTP9Ye">实验设备老化</b></td><td data-page-node-id="DgGCys688V0eGRjP3iBPZe"><b data-page-node-id="wwBhHMpu9RpUeoqqDksy7O">存在</b></td><td data-page-node-id="ITzCYAcS5FQaXRUYZQv0aQ"><code data-page-node-id="jnx19m6DKVAecWYHO8iPuG">buy</code> / <code data-page-node-id="4wKbN44u0E1GPir5oiiN0B">cut</code></td><td data-page-node-id="MjbKwWtOHtGU5Tg85EW2yS"><code data-page-node-id="oaJaRlNEN8vHqhqapz8Hgp">simulation.py:314</code></td></tr>
+    <tr data-page-node-id="vINpNsiMxCOa1NxWSDUByL"><td data-page-node-id="bT744zfp3ZURin835hqckt">6</td><td data-page-node-id="E4Yupj3K9bDiX3aRsOQoSc">图书馆馆藏陈旧</td><td data-page-node-id="5NGXMJFCYedmTVAxv6uzHz">存在</td><td data-page-node-id="Vi0WLGR9wywHk0p7cQTbA1"><code data-page-node-id="CiAFqqpovfgQPqWLKrAvPu">books</code> / <code data-page-node-id="nRJWO0YevTKMj4Rmv4ChIM">delay</code></td><td data-page-node-id="0NEOQISj3uchsfnW56XHIa"><code data-page-node-id="P2HB9aE3zpIChUuxkpAZJd">simulation.py:321</code></td></tr>
+    <tr data-page-node-id="ssMITomsZMpp0EdkbH5Va6"><td data-page-node-id="PaKmNotMaGW0DJsP36S68S">7</td><td data-page-node-id="eUIXeYSonoafhQYpdTb7Il">体育器材损耗</td><td data-page-node-id="X8enD9kVxR28jCByewQ4Wv">存在</td><td data-page-node-id="aEoTsPt6jj8H4MALJnF4XO"><code data-page-node-id="3TsFpBlS1zzEPcNqQCxW2h">replace</code> / <code data-page-node-id="bNSvZ4WGUnbz0uFuBPmk6J">restrict</code></td><td data-page-node-id="y0r1qX2XyUcThgiEcKXgtH"><code data-page-node-id="Y6CLYd9UmNclxT6lSSapjy">simulation.py:328</code></td></tr>
+    <tr data-page-node-id="Pf5rPnQAk5JMtm2fNmojyd"><td data-page-node-id="q7vW69PEZUPnbQBzykeHEt">8</td><td data-page-node-id="7yDvmyKaJfW7Ej9SWNO2o6">教师培训需求</td><td data-page-node-id="FUAQysit9ldxjFLKS3KJoQ">存在</td><td data-page-node-id="VkmzaJkekwlFzIQHLICSqJ"><code data-page-node-id="9a3o1hnHx4VvJmaPb30CEw">external</code> / <code data-page-node-id="1nyhiNe8EIZw6bF9ghJ1dL">internal</code></td><td data-page-node-id="j4zVpAjXFGR9oxkJfoAmvs"><code data-page-node-id="hzp7Z9pPi1THXdHUJB6wSB">simulation.py:335</code></td></tr>
+    <tr data-page-node-id="GaDugT9Nww8bhlHt7KXtMW"><td data-page-node-id="b9AjOKNxZd3tHLWEg80LGO">9</td><td data-page-node-id="RyDGx9ZdiC2A555rIcDkRk">校园环境老化</td><td data-page-node-id="Rk4XXLaiL3sngFKHVXeoLd">存在</td><td data-page-node-id="caNoNvdta1ddgEylkp5NzN"><code data-page-node-id="bsrxHEbxEJEnQaH3jT3MGM">upgrade</code> / <code data-page-node-id="BuFplzVbfAFEz6z9TBCP9E">postpone</code></td><td data-page-node-id="qSZxxjDccPuM3bRRJw6hOh"><code data-page-node-id="hMSqcZVmjDvjH9x5DAm5nA">simulation.py:342</code></td></tr>
+  </tbody>
+</table>
+
+<div class="note ok" data-page-node-id="B7zygQknsumiFeFMjXXvsq">
+<b data-page-node-id="C07x8kDMfsHVjQlLgPoOQ2">两个关键事实</b>
+<ol data-page-node-id="Y1NYlbEGuy4rHAZsRJmbDz">
+  <li data-page-node-id="PvM9Ertzovm2q6BkWo9AEV"><b data-page-node-id="0dxEMEEUukeYqZPWuqTcVx">「骨干教师去留」仍然存在</b>，且<b data-page-node-id="nDL7TPmeJsY40yYGOU27Qe">仍在 index 2</b> —— 扩充是<b data-page-node-id="4JIJNzlvpRltVA9ADuFSvr">追加</b>在后（indices 3–9），并未重排。</li>
+  <li data-page-node-id="h2UPksoJ0rDuNUzfFFCtiZ"><b data-page-node-id="XP6wwGkXzEf785DkiPOiNf">只有</b>「骨干教师去留」的 <code data-page-node-id="zLRPDHHW2BVLvuwtmD2hBV">transition</code> 选项带 <code data-page-node-id="fRA8ylxpdwuHxZ2TuHQA9E">dismiss_teacher: True</code>（全池唯一）。</li>
+</ol>
+所以坏掉的不是事件位置，而是<b data-page-node-id="nDZdb80U3lbpTbgvxwxkzX">取模的除数</b>：<code data-page-node-id="DGnFJyQcZqBx8XCIs47uNR">% len(choices)</code> 由 <code data-page-node-id="ysHf4HxiHF40ITSUi77x09">%3</code> 变成 <code data-page-node-id="fNX1Q59AJORYAMFFbc7wsy">%10</code>。
+</div>
+
+<h3 data-page-node-id="tNEictR2yQ44HTHaQDsPHD">3.1 事件池曾发生变化的证据</h3>
+<ul data-page-node-id="IcqbChrgnTmOZUfvPK2AMD">
+  <li data-page-node-id="NY41Pm0y066c3Lx4uO0AJV"><b data-page-node-id="7GE3Z82Vlj26HOzoWAohAY">最强证据 —— 测试注释本身</b>：<code data-page-node-id="Fd2Ln9jGuqo6HuP21D5LgW">tests/test_simulation.py:175</code> 写着
+      <code data-page-node-id="gOGuUcBxruSL6CJPUNcESP"># (3+2)%3==2 → 骨干教师去留事件</code>，<b data-page-node-id="GEsRSpDxzvjphMIppISUGJ">字面写死了除数 3</b>。这是测试编写时事件池长度为 3 的直接记录。</li>
+  <li data-page-node-id="2S2EzPszBTG0Ff607d92Zn"><b data-page-node-id="g9zXb1uHhFpC9CHaTt8e6v">产品侧自述</b>：<code data-page-node-id="CriVSE4ffNAmToxlFBwHqN">PrivaHigh/待办事项.md</code> 列有「<b data-page-node-id="azgtYzWD4FfvxBpTcVrHMo">待办2:多增加一些突发事件</b>」，
+      说明扩充突发事件是既定产品方向；而「待办1：内部交接删除一个老师」标注
+      <b data-page-node-id="FboHr0X4Lm6XgsbGjw0yas">已完成（2026-08-22）</b>、实现为「选择『内部交接』时随机解聘一位特级教师」——
+      正对应 index 2 的 <code data-page-node-id="gRMvVP4jk2ytsp94vvQB50">transition</code> + <code data-page-node-id="20G3Yi7WwVoVrtjmjahFtC">dismiss_teacher</code>，说明该事件当时已存在。</li>
+  <li data-page-node-id="7fyq1Qb9Nxqa6FWvXlTmGb">当前池中 indices 3–9 的 7 条事件（食堂检查、流感、实验设备、图书馆、体育器材、教师培训、校园环境）
+      与 index 0–2 的早期三条在命名风格上一致，位置全部在其后 → 与「追加式扩充」吻合。</li>
+  <li data-page-node-id="3Z1JsHuCm8bUKRcEuCnizO"><span class="warn" data-page-node-id="SHpkMi7GkJg0wbFkT1E2Yn">局限</span>：<code data-page-node-id="jL5kSm7voSmG1bIKPz2SxE">PrivaHigh/</code> <b data-page-node-id="m6Fjsurl3Bvz29fNROEsJm">不是 git 仓库</b>（无 <code data-page-node-id="UT7KrlZhBCfiHca4AtK8Th">.git</code>），
+      无法用 <code data-page-node-id="uo3BUR2AA3dq8bLBZ8tz6T">git log</code> 取出精确的变更提交。上述为「注释 + 待办 + 索引位置」三重间接证据，<b data-page-node-id="8jVvrEagOErah7IdL4tApj">未做任何推测性断言</b>。</li>
+</ul>
+
+<h2 data-page-node-id="JDiFRqzBtQ5bz448k0C4TL">4. 随机性分析</h2>
+<table data-page-node-id="2L1PBVBh3AMfhJxrEdHWep">
+  <thead data-page-node-id="vgelsyYaXaRyoJCrqaFPHG"><tr data-page-node-id="F6qFzuYSGwCOsyHvy6c1Pi"><th data-page-node-id="6M7yxh4MUsbVFEJB5FTYXq">问题</th><th data-page-node-id="lU4PTRVHOKrCXcn1QrP0N1">结论</th><th data-page-node-id="nuKx7Erz29oUW9xhwJ9VI0">证据</th></tr></thead>
+  <tbody data-page-node-id="c4RS0F0gDtuimWl0MAhvYH">
+    <tr data-page-node-id="YIrpfZSKYqqCe7Iyh65rez"><td data-page-node-id="1EzbFdBVLjiNFd842od7ew">是否存在随机事件？</td><td data-page-node-id="DTYDBQsVNRq31EMEeBHm8L"><b data-page-node-id="pECjOdmkKWXrfwxnBDHibc">实际是确定性的</b></td>
+      <td data-page-node-id="eLHFisfhj6iWjh1mceCO0M">事件选择为 <code data-page-node-id="0B2vSEQcGnFOuHA6LYThrB">choices[(seed + semester) % len(choices)]</code>（<code data-page-node-id="ne7jVkyg1b6IrPlfGIOm5T">:349</code>），纯算术、无 <code data-page-node-id="OWu4PyOQlOHEkBTQsZ9OKC">random</code> 参与</td></tr>
+    <tr data-page-node-id="ozNx3rjFYthWPhJV7Xj2ul"><td data-page-node-id="s3cwHaDwyqFXBHM9HEq1JE">三个测试是否控制随机性？</td><td data-page-node-id="k3WZ1o3zoHpPiFjn05zfPJ"><b data-page-node-id="XNAZZFVstZ3205IKFtVo7Z">是（已固定 seed）</b></td>
+      <td data-page-node-id="lFYoVmbiznnl2Cqd7kJpNV">三条均调用 <code data-page-node-id="vFUxLIhrAq2eCJQmwPoTib">create_game("致远高中", seed=3)</code>，并显式设定 <code data-page-node-id="mtd2pk0gkwEobErMT2zCLn">state["semester"] = 2</code></td></tr>
+    <tr data-page-node-id="x0WYXoGNDIxwD3ENtRSWzq"><td data-page-node-id="Y1dgaMBjwiyEiP8EIZoFRU">是否固定 seed？</td><td data-page-node-id="NRcmIIhrBH8iRpokjJYxNW"><b data-page-node-id="brvwqu7BUDB049kgNAamwn">是</b>，<code data-page-node-id="3lVBBc3YrzaS4Y0bHhLxmF">seed=3</code></td><td data-page-node-id="DuHSA03Dj8x0rODoMTTHqu"><code data-page-node-id="OHvVPiIHqEM91pvEtEIxw0">tests/test_simulation.py:174 / 189 / 204</code></td></tr>
+    <tr data-page-node-id="d4Sv5BYCuF0c68FV58X8jY"><td data-page-node-id="RdhM06aowMW5galebGkf19">是否 mock 随机事件？</td><td data-page-node-id="k42AHuBgq3IIjdr6Ox3CpO"><b data-page-node-id="mTOUBnhzm1Aao7VXNBQ7dn">否</b></td><td data-page-node-id="HpHrkbDIOhcdnqyNUIuGeV">无 mock / monkeypatch；改为直接调用私有 <code data-page-node-id="6uOde4GUeuiuBADbmP279t">_event_for</code> 并手工塞进 <code data-page-node-id="XFRAhdPEiAXcbFm8qguerS">pending_events</code></td></tr>
+    <tr data-page-node-id="TibimDqJHrF4hV0FFVxlsp"><td data-page-node-id="VTBF3hKfnrgG1w7GA26h0v">是否有 fixture 控制？</td><td data-page-node-id="HtG5GPzhxKm6ySAm4hHFKa"><b data-page-node-id="MjYNBQVT4ZsscYyzsoNdy4">否</b></td><td data-page-node-id="nQ4jeZEBwfpeyHNEjCdAeu"><code data-page-node-id="nU8a0aJFAZc838UV6g0aJJ">test_simulation.py</code> 无 <code data-page-node-id="Ds0dTAyGwh2vnMPNx75Qvb">conftest.py</code> 夹具、无 fixture 定义（该文件仅一个 <code data-page-node-id="D3DahkybWjXjY6qDlZkUiM">_settle</code> 辅助函数）</td></tr>
+    <tr data-page-node-id="O6JMAPNOZ79L6WiCis3WoP"><td data-page-node-id="bq2BIjjn5jwuLywhA08UTG">为什么本次运行得到「实验设备老化」？</td><td data-page-node-id="29DAbIvkxxZvPRQf7m89hn"><b data-page-node-id="Yh0c7Ofk3kJeKm0Rd0P42Q">必然结果</b></td>
+      <td data-page-node-id="jE6Q8A92Rn5ZOtVCzdy1Um"><code data-page-node-id="gwIwx4fYLkHNuVHzqvNiHh">(3 + 2) % 10 = 5</code> → <code data-page-node-id="3A6rFrVREN307SHBfaD2gN">choices[5] = 实验设备老化</code>。
+          由于全程确定性，<b data-page-node-id="1RmMKfAFU78Urz4gq2yrIC">重跑必然同样失败</b>——不是随机抖动、不是 flaky</td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="27wyzr7bY4TkxehNTIxx0P">补充：<code data-page-node-id="R8rrzLag7oJhJpChXuLC1X">app/simulation.py:4</code> 确实 <code data-page-node-id="Cm7VV32KfbIFzCwu9zwHeR">import random</code>，但仅用于
+①<code data-page-node-id="JK2URZmDcJqbpm5dhlONxk">create_game</code> 未指定 seed 时生成随机种子（<code data-page-node-id="ydVkZYO8edCtQ4dcWPfFEv">:148</code>）、②学生天赋/活力偏斜分布（<code data-page-node-id="c8vqMNy5AkCBusiTV1fXtT">:108–120</code>）、
+③解聘时随机挑一位教师（<code data-page-node-id="Cle7QP9xiWgpow9rbJ82NM">:370 random.choice(candidates)</code>）。<b data-page-node-id="sN6ACG27VaFLod9FYn8UlC">事件选择本身不使用随机</b>，
+且这三条测试也都显式传了 <code data-page-node-id="acMTPcV8bIT9BhkF8w9R5u">seed</code>，第 ③ 处也仅影响"解聘谁"、不影响"是否有教师被解聘"的断言。</p>
+
+<h2 data-page-node-id="0gHmykSOXEtPHlnMfHVFXL">5. 根因判定</h2>
+
+<h3 data-page-node-id="zsI3jRRDZX0N74kPpF5o8d">5.1 测试设计问题 —— <b data-page-node-id="H3YL4vjFs6qjxVtZSIb0cD">是</b></h3>
+<table data-page-node-id="syYB8ASwpp8pBx0LHaScHa">
+  <thead data-page-node-id="70B3pW269DcmLsJPe61E0l"><tr data-page-node-id="3sMYKBJYBrG8u1mfclhqVX"><th data-page-node-id="42g7Ut0AmAFcDasDKvkR27">#</th><th data-page-node-id="AXPD1sPBj7i570dSg9oobB">问题</th><th data-page-node-id="oJ5yxtr44TkQHrYV6nLYCc">具体位置与证据</th></tr></thead>
+  <tbody data-page-node-id="8SH83jHaW17P4nwUPyHcEm">
+    <tr data-page-node-id="SbPHWErQMWt3will6NiPil"><td data-page-node-id="nHwMV01jy0JK04FKBtRECc">1</td><td data-page-node-id="TMOur8bizYWdIGEIism0bd"><b data-page-node-id="breCreMWVEPdhTcsxm27xG">把取模除数写死</b></td>
+      <td data-page-node-id="O5mzyvDeL4cIF32LwGqkYB"><code data-page-node-id="Z768FWqNkxwUu6xZFNu7NG">tests/test_simulation.py:175</code> 注释 <code data-page-node-id="oVlgsbEV11BU1xchT6qpvl"># (3+2)%3==2 → 骨干教师去留事件</code> —— 字面写死 <code data-page-node-id="JF3NHbIJUGYRSGFQ1ezGZj">len(choices)==3</code></td></tr>
+    <tr data-page-node-id="cG71qsK4EJh4YIYQYhiGpS"><td data-page-node-id="NmMTpMSNfuB7KnHMH1mZEe">2</td><td data-page-node-id="hXhQNl6SjkbkYBYKGbpHl3"><b data-page-node-id="RuHob1SwSCFf06vxSUCjbw">把随机/派生事件硬编码成固定标题</b></td>
+      <td data-page-node-id="tD3JLP4loh7errvRzxje0E"><code data-page-node-id="Q3k0AHBxO030kQDbvur6kP">:177</code> <code data-page-node-id="IlShZ4qLVu1bUmHq6KtaCa">assert event["title"] == "骨干教师去留"</code></td></tr>
+    <tr data-page-node-id="jGWwwjNvbaCVjHmPVtj29H"><td data-page-node-id="2pWvBO25cydN9xy3j8cBaj">3</td><td data-page-node-id="nTxfGT9a8OXSMO390skE3O"><b data-page-node-id="l8k47hkLaDROBdE3CUw0eU">硬编码 option id，且未校验事件身份</b></td>
+      <td data-page-node-id="WHWIQkQzms9oJgHAczCyQc"><code data-page-node-id="8FushbCAGvDNenVAIY7Qtb">:181 / :195 / :209</code> 直接传 <code data-page-node-id="K5OKtC1Xt09Rn7qkI6hzgH">"transition"</code>；该 id 全池仅存在于「骨干教师去留」</td></tr>
+    <tr data-page-node-id="CVWKQbnmQwevaEQe72j1k4"><td data-page-node-id="b52LplLJoHxiiilGwqU5Jd">4</td><td data-page-node-id="Nqw59dEkuWCIWP1DL2cN2I"><b data-page-node-id="BJ6fi35pSWU2swah4rMF0x">依赖私有 API</b></td>
+      <td data-page-node-id="tooQDHvd0DnjvAt9MXI73d"><code data-page-node-id="vAzyR3TfwUQnQ9n8jk2rDH">:173 / :188 / :203</code> <code data-page-node-id="z1MEAes3wxE9n5xy5XgAln">from app.simulation import _event_for</code> —— 下划线私有函数，非稳定契约</td></tr>
+    <tr data-page-node-id="XjRYdB4yCclDolDWWrPULs"><td data-page-node-id="XnsRIlKfHQEYAZFcttMfcb">5</td><td data-page-node-id="6S4Rd8IyQywrYaARMQWshO"><b data-page-node-id="fobyZc9EGf9Wp7JXAT7oNP">测试依赖事件池具体内容/长度</b></td>
+      <td data-page-node-id="psHqI2Yl7UEtRy0jLbQ5qp">事件池由 3 扩到 10 后立即失效，说明断言与「池长度」耦合</td></tr>
+    <tr data-page-node-id="rWn3Of0vSLrZWm7Q4xlOXz"><td data-page-node-id="PIjOhzpfnGTyBOt22fJCRN">6</td><td data-page-node-id="eJamYe7OGtHWcTjrt9HXIh"><b data-page-node-id="Uvbg3LDsDLZLyDJrOBCRys">断言与当前业务规则不一致</b></td>
+      <td data-page-node-id="saq2ulpXpaAOaNeOkFtuXa">测试隐含假设「<code data-page-node-id="11dXS1nrGCHA7j72YyRCyJ">(seed=3, semester=2)</code> 必然得到骨干教师去留」，这在当前 <code data-page-node-id="3n2Q2xzqVuH88RO49hDrX6">%10</code> 规则下不成立</td></tr>
+  </tbody>
+</table>
+<div class="note ok" data-page-node-id="xYDjtcHCZIOUKWHNevzO6W">
+<b data-page-node-id="Qm1Xruql96TS7lih3FSDhE">本仓库已自带"正确写法"的示范</b>：同文件中的通过用例采用<b data-page-node-id="tQqsYEXXepgQe4cJsWTrYr">与事件身份无关</b>的写法 ——
+<pre data-page-node-id="SHRWAtQ8vBIzFMVpnDu040">event = state["pending_events"][0]
+zero_cost = next(option for option in event["options"] if option["cost"] == 0)
+state = resolve_event(state, state["version"], event["id"], zero_cost["id"])</pre>
+见 <code data-page-node-id="rhkaFlCgmhDn3wCHjAe0rH">tests/test_simulation.py:59-61</code>、<code data-page-node-id="hPT6B19tReOXj5Ld4rQQLB">:73-75</code>、<code data-page-node-id="sBTs31ozc62E4Kye4qMHUC">:96-98</code>、<code data-page-node-id="9QCsczS9fGeYtmWIBzRMX0">:110-112</code>（这些用例全部通过）。
+它们<b data-page-node-id="nDh7F9GGzMYBbvz0a3wxaI">不关心抽到哪个事件</b>，因此对事件池扩充免疫 —— 与三条失败用例形成鲜明对照。
+</div>
+
+<h3 data-page-node-id="Gz67BBSeQIrLFFlKwHBih4">5.2 业务代码问题 —— <b data-page-node-id="aulYAXPATKjTraGvuMdJiu">否</b>（无证据）</h3>
+<table data-page-node-id="KQrFBCek3qBeDEUPBgZJAc">
+  <thead data-page-node-id="wLxAdpB03GboDOb1DB9bq8"><tr data-page-node-id="6i5149sR28VCbcYoIxR7ki"><th data-page-node-id="k1PggY6NUwg0e2p3XqUn3U">检查项</th><th data-page-node-id="lH9TPR9J6OjDTiXkij4tcI">结论</th><th data-page-node-id="UrHeQLJYD967LODK6uOILY">证据</th></tr></thead>
+  <tbody data-page-node-id="Xwk6B2qHgLwehJC7R5UFkF">
+    <tr data-page-node-id="th6bgWaWLOsGy1osNgXF3G"><td data-page-node-id="WBUR9EEGOF6JuxTu5bT2lN"><code data-page-node-id="FhhqpNkhoOzwuDEk45X2i6">resolve_event</code> 是否正确处理所有合法事件</td><td data-page-node-id="3lSIqKSGAdfPpE34jCSJxA"><b data-page-node-id="lLVWVUmvsEjIQR5X8Wh3mR">正确</b></td>
+      <td data-page-node-id="cY2TcEGdoWt6TEn9zSnvrd"><code data-page-node-id="D4jeg0NBbsFtmjtHKLcUE4">:352-374</code> 对事件、选项均为泛型处理；唯一特判是通用的 <code data-page-node-id="WNzMY99DeM3DuU8MtQvxjE">option.get("dismiss_teacher")</code>（<code data-page-node-id="O3MkJCYE0Isc8XQ5LXhmf5">:366-370</code>），与具体事件名解耦</td></tr>
+    <tr data-page-node-id="BDTGAYm3LFnh7IaBegpvPK"><td data-page-node-id="FY1zNGfGky3dPm5qzlMJaZ">「实验设备老化」是否本应有 <code data-page-node-id="qlGYUoom2Q8pjDlGouRgqm">transition</code> 分支</td><td data-page-node-id="KqNe4BBMtPRc8BnrxFwvbc"><b data-page-node-id="2H4X5rzTLSBzsysRqT34Zi">不需要</b></td>
+      <td data-page-node-id="YipwYWmclm4rBVQNWS8GYC">它的事务语义是设备采购，选项定义为 <code data-page-node-id="d6CZVVqdpWxovso2wOrBML">buy</code>/<code data-page-node-id="G4qQ2eTi1g3J7PezL3OzEG">cut</code>（<code data-page-node-id="LgCxOoAJuJfFdz7gUesSPM">:315-318</code>），本就无「内部交接」概念</td></tr>
+    <tr data-page-node-id="H8ttm7NSS6L3WEW3RjlOFk"><td data-page-node-id="pSjIoNSYaFWblRgBKpPz0a">「未知事件选项」是否说明遗漏了事件分支</td><td data-page-node-id="3iNyToXeHHMtGNehKfH5Ah"><b data-page-node-id="SvQ9U6Df3ZJIGCMU3DJDcq">不是</b></td>
+      <td data-page-node-id="bc56ctchXpF8o0PCFBQUoM">它是 <code data-page-node-id="FH83XjZ6pQVCDRzYNjFwPR">:358-360</code> 的<b data-page-node-id="rqClidycPBdsQS7tHayfTU">正确防御</b>：当传入的 option id 不属于该 event 时如实拒绝。此处被误传了别的选项 id</td></tr>
+    <tr data-page-node-id="sgnv0HlpO5Hf98Kznc8ozt"><td data-page-node-id="GOnrPaNENij1gNjk5L3C8w">事件定义与 <code data-page-node-id="HICAzEsFZRAdeDKN9r8Raq">resolve_event</code> 分支是否不一致</td><td data-page-node-id="boy4dCGQ1aSU5FLRTA1sF6"><b data-page-node-id="eLasZ38gECCEJFlrl4bS2V">一致</b></td>
+      <td data-page-node-id="ZFVt6bHFTN0vKgSofucAQn">10 条事件结构统一（id/title/description/options[2]），全部可被 <code data-page-node-id="4znZdY2rFrXpuFnFXPgQz7">resolve_event</code> 正常处理</td></tr>
+    <tr data-page-node-id="bz0REh95OuM7gvULAFehDw"><td data-page-node-id="9zgtchozCr4XApkLFHlPhM">是否存在名称/选项/key 不一致</td><td data-page-node-id="1FpHGoel61OmjUIFukJQfU"><b data-page-node-id="smApCAFDfQbO1Bm4jqzkfL">未发现</b></td>
+      <td data-page-node-id="A9eoU81KrBdv2qxUd5yggU">事件 id 统一为 <code data-page-node-id="THPuuDRwamuBCQBK7rU4xP">f"&lt;key&gt;-{semester}"</code>；选项 id 在各事件内唯一</td></tr>
+  </tbody>
+</table>
+<div class="note" data-page-node-id="suJqB8Dxv1HI4f9Dc6I9aM">
+<b data-page-node-id="hIwqbRh7W3sGonIKvkCdGJ">需要澄清一处概念</b>：源码中<b data-page-node-id="WiSJmSvCrFGl94MricDMCC">不存在名为 <code data-page-node-id="YoMHKB4q1ESY9fI2M8VTmO">transition()</code> 的函数</b>。
+<code data-page-node-id="oeXuzKmJCLFHvYwFTozBHa">"transition"</code> 只是「骨干教师去留」事件内那个 option 的 <b data-page-node-id="xRhrjcjRzWSEBhKgDyBYaX">id</b>（<code data-page-node-id="BBeovEecYRv1KwxI2ycbmO">simulation.py:296</code>，label 为「内部交接」，带 <code data-page-node-id="FgIr3WYUJHwjiArXHFbTE9">dismiss_teacher: True</code>）。
+本轮已核实全仓库 <code data-page-node-id="swCf3w5iyTC1DkWidsZnbU">"transition"</code> 仅出现 4 次：1 次为定义（<code data-page-node-id="LDqu5KBn2sOYtdqQpNHwhY">:296</code>）、3 次为三条失败测试的调用参数。
+</div>
+
+<h3 data-page-node-id="aHvuiNxM9Z6riX39ZNU0X6">5.3 测试与当前业务版本不一致 —— <b data-page-node-id="2UjmSR17gdd8pc0IUVCjvw">是</b></h3>
+<ul data-page-node-id="qDTCPiMg0Be1MY80jOaPCB">
+  <li data-page-node-id="v0gpoguHBwSdAdEuA8omjX">测试注释写死除数 3（<code data-page-node-id="QVreAMG3LN5VEqeeLIEOyF">:175</code>）↔ 现状除数 10（<code data-page-node-id="fFUVNOhJB1lWHc1Pk3gQya">:349</code> + 池内 10 条）。</li>
+  <li data-page-node-id="HSPFXtnNmFhyxvvVKZfRvm">「骨干教师去留」仍在 index 2 未动；变化的是<b data-page-node-id="kbkxxo8BLUfKVBWw6V1zSF">池长度</b>，即 <code data-page-node-id="f0Sv7gpX4rdb4ws84fEeEK">advance_semester</code> 内部事件选择规则的输入。</li>
+  <li data-page-node-id="xysdKAIfMLLcgs4ptqAzdK">产品侧存在对应的扩充意图记录（<code data-page-node-id="tXMirdwgnyuG9HauXujO67">待办事项.md</code> 的「待办2：多增加一些突发事件」）。</li>
+  <li data-page-node-id="nd1Ex2qkbvmNeEjVhEASwc">这三条测试是「<b data-page-node-id="lP8c06uS4xJn8syicMSQw7">跟着旧版事件池写的</b>」，业务演进后未同步更新。</li>
+</ul>
+
+<h3 data-page-node-id="Aqz3MCYvC7jvQsshtsuohD">5.4 平台问题 —— <b data-page-node-id="BC4sI6z8ZFLwUV38tAw7uE">否</b></h3>
+<ul data-page-node-id="59cFjQtIf6QwhOOw69ikkf">
+  <li data-page-node-id="12HOok1nSJnKBg4BFcFrBg">平台以受控 <code data-page-node-id="tV1dqzqb0YHZCLAoTGmjx5">cwd_root</code>、受控解释器、白名单参数原样拉起 <code data-page-node-id="qurL86l8MD4ZAl4taSTpZ3">pytest tests/</code>；junit 与 report.json 如实归档、
+      <code data-page-node-id="D2Sd1BuLpJ8EY8JrN06kqc">exit_code=1</code> 由 pytest 自身返回、其余 46 条用例全部通过 —— 说明运行环境、依赖、路径均正确。</li>
+  <li data-page-node-id="pEpGGhbomlP8dFzniuQcCs">失败信息中<b data-page-node-id="0VODOEUFYzf0KNSinCZGlg">不含</b>任何路径、解释器、依赖或平台类错误，全部是业务断言 / 业务异常。</li>
+  <li data-page-node-id="R6zEqAoPY3VkLFl639W8gw">平台的价值恰在此：把这 3 条真实业务缺陷<b data-page-node-id="Ea5redRtFKyltOmv5Gzs5f">如实暴露而非掩盖</b>为 Runner 错误。</li>
+</ul>
+
+<h2 data-page-node-id="JVv4anGwALzjlzfFoi41oQ">6. 三个失败是否同源</h2>
+<div class="note ok" data-page-node-id="9qnIDvGIuP0XHjXYuDC4tl">
+<b data-page-node-id="cT2wEumoGr7t7dlsZWLQIF">同源。</b>共同根因只有一条：
+<pre data-page-node-id="ljJg3WmwVLgJD50luYIRnq">PrivaHigh 事件池由 3 条扩充到 10 条
+  → _event_for 的取模除数由 len=3 变为 len=10          (app/simulation.py:349)
+  → (seed=3, semester=2) 由 index 2「骨干教师去留」变为 index 5「实验设备老化」
+  → test#1 断言事件标题失败（AssertionError）           (tests/test_simulation.py:177)
+  → test#2/#3 拿「实验设备老化」去解析 option "transition"，该事件无此选项
+      → 触发 resolve_event 的防御性异常（SimulationError: 未知事件选项。）  (app/simulation.py:360)</pre>
+<p data-page-node-id="7xZG4RKqbViDFO1oEFiMLs"><b data-page-node-id="TkmySdd1eyxhxXXz57p2bi">#2 与 #3 是 #1 的连锁后果，不是独立问题</b>：它们与 #1 共用同一个错误的 <code data-page-node-id="4teLzpeSDJwrnUfYz47Pun">_event_for</code> 结果；
+<code data-page-node-id="uO5oMLStKXqcC8xFVWDWTS">app/simulation.py:360</code> 是被动响应者，其自身逻辑正确。</p>
+<p class="muted" data-page-node-id="mncm9QMDBuwAQ2sd92rkeu">反过来说：如果把除数问题修好，#2/#3 会同时恢复；不存在需要单独处理的第二个根因。</p>
+</div>
+
+<h2 data-page-node-id="oDIpEpxE6SoqAuUNcstGPt">7. 修复建议（本轮不执行）</h2>
+
+<h3 data-page-node-id="fAh7RHI8wgYIDYMcxOXD5a">7.1 应该修改测试 —— <b data-page-node-id="jypi6D3tODO11WlX242nnx">是，这是唯一需要改的地方</b></h3>
+<p data-page-node-id="xMNJY0gbZrTuG647wxwiyH">目标：让这三条用例<b data-page-node-id="ZuvTcWmMPUhmyXUu3vovrW">不再依赖事件池长度与具体索引</b>。两条路线：</p>
+<table data-page-node-id="pqsBr4LstirL07vR4xIgEI">
+  <thead data-page-node-id="wZmXDhnwWISnphZeQZu7Es"><tr data-page-node-id="pxrOYpEQ62pbx9wn2FPBqN"><th data-page-node-id="TymtwTZSEat78EZUjWka23">方案</th><th data-page-node-id="WNeE2OYrjJ5WsEPhLUvbFE">做法</th><th data-page-node-id="7OhAFTBps52UOVRZWF5ivX">优点</th><th data-page-node-id="SlvX9aBgY2ykfFg1WvFsiF">代价</th></tr></thead>
+  <tbody data-page-node-id="gX5EGXNz8gn6SS1pki2SbH">
+    <tr data-page-node-id="uemWWztY5eoerSRWxh69AF">
+      <td data-page-node-id="7CjaUjgVvgcFL8a3jMEtm7"><b data-page-node-id="TsMbAu8lDk3cIKJ6qR6keR">A（推荐）按语义定位事件</b></td>
+      <td data-page-node-id="Ahr9ajADc8WKTcyf4FDXvx">不再靠 <code data-page-node-id="FKCcqekjlToUfUXTNOGFlY">(seed, semester)</code> 推算，而是「找到那个带 <code data-page-node-id="5iI2gaE4rxcUN6AfwKpB5r">dismiss_teacher</code> 选项的事件」再测其内部交接行为</td>
+      <td data-page-node-id="53pxH8zrFkdyVgMHDb3jB7">与池长度完全解耦，扩充事件不会再次失效；语义直白（测的就是"内部交接"这个能力）</td>
+      <td data-page-node-id="CRVHDRy0GUqRi2M0XfMOJn">需业务侧暴露一个稳定的小入口（见 7.2），或测试内自带选择逻辑</td>
+    </tr>
+    <tr data-page-node-id="5JWK8Sy32M6ytBzhBpcH9B">
+      <td data-page-node-id="A86VdNbJIcXPIcSWqWwRq6"><b data-page-node-id="KVT2VcKL52GFzQVRz52OZ7">B（最小改动，仍脆弱）</b></td>
+      <td data-page-node-id="LZLxAjy24r3GfS0FO82EU9">仅把 <code data-page-node-id="aJSgw6QXyJZQwDY7oKf19n">seed=3</code> 改成使 <code data-page-node-id="vAvUnyH9QgUDViXop6CT17">(seed+2) % 10 == 2</code> 成立的 seed（如 <code data-page-node-id="Y9QVQxfLhrUa9wDY9GrPkn">seed=10</code>）</td>
+      <td data-page-node-id="j8Df7toRy11NcoJv1jB0hP">改动最小，立刻复绿</td>
+      <td data-page-node-id="7sxvNOFT0WzFPvDZceGlSW"><b data-page-node-id="D0Av2UUgHIgNBGa9vJM6UH">仍与池长度耦合</b>：池变 12 时需再改成 <code data-page-node-id="vo4Yg1FYYYqxj4Qx6JL58c">seed=12</code>… 治标不治本</td>
+    </tr>
+  </tbody>
+</table>
+<p data-page-node-id="mdhboi0T7crv84V2UiqJac">另外建议顺带修正：①删掉/更新 <code data-page-node-id="e2FBxaQOzratgt1HWCn0Q0">:175</code> 那句写死除数的注释；②测试尽量改用
+<code data-page-node-id="Doar8yN2m7fJyAZ0N9M4yr">state["pending_events"][0]</code> 这类公开路径，避免继续依赖私有 <code data-page-node-id="MVqCPiVJJJC9zt8a2CKalU">_event_for</code>（<code data-page-node-id="AHC1gy6eazcHNzgx4wVFUm">:173/:188/:203</code>）。</p>
+
+<h3 data-page-node-id="Luynl01hvLbuHshoAqZ4KY">7.2 应该修改业务逻辑 —— <b data-page-node-id="5WA5NENVMMKHd1G8J3cGDZ">否，业务逻辑无需修改</b></h3>
+<p data-page-node-id="QZSLaDl1Zugkq7C5jOFHTD"><code data-page-node-id="87jCW72yx7eoewawFpcLHI">resolve_event</code> 与事件池均正确。若为支持方案 A 而改动业务代码，属于<b data-page-node-id="foVHmA4SyGc1uCaSNVHHrr">可选的、非行为性的小增强</b>，
+而非缺陷修复。可选形态（按侵入性递增）：</p>
+<ul data-page-node-id="RhHmk9MB8l5UWNyoiLQCgQ">
+  <li data-page-node-id="VpGgy6ECGHH2SJZHkN1YAw">暴露一个只读选择器，例如 <code data-page-node-id="WIcIox599Hvv6CLm2SV8Nj">event_with_dismiss_option()</code> 或 <code data-page-node-id="3wYlutGkyZbjklu75bVjlp">all_events()</code>，供测试按语义取事件；</li>
+  <li data-page-node-id="V2JVkETUDyDr4E5MtgmB78"><b data-page-node-id="7cl5L5K7NO20iSDmZbm7Ew">或</b>不动业务代码：测试内部自带"遍历 seed 直到抽到含 <code data-page-node-id="uCWecffRKQNxwYLj6ofMjf">dismiss_teacher</code> 的事件"的选取逻辑（纯测试侧，代价是略绕）。</li>
+</ul>
+<p class="warn" data-page-node-id="xVnROd1TJJTJDxuKqy5MfI">注意：把事件池改成"由外部注入/可配置"属于架构改动，<b data-page-node-id="kM8nJDRHZU1Y2J1Oc17aHG">影响面远超本次修复所需，不建议为修 3 条用例而做</b>。</p>
+
+<h3 data-page-node-id="qRQnBDj0LP5v4ILdrQa4gB">7.3 若两者都需要改 —— 顺序</h3>
+<p data-page-node-id="WxZw1j9fldRthVvCSYQ7jV">仅在采纳方案 A 且选择"暴露只读选择器"时才涉及业务代码。此时顺序为：
+<b data-page-node-id="6MuPbeqy9BAQddNBN7hq45">先加业务侧只读选择器（不改变任何既有行为）→ 再改三条测试 → 复跑 <code data-page-node-id="NYIgFD7hew6plxW543fQfs">tests/</code> 确认 49 条全绿</b>。
+若采用 <b data-page-node-id="F9I9nsYIR6WiWjS6armtmC">方案 B</b> 或"测试内自带选择逻辑"，则<b data-page-node-id="ifXlIZuQZXGA338DZZXjMZ">只改测试</b>，业务代码零改动。</p>
+<div class="note" data-page-node-id="A05Mn690fAHZ8NlwzMBokz">上述均为建议。<b data-page-node-id="zPWjeJ95AbqOPHNGRxLF4v">本轮未做任何修改</b>；这三条用例目前处于失败状态。</div>
+
+<h2 data-page-node-id="dk5g7xHcS81v2P2M2v87Qs">8. 对平台验收的影响</h2>
+<table data-page-node-id="34D5USh7txQkYoVE7C1CzN">
+  <thead data-page-node-id="BPSeJDSYX3POwGiXlMB7Wd"><tr data-page-node-id="S73SnZ9AAtfrf3zFHSnglH"><th data-page-node-id="zEIRgjAKrCM4xKUFJL6B5m">维度</th><th data-page-node-id="GFRGCL9pVxNJVDlxVe84AA">结论</th><th data-page-node-id="zHwQCZOzvDH6Bbxj0i0WcB">说明</th></tr></thead>
+  <tbody data-page-node-id="fJUXal6mlfKSaQ0CHn5Uk0">
+    <tr data-page-node-id="sSpv83MLiWyLAfslaP5XIg">
+      <td data-page-node-id="lfS9dCWC0qGtOMGNsqpC9w">是否影响平台链路验收</td>
+      <td data-page-node-id="boaccT9sa9z5bevCaetLOB"><span class="ok" data-page-node-id="wNqW3SwkXuCiUZU9sEUIQi">不影响</span></td>
+      <td data-page-node-id="atqmypCGRd1ynBeynyQrce">平台在 PlanRun #20 中正确执行了计划、正确归档 junit/report.json、正确按 fail_fast 跳过后续步骤、
+          报告中心索引正确派生、历史零改动。3 条失败发生在<b data-page-node-id="WFdl9G8iLDQgBLo9KNTsTS">被测系统自身的测试套件内部</b>，
+          平台对它的行为是"如实上报"，这正是验收应有的表现</td>
+    </tr>
+    <tr data-page-node-id="oe7d5EzDjJ5GaEETk6TJ7F">
+      <td data-page-node-id="AiK77brWm3fDFyvfWYDTjf">是否属于 PrivaHigh 业务/测试层问题</td>
+      <td data-page-node-id="zAQDYyPlTdsaYGq3f7E5jg"><span class="ok" data-page-node-id="2v0Knk0LKL1vYAAF39bPNG">是，属测试层</span></td>
+      <td data-page-node-id="PjbPEDuozcIQNLjBhiweLA">"测试与业务版本不一致"——测试写死事件池长度，业务演进后未同步</td>
+    </tr>
+    <tr data-page-node-id="zLtZG9iOhuFB0LOHzkIK6Q">
+      <td data-page-node-id="8ZHI7bDdIFHdmdPYLBZxAu">是否需要作为平台缺陷处理</td>
+      <td data-page-node-id="0ZC6x1QFwGEgeMRjXgLBro"><span class="bad" data-page-node-id="tNknaKguDBFReQhH05HzKE">不需要</span></td>
+      <td data-page-node-id="rTwISjEvHATpDy0sd2myBj">平台无任何异常行为。不应把这 3 条失败计入平台缺陷，也不应为了让它们通过去改动平台</td>
+    </tr>
+  </tbody>
+</table>
+<h3 data-page-node-id="4dj8E5hIWJVlvWkjDyoiqP">8.1 两项验收的当前状态</h3>
+<table data-page-node-id="ywaevzDMbqYAaEYGhtdfkL">
+  <thead data-page-node-id="qeNfnHHDw26xvW6B3YgIWn"><tr data-page-node-id="0XYzM6LcOIo4YekfEfaTD8"><th data-page-node-id="VpAGWc7mfhImO6fgVWgEhQ">验收项</th><th data-page-node-id="7b8gbOCNoJlSAdZCBSdYU0">结果</th><th data-page-node-id="QI6V7g9rXT12x3b9lecoS1">与这 3 条失败的关系</th></tr></thead>
+  <tbody data-page-node-id="qXX6mVX4NagGCG4cY7SlCa">
+    <tr data-page-node-id="PxUE2SZTGwsYH0fN7lTwwi"><td data-page-node-id="ZDjKFUpFgTb3Md13MyZdJF"><b data-page-node-id="xGVjqRxfwLOnuglLOC1if8">MatchEval 真实资产链路</b>（PlanRun #21）</td>
+      <td data-page-node-id="QZ85UG6noFoltJzF8VpjWw"><span class="pass" data-page-node-id="LLKBRjY5LqPEkCUa6TvSm2">通过</span> TP=23 / FP=0 / FN=0 / TN=92，P=R=F1=1.00，旁路基线完全复现</td>
+      <td data-page-node-id="9AsSPCJcUCjrrnj4fQBAEe"><b data-page-node-id="Rq0envk7r6x5wCgPbZAg6t">无关系</b> —— 独立引擎、独立链路，视觉评估已完全达标</td></tr>
+    <tr data-page-node-id="RYnxO1sZaweYXbcu5jsWDF"><td data-page-node-id="IdK9JDLnkIt3veCcT0GR8y"><b data-page-node-id="6NtS8dyETKxY5kWLOnKrUu">pytest 功能评估</b>（PlanRun #20）</td>
+      <td data-page-node-id="HipDcTIEzDgMHE5RHVNBEq"><span class="warn" data-page-node-id="WGTKTXBzsVHRzsuA3hvTU1">46 passed / 3 failed / 0 errors / 0 skipped</span></td>
+      <td data-page-node-id="RU3XfD9QoYhwXHRe21yWjB">3 条失败均为上述测试层版本不一致，<b data-page-node-id="c4PFs97zpnuVUYSPid9eLQ">其余 46 条覆盖的业务逻辑全部通过</b></td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="2aE6MjFCyBS6vMDKEOfZyC">即：**平台链路验收整体成立**；pytest 侧的 3 条失败是"被测对象的质量问题"，可作为首轮验收的有效产出上报给 PrivaHigh 侧，
+而不构成平台侧阻塞。是否将其作为 PrivaHigh 的缺陷单，属于产品侧决策。</p>
+
+<h2 data-page-node-id="jUgtnoMoSrBwkHMnMQltN9">9. 最终结论</h2>
+<div class="note ok" data-page-node-id="OjHA3mC7mPUvV6FdI2OxDm">
+<b data-page-node-id="R8790KLewpvIrwy2INqwKh">【根因类别】</b>
+<ul data-page-node-id="ugud72m11nUh2uS4oKqB22">
+  <li data-page-node-id="junUqRsIB23v8OMkF2wrkB"><b data-page-node-id="xbVozK2ki0TjDhOPyO1Tfr">测试设计问题：是</b> —— 证据：<code data-page-node-id="2d5nizYnXDadAiQr0fvt7h">tests/test_simulation.py:175</code> 注释写死除数 3（<code data-page-node-id="CpwXqTtbOOVgsRXMB8aPXE">(3+2)%3==2</code>）、
+      <code data-page-node-id="QLL3fmAXYkwoB4eiWgY4dC">:177</code> 硬编码事件标题、<code data-page-node-id="PfRyZWJqDerUkdU3ul4shD">:181/:195/:209</code> 硬编码 option id <code data-page-node-id="S7K2jpEvvjtjhc3N1AayXo">"transition"</code>、
+      <code data-page-node-id="QZ6y0rBv5NLFNDbCKCt7aX">:173/:188/:203</code> 依赖私有 <code data-page-node-id="kSZXjeEUlOhurhsMhyEcnD">_event_for</code>。同文件另有 4 处"事件无关"的正确写法且全部通过。</li>
+  <li data-page-node-id="Ee54XYadr4kA4tTxArbcUh"><b data-page-node-id="yjbJQWTbNgVIo45BS7PTW6">业务代码问题：否</b> —— 证据：<code data-page-node-id="1zUIOCZoMQgv85foHpuviJ">resolve_event</code>（<code data-page-node-id="IBdMyXo1T4vRW8kLu4b5Te">:352-374</code>）泛型处理正确、唯一特判
+      <code data-page-node-id="sSEWOB22MXQJwHqycy2v8O">dismiss_teacher</code> 与事件名解耦；10 条事件定义完整、无遗漏分支；<code data-page-node-id="2Kerb00sz75zQmHuOfsE69">:360</code> 的异常是<b data-page-node-id="qu3NAoBdL8DpuOQEkcMSpD">正确防御</b>。
+      源码中不存在 <code data-page-node-id="7OKqrrs3vOaWj5BjZ3wPI3">transition()</code> 函数，它只是一个 option id。</li>
+  <li data-page-node-id="7eX1xGi1veioCHTXO1FXLa"><b data-page-node-id="fUFtOSMaNymcieMk2T3XNr">测试与业务版本不一致：是</b> —— 证据：事件池已由 3 条扩至 10 条（<code data-page-node-id="0f99hdkX2giSkgvnqADoUR">:277-348</code>，
+      「骨干教师去留」仍在 index 2，新增 7 条追加在后），而 <code data-page-node-id="wG0q08I1qsabT0hr3fyNSH">:349</code> 的取模除数随池长度变化；
+      产品侧 <code data-page-node-id="HBIUD7MmhLOhjHY19orQH2">待办事项.md</code> 记有「待办2：多增加一些突发事件」。测试未随同版本更新。
+      <span class="muted" data-page-node-id="mo0OxI3g1n8nY6QqBnNf2j">（局限：该工程非 git 仓库，无法提供提交级 diff，以上为三重间接证据。）</span></li>
+  <li data-page-node-id="gu9gnKYwn4QPN7GXfWXwoF"><b data-page-node-id="XAWgRVCpm9F3gi3rgLb4XJ">平台 Runner 问题：否</b> —— 证据：Runner 以受控 cwd / 解释器 / 白名单参数正常拉起，
+      junit 与 report.json 如实归档，<code data-page-node-id="1wxPY88cJa6rhPBCY9JY32">exit_code=1</code> 由 pytest 返回，失败信息中不含任何平台类错误。</li>
+</ul>
+<p data-page-node-id="gOVLkO2tVeK4IeFDgTAJai"><b data-page-node-id="c5Mbw084V25LWZ5WxZYr0C">三条失败同源，根因单一：测试把 <code data-page-node-id="CgTWlBT8ASRScirA2i8U5P">(seed + semester) % len(choices)</code> 的除数写死为 3，事件池扩到 10 后索引漂移。</b></p>
+</div>
+
+<div class="note" data-page-node-id="0YUWSdl3ndVp1Z0g31Uo26">
+<b data-page-node-id="v1jooozo6OsNTZgvOECWHR">【下一步建议】</b>（本轮不执行）
+<ol data-page-node-id="nS0Yna3Q3DelJMYPC4b8nc">
+  <li data-page-node-id="5WU4LWjlw3Yu8YeWw5CJSM"><b data-page-node-id="SnXCKnt5CdpzCrTJUvSBNC">把这份归因反馈给 PrivaHigh 侧</b>，由其在游戏仓库内决定修复方式——这属于被测对象的质量问题，不属于本平台的工作范围。</li>
+  <li data-page-node-id="k7xrmKFkBxQfKoiEt4t4rU"><b data-page-node-id="CSy7IoPa45J0ERWU4DJWUK">推荐修复方案 A</b>：让三条用例按语义（含 <code data-page-node-id="sYEEy7A4JASI5I6MaCc2r3">dismiss_teacher</code> 的事件）定位目标事件，而非按
+      <code data-page-node-id="qiPNfcD2L7e0mwGFsirPv9">(seed, semester)</code> 推算；备选方案 B（把 <code data-page-node-id="2qdgyBHqbSt4j2GSdNe8mz">seed=3</code> 改为 <code data-page-node-id="WaL8EDfhstq5KCQcNYMBAc">seed=10</code>）可立即复绿但与池长度仍然耦合。</li>
+  <li data-page-node-id="ATeyVEMPyFPi7TDJAPalL6"><b data-page-node-id="7EEZ23fFGAcOyxk2rifClH">修复后需复跑</b> <code data-page-node-id="meWpLlyKlj7BPvKDY7yOtG">tests/</code> 全量确认 49 条全绿，并<b data-page-node-id="xnuBpGSZHRHTDfmUvqR7uA">顺带复跑平台侧 verify 套件</b>
+      （此前因多轮"禁止执行测试"的约束，该基线自白名单登记后尚未复跑）。</li>
+  <li data-page-node-id="dPtLlKSv077jXjTt1Hm8i9"><b data-page-node-id="Z17JLfTNTEATn038BUnlHa">平台侧不需要任何改动</b>；两个已记录的低风险项（预检 <code data-page-node-id="c4PDbAAWRetCDy6tbDdXXn">run_in_progress</code> 误报、旧 <code data-page-node-id="5qw6ooFfiASDJ2LREdFEAI">local</code> 环境 kind 默认值）本轮同样不动。</li>
+  <li data-page-node-id="UQWBHEbxCwsIWSem7u1Jkn">是否需要把该问题登记为 PrivaHigh 缺陷单，<b data-page-node-id="WEjkev9ayXk3H6odH5FVaS">等你确认</b>。</li>
+</ol>
+</div>
+
+<h2 data-page-node-id="FBg9uMVbaI6A2rMCmkNBtI">附：本轮行为声明</h2>
+<ul data-page-node-id="SVM7WAj8ouqeq3uF6ww4LT">
+  <li data-page-node-id="FEPQKovIodBbNJ01P7ECWC">仅<b data-page-node-id="CsOPrEHFXelB4cskaHHNZr">阅读</b>了 PrivaHigh 源码（<code data-page-node-id="kwdmxvX9wktlQp3vy1lqKG">app/simulation.py</code>）、测试（<code data-page-node-id="BjE1aXCeZFCipI3RfkepQW">tests/test_simulation.py</code>）、
+      文档（<code data-page-node-id="QVrQiOzR1z69qLHM5UqowD">待办事项.md</code>、<code data-page-node-id="xhOYcUTw5M4mlCcSAKsWv9">对话记忆.md</code>）与历史产物（junit / report.json）。</li>
+  <li data-page-node-id="qjQRkaPrc3Sh4UXzoXO4Ol">仅做了<b data-page-node-id="RTeesYitCt3VYufMLJfrE1">纯只读</b>的静态分析（AST 解析事件池、算术验证取模结果、grep 调用点）。</li>
+  <li data-page-node-id="nvcx1MLUvL58ye2z72m8DQ"><b data-page-node-id="10HCM9Iek2rROj7o0mkVSv">未执行任何测试</b>，未重新运行验收 Plan，未执行 Locust。</li>
+  <li data-page-node-id="6yHY4JZFZc0eEMbrBUnOM4"><b data-page-node-id="5DdunHuSAGhIbuUZGJ6MGh">未修改</b>任何代码、测试用例、PrivaHigh 业务逻辑、Runner、平台数据库、Plan/PlanRun/Job、真实资产或历史报告。</li>
+  <li data-page-node-id="fKbAAOxaPdavy9JCwHtFYj">未为验证而修改随机种子、事件池或业务数据。</li>
+</ul>
+
+<footer data-page-node-id="CYlMr2WE94iHDr0Vcuy6yt">
+PrivaHigh 三条 pytest 失败 · 只读归因分析 · 2026-09-29 ·
+结论：<b data-page-node-id="Xd3wspdBIVMUrZ6gqbr64Q">测试设计问题（是）· 业务代码问题（否）· 测试与业务版本不一致（是）· 平台问题（否）</b> —— 三条失败同源，未做任何修改
+</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="LSZdHFPbn1aHRSMPIXR6Ac">
+<head data-page-node-id="w9eICqFnwaoz9VIUobox20">
+<meta charset="UTF-8" data-page-node-id="NwLuErgnvB8ADqDEZFRfCs">
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="4EtpZAJ0IK6BTBYBq7aZtg">
+<title>Locust 心跳修复与复测验证报告</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --line:#e3e6ea; --text:#1f2328; --muted:#6b7280;
+    --accent:#2563eb; --ok:#0f9d58; --bad:#d93025; --warn:#b26a00; --code:#f2f4f7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+       font-size:14px;line-height:1.7}
+  .wrap{max-width:1000px;margin:0 auto;padding:32px 22px 64px}
+  h1{font-size:24px;margin:0 0 6px;letter-spacing:.3px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:26px}
+  h2{font-size:17px;margin:34px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:14.5px;margin:22px 0 8px;color:#111}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;
+        padding:18px 20px;margin:14px 0}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#f0f2f5;font-weight:600;white-space:nowrap}
+  td.num{font-variant-numeric:tabular-nums}
+  code,pre{font-family:Consolas,"Courier New",monospace;font-size:12.5px}
+  code{background:var(--code);padding:1px 5px;border-radius:4px}
+  pre{background:#f7f8fa;border:1px solid var(--line);border-radius:8px;
+      padding:12px 14px;overflow-x:auto;line-height:1.55}
+  .pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;
+        border:1px solid var(--line);background:#fafbfc}
+  .ok{color:var(--ok);font-weight:600}
+  .bad{color:var(--bad);font-weight:600}
+  .warn{color:var(--warn);font-weight:600}
+  .muted{color:var(--muted)}
+  ul{margin:8px 0 8px 20px;padding:0}
+  li{margin:4px 0}
+  .kv{display:grid;grid-template-columns:190px 1fr;gap:6px 12px;font-size:13px}
+  .kv dt{color:var(--muted)}
+  .kv dd{margin:0}
+  .banner{border-left:3px solid var(--warn);background:#fff8e6;padding:12px 16px;
+          border-radius:8px;margin:14px 0}
+  .banner.ok{border-color:var(--ok);background:#eefaf1}
+  .banner.bad{border-color:var(--bad);background:#fdeeed}
+</style>
+</head>
+<body data-page-node-id="bZRCN2SbrPEn24msPWDzJs">
+<div class="wrap" data-page-node-id="pqBxO4ktAcboo4Ek9MOCfe">
+
+<h1 data-page-node-id="GjADRvRYYUqV874cN8qpHC">Locust 心跳修复与复测验证报告</h1>
+<div class="sub" data-page-node-id="tcwHEI8Ne1V9LGkxLRZYvQ">
+  被测对象 <code data-page-node-id="vhe3RdOVj3GkiFo5BiyFdE">Colyseus-Storm/locustfile.py</code> ·
+  目标服务 <code data-page-node-id="4FFjar9YcpnFz7LHSLr9BB">colyseus-game-client\Server</code>（:2567） ·
+  执行 2026-10-01 12:53 / 12:57 · PlanRun #24 #25 · Job #29 #30
+</div>
+
+<div class="banner ok" data-page-node-id="PAH8LACu2k4Yq1P7lCtYCt">
+  <b data-page-node-id="dkvE1SoTNVogFmHNeCLqt5">结论：修复有效且可重复。</b>
+  连接存活时长由「约 7~9 秒被中止」变为「完整跑满计划对局 10~20 秒」；
+  <code data-page-node-id="78lzINrJz4PUdOeHYtECek">游戏结束</code> 由 0 次变为 6 次/轮；<code data-page-node-id="JONJBAcWDV5yKa38MriS4V">WinError 10053</code> 由 9 条变为 0 条。
+  两轮同参数复测结果一致。同时<b data-page-node-id="nJng50DlwukiEiCHEBSVPA">更正了上一轮对根因的判断</b>（详见 §3）。
+</div>
+
+<h2 data-page-node-id="BIIzB4BOAdNqAo2Fs2beOe">1. 改了什么</h2>
+
+<div class="card" data-page-node-id="pXfZ3Bg3tGKAyYA2F0AYGG">
+  <div class="kv" data-page-node-id="YOxy9G81fFhjyMmG4uVt7O">
+    <dt data-page-node-id="sChq7DHb7zlAeBUM7jO1VU">文件</dt><dd data-page-node-id="VSD9S8ngxPxStdVucFQQEi"><code data-page-node-id="FVz8AhfGs7AvddKV9ry5Aw">F:\测试平台\Colyseus-Storm\locustfile.py</code>（唯一被改文件）</dd>
+    <dt data-page-node-id="2Ci6gEzBzQ2aefKEch3uBp">净变化</dt><dd class="num" data-page-node-id="55LxO6oLOObTnk7VB8r6J0">+80 行 / −2 行（199 行 → 272 行；11293 B；md5 <code data-page-node-id="FOcFBShQFOuSLsvAA2jQYi">4699824c…</code>）</dd>
+    <dt data-page-node-id="HoVtErtMXCZJyhyoXGMvWv">备份</dt><dd data-page-node-id="5uoOIHp4P8xLJARsMkToz4"><code data-page-node-id="WvMvcKYBJbmAFhfuoM623B">locustfile.py.bak-20261001-125123</code>（原文件逐字节副本，7089 B）</dd>
+    <dt data-page-node-id="rUfSt8MJHwKKBs9uNeiVoL">改动性质</dt><dd data-page-node-id="N8xr4cVbm9JZolU8hdlAUd">仅新增入站读取 + 把对局异常接进统计；<b data-page-node-id="OWegnaFoPLLiK5vovHcWpG">未改</b>用户的并发/时长/发包节奏、未改登录与注册逻辑、未改服务端</dd>
+  </div>
+
+  <h3 data-page-node-id="NQkAa794Pj0BOOONMmH8br">改动 1：新增 <code data-page-node-id="923C7tYPW6cBYYyvcwE5ww">drain_inbound(ws)</code>，在对局循环内非阻塞读取入站</h3>
+  <pre data-page-node-id="Pi6I85dF51AMHaQeGYmhQE">                # 排空入站帧：读取入站数据时 websocket-client 会自动应答服务端
+                # 的 ping，使服务端 pingCount 归零；不读则约 9s 后被 terminate()。
+                frames, nbytes = drain_inbound(ws)
+                round_frames += frames
+                round_bytes += nbytes
+                time.sleep(0.1)      <span class="muted" data-page-node-id="R6wR1nRS3YR3yOn8Zbbakh">← 发包节奏完全未变</span></pre>
+  <p class="muted" data-page-node-id="5teHxV6hNN1oNmoBDLfXYQ">实现要点：<code data-page-node-id="SF8zTwBHGmFLSdj9Y04Jq5">ws.settimeout(0)</code> 非阻塞读取 → 无数据抛
+  <code data-page-node-id="NPb9gFoYyDNvB3P8TXXayY">BlockingIOError</code> 即停 → <code data-page-node-id="AE5ThsuHlQByS7foF78u13">finally</code> 里恢复原超时，不影响后续
+  <code data-page-node-id="5kluXlVBdfCfujq4HAR8cb">send</code>；带 256 帧上限防止排空循环长时间占用协程。</p>
+
+  <h3 data-page-node-id="ErPHJyM1rLQ6UTzGTCXu7u">改动 2：把对局异常接进 Locust 统计</h3>
+  <pre data-page-node-id="vZhEadLhznIomtAAUHIHzE">            events.request.fire(
+                request_type="WebSocket",
+                name="[3] Gameplay round",
+                response_time=int(round_elapsed * 1000),
+                response_length=0,
+                exception=e
+            )</pre>
+  <p data-page-node-id="bHgm99GsHu9o3hPaw5pVc9">原先对局异常只 <code data-page-node-id="JnT5o3p84Tlq10POpQMwpp">print</code>，因此「连接被中止」这件事从未进入
+  failures / exceptions —— 这正是此前 <b data-page-node-id="DQHgOVTyBn2tJgGb1Pm6gG">0 失败却 9 次断连</b>的原因。改后此类异常会
+  在统计表中显式出现。</p>
+</div>
+
+<h2 data-page-node-id="KXAGsrb1hCLH5djfHMzNjo">2. 复测结果（两轮同参数）</h2>
+
+<table data-page-node-id="5MnAceS1Pn0ystbl67f8zM">
+  <thead data-page-node-id="SFZJcdyYbxXKr0zOHzxDYA"><tr data-page-node-id="9gVBnPXYgRlC2Ej0DYXvMk">
+    <th data-page-node-id="xpAaNObZuxyjdgrR8nzkma">指标</th>
+    <th data-page-node-id="cqqOMdITG5RwMop4pjUncc">Job#28 改前<br data-page-node-id="9cP2AlFmZOM74HStkem9Gj"><span class="muted" data-page-node-id="7EFl4si69NiOj0nGywXuac">(11:14, PlanRun#23)</span></th>
+    <th data-page-node-id="D61ATz1v711uGDdtzsJJrN">Job#29 改后#1<br data-page-node-id="96QxJKBtSxB4sw9pE0xB04"><span class="muted" data-page-node-id="Q6OqCktYlTSZxytYgXISfI">(12:53, PlanRun#24)</span></th>
+    <th data-page-node-id="iELCrKs8w7uIdrnWdeiXbm">Job#30 改后#2<br data-page-node-id="NODvoCtzCg0MshfvPQbfMu"><span class="muted" data-page-node-id="2Ni7dOAGkZEaxB7mbR1lK3">(12:57, PlanRun#25)</span></th>
+  </tr></thead>
+  <tbody data-page-node-id="o0f1WRvArZr1umOkK2JlZM">
+    <tr data-page-node-id="pt1EXzb6pxLJkOioygKkd0"><td data-page-node-id="9ChoZFUoumF87EhMgLnqM5">PlanRun / Job 状态</td><td data-page-node-id="f79iibzDvhgvDEA96WwT2y">success</td><td class="ok" data-page-node-id="k9U6kBffWS7lc3rrbKFgAv">success</td><td class="ok" data-page-node-id="T70qS3KvFa5BeGDMHbuZtu">success</td></tr>
+    <tr data-page-node-id="lyp8Sux7edHWH9vGtwRwfG"><td data-page-node-id="yBZVWXO2bjuHzS4EQ4m4cs">exit_code</td><td class="num" data-page-node-id="U547bZBwp3LmEiHHwAyS3h">0</td><td class="num" data-page-node-id="t3btoXnHzBJql5WMwxEqGF">0</td><td class="num" data-page-node-id="izuL6WcWH1NnVEfZhkiv5b">0</td></tr>
+    <tr data-page-node-id="vyh3CWjpPW8Pag8G5vi7e8"><td data-page-node-id="pAJvoXOFy9WvR8raC3sAKq">墙钟耗时</td><td class="num" data-page-node-id="dcQXPLTbrC5NcuajV8YxcN">62.2s</td><td class="num" data-page-node-id="HFM37btGIyCI2NlzkGqeI1">62.2s</td><td class="num" data-page-node-id="4lG8B73AZjq55Ksx6ETNRo">62.1s</td></tr>
+    <tr data-page-node-id="Vhy8AAuNS9yTuvCo311BjD"><td data-page-node-id="UZ8bWNF75NY7aKCXCh4EP2"><b data-page-node-id="GByXvbslVYuzWrDGawrPQG">完整跑完一局（<code data-page-node-id="vo813YYSDcDCrk3479IIOO">游戏结束</code>）</b></td><td class="bad num" data-page-node-id="rjEZAAl16IBToNCHf58Zbx">0</td><td class="ok num" data-page-node-id="xclFSUdEjMzVLlWJsia6VJ">6</td><td class="ok num" data-page-node-id="KGRnYTQa8jfca2CZnMDPnX">6</td></tr>
+    <tr data-page-node-id="8TjDzCNkbZQ4d9M5C6O9RT"><td data-page-node-id="eo2Da1Gmyw45qdq0CWInWa"><b data-page-node-id="DRjb9y1MqjFaqKDmh34Kdq"><code data-page-node-id="dV4SlMW60X263rLjYisyWX">[ERROR]</code> 行数</b></td><td class="bad num" data-page-node-id="IQiNVQE7jSglRriHEfOsYp">9</td><td class="ok num" data-page-node-id="CuWiq08dxb2uWBbAbXtxTe">0</td><td class="ok num" data-page-node-id="I97EtsyqYVtM5noCus501Z">0</td></tr>
+    <tr data-page-node-id="pSwsdPTbPxj4T54DtvssZt"><td data-page-node-id="0YcvPhn1KydDrWusqA5EY7"><b data-page-node-id="QR8ghkuwbh041FphKA7IWl"><code data-page-node-id="iOKQO2cEu1J7EjyjpxWZHP">WinError 10053</code></b></td><td class="bad num" data-page-node-id="jeCXHEGnDGi70BSooSFVYw">9</td><td class="ok num" data-page-node-id="Rv5BIbC9QfgPTtvz6T1mnJ">0</td><td class="ok num" data-page-node-id="zm8LDguhnMWZXIlO5OydDK">0</td></tr>
+    <tr data-page-node-id="cQJl5Twdxke8DAIIU0gLj5"><td data-page-node-id="YBEMSBaCgFN6q2NAiHGQqp">第 1 轮完成数</td><td class="bad num" data-page-node-id="ACmOWESKSKUOKeVhk6s5TS">0</td><td class="ok num" data-page-node-id="8RYEIa1QUe8eAQp0D83YFY">3</td><td class="ok num" data-page-node-id="yCUJ2yUR2tLoTLvVjhVNft">3</td></tr>
+    <tr data-page-node-id="uYlafvLngqrPXTRFDmQTmR"><td data-page-node-id="dE0ALux6NcLwLGVCWZ3YcH">第 2 轮完成数</td><td class="bad num" data-page-node-id="gHeSjdZIyUywQOA15NzNZZ">0</td><td class="ok num" data-page-node-id="bSUGqNt2y4QR8ex0YxilCM">3</td><td class="ok num" data-page-node-id="GE0AI9utsDeN0uVn9LbOXN">3</td></tr>
+    <tr data-page-node-id="I5XaRRdVuVOYRKqf5RJ8zG"><td data-page-node-id="QKGbXslNtyxMxKg96GNn1K">WebSocket 连接数</td><td class="num" data-page-node-id="ug9NSqWKs88uJC3tpDaw3x">9</td><td class="num" data-page-node-id="PNRnmMBEnaMEBsZxcFYSVv">6</td><td class="num" data-page-node-id="0GyEtoAMNTsxtwhnRD45y7">6</td></tr>
+    <tr data-page-node-id="7M9HgZQmmpOjwNNTuQ5C7e"><td data-page-node-id="1EWS6Coo8IUTp8kBNfYVyL">entityUpdate 发包数</td><td class="num" data-page-node-id="QHnArBFq9gsNARTtdEu5FA">653</td><td class="num" data-page-node-id="SreA1wAQBXUHl5fazUkCYe">962</td><td class="num" data-page-node-id="z95q8YYsTT9O6opXtrKS1l">843</td></tr>
+    <tr data-page-node-id="Hnjs0J07452bTNkHgvV9jh"><td data-page-node-id="pHUB4YDxKVFxx1x7ep9a2E">总请求 / 失败</td><td class="num" data-page-node-id="oX0G1uDPJcecVidrxJX44Z">671 / 0</td><td class="num" data-page-node-id="8MpymndOusPd01QqK8n0p6">974 / 0</td><td class="num" data-page-node-id="9EgqwaXKgf4AL174J6LQuo">855 / 0</td></tr>
+    <tr data-page-node-id="g9iyAfVUve0sBiYCcM1oBu"><td data-page-node-id="zEd8zcixhEdk08mVYm2div">failures.csv / exceptions.csv</td><td data-page-node-id="6OouxiVv8ABAJUiJLqli5i">空</td><td data-page-node-id="wdhrPVGGepdEooCtSm6qdh">空</td><td data-page-node-id="JwqVvXycEERbGLjJr52r4G">空</td></tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="mHcd24ITj0Aofd84vuub5E">对局时长与计划完全吻合（Job#30 明细）</h3>
+<pre data-page-node-id="NSH9PBeFb8utMoQHypuFSa">[Round 1] 游戏结束（对局 16.1s / 计划 16s，排空入站 1 帧 / 827 字节）
+[Round 1] 游戏结束（对局 15.0s / 计划 15s，排空入站 1 帧 / 827 字节）
+[Round 1] 游戏结束（对局 18.1s / 计划 18s，排空入站 1 帧 / 827 字节）
+[Round 2] 游戏结束（对局 12.1s / 计划 12s，排空入站 1 帧 / 827 字节）
+[Round 2] 游戏结束（对局 14.0s / 计划 14s，排空入站 1 帧 / 827 字节）
+[Round 2] 游戏结束（对局 17.1s / 计划 17s，排空入站 1 帧 / 827 字节）
+[Round 3] 等待登录冷却 28.7s...   <span class="muted" data-page-node-id="7pkCdjRFJR6H0gHMwL19FA">← 被 run_time=60s 截断，非异常</span></pre>
+<p data-page-node-id="MWgKEN754c9jtNWp8WZ8kP">连接的存活时长已由「被中止」变为「完整执行到 <code data-page-node-id="FnTk9VFWSFcUpGGK1JNAPZ">random.randint(10,20)</code>
+计划终点」。第 3 轮进入 30s 登录冷却等待后被 <code data-page-node-id="CKc9ZNBFcMnvnFYZNyEEk2">run_time</code> 正常截断。</p>
+
+<h2 data-page-node-id="HvlfmkErhnGNGrixDSvOc2">3. 根因更正：是心跳 ping/pong，不是「补丁积压」</h2>
+
+<div class="banner bad" data-page-node-id="w5DzPs35Dd1paPHD6uGpu1">
+  <b data-page-node-id="39xt45Oc9wKyJqSzrd0gVf">更正上一轮结论。</b> 我在《Locust 连接约 7 秒被中止-根因定位》中判断
+  「客户端只发不读 → 房间状态补丁在接收缓冲积压 → 连接被中止」。
+  <b data-page-node-id="RsM35hDB6Cf026SlL0PKfv">该判断被本轮实测推翻</b>：入站数据帧实际只有 1 帧，根本没有可供积压的补丁。
+</div>
+
+<h3 data-page-node-id="61yDIUR4p2BTPFmhwizPnj">实测：房间里其实几乎没有入站流量</h3>
+<pre data-page-node-id="0ekZIIpSTQwIJr8FKHgbmH">6 秒窗口内：发包 60 次，入站 1 帧 / 827 字节（首字节 10 = JOIN_ROOM 全量状态）
+入站帧首字节分布: {10: 1}
+入站速率: 0.13 KB/s，0.2 帧/s
+<span class="muted" data-page-node-id="nipVVwBRTKWBPlaueklQ1F">（同一现象在 Locust 三轮日志中一致复现：每轮「排空入站 1 帧 / 827 字节」）</span></pre>
+<p data-page-node-id="VMOWX23oD4bbtI5zXJnRgx">即 <code data-page-node-id="MbhhMXKtF36HUSapASblQ4">MMORoom.onCreate</code> 虽设了 <code data-page-node-id="pwBQPIEVf12WLb7kJmnqLt">setPatchRate(50)</code> 与
+<code data-page-node-id="PLMHTMYH4lOED3yxJI5YaT">setSimulationInterval</code>，<b data-page-node-id="rrQoOlyvMyDfPl3Fabmunr">但该客户端在整个对局期间并未收到周期性状态补丁</b>。</p>
+
+<h3 data-page-node-id="efW5V983ZiE9O0tTWLscxf">真正机制：Colyseus 传输层的 ping / pingMaxRetries 心跳</h3>
+<p data-page-node-id="RQ5yOGFE1bm20dYHHHP1Xf">证据来自安装包源码 <code data-page-node-id="5wyFIBQtfvaFTMJbToMpLH">colyseus/esm/transport/WebSocket/WebSocketTransport.mjs</code>：</p>
+<pre data-page-node-id="KqoX9gKEKDo3bApoDQBSEp">this.pingIntervalMS  = options.pingInterval  ?? 3000;   <span class="muted" data-page-node-id="X2vNnsjZiA9xAVCUz2pyBu">// 默认 3s</span>
+this.pingMaxRetries  = options.pingMaxRetries ?? 2;      <span class="muted" data-page-node-id="EIpV82WPzjQ9zHh30bk7AU">// 默认 2 次</span>
+
+function heartbeat() { this.pingCount = 0; }              <span class="muted" data-page-node-id="gxFMn9oSelRL83buz2uYdA">// ← 只有收到 pong 才归零</span>
+
+autoTerminateUnresponsiveClients(pingInterval, pingMaxRetries) {
+  this.pingInterval = setInterval(() => {
+    this.wss.clients.forEach((client) => {
+      if (client.pingCount &gt;= pingMaxRetries) {
+        return client.terminate();                        <span class="muted" data-page-node-id="09Vo75iFhALyYFr4xr5pt8">// ← 主动踢连接</span>
+      }
+      client.pingCount++;
+      client.ping(noop);                                  <span class="muted" data-page-node-id="jqFG5Hnv9ADaa1q6FabnKc">// ← 发 WS 控制帧 ping</span>
+    });
+  }, pingInterval);
+}</pre>
+
+<table data-page-node-id="AuCykMipLZr4XK5oscEbxe">
+  <thead data-page-node-id="QBBCg7q3jxYXFE6mIBk4rk"><tr data-page-node-id="rP2veVa2rAbs6Kc0E2n82t"><th data-page-node-id="0PqcugccGKVXweXpV6bISf">时刻</th><th data-page-node-id="qmx9DKEPT7Q1LllGXacdkH">pingCount</th><th data-page-node-id="6JsuVpA1YicgMroJwgkXpl">动作</th></tr></thead>
+  <tbody data-page-node-id="MgsqSyUbZt7SGysWTPmcr8">
+    <tr data-page-node-id="MxyA2wECk8h7zvjh5eYUwd"><td data-page-node-id="fTi8DavNEybgNMbCNaTUpz">连接建立</td><td class="num" data-page-node-id="scomNQm085Z5QEQlOEsXLf">0</td><td data-page-node-id="wcwhEecBRQSDUDRBApwn7Q"><code data-page-node-id="GjXkUy5ftZRw9b6NEKceAe">rawClient.pingCount = 0</code></td></tr>
+    <tr data-page-node-id="q95y6rm7q8wvXbNbQIRwCC"><td data-page-node-id="kCPlA6tjdF241xOGayiaDs">t = 3s</td><td class="num" data-page-node-id="Y0jawDmUs2VGmrGJnoOG3w">1</td><td data-page-node-id="nVDfAp3c4FSsFrvE9YDEzY">发 ping #1</td></tr>
+    <tr data-page-node-id="hDgDgGudkN4jMTEayr9YTU"><td data-page-node-id="phHqYtWdLapWH9btd2HZOq">t = 6s</td><td class="num" data-page-node-id="Sj4Xs7jUt24YqamJ64ysJq">2</td><td data-page-node-id="lTUoFr96OtRBCnVYj4e5zm">发 ping #2</td></tr>
+    <tr data-page-node-id="2V2zHxBMPLLpDEU5FoTciZ"><td data-page-node-id="nWtqgmUG6fSD6fEJgv4sfj"><b data-page-node-id="A2U0n999tr3SRP6OhmxGJO">t = 9s</b></td><td class="num" data-page-node-id="UMoGl1FWfBMqn8OuCFGt3A">2 ≥ 2</td><td class="bad" data-page-node-id="B01JW7WQ65rt2IueCpUWwf"><b data-page-node-id="1N4kSXWZDMl01sJt1knhOC"><code data-page-node-id="MvWK7EP39G2JPqird2hKgU">client.terminate()</code> → 连接被服务端主动关闭</b></td></tr>
+  </tbody>
+</table>
+<p data-page-node-id="bgtmzInGXYPnL2Yq5eY3F2"><b data-page-node-id="pVoX9vbqlgTC0XBD3CVAWP">与实测吻合</b>：改前「只发不读」的独立探针在 <b data-page-node-id="isVtP3N9e8jctOpe85TkZ9">9.15s</b> 后抛
+<code data-page-node-id="J6yCF8URACxmpBphY26ylm">WinError 10053</code>；改前压测 9 条连接平均存活约 7.1s（含连接建立偏移）。
+而 <code data-page-node-id="30t3AICGgnjoP7wcprAIvQ">ping</code> 是 <b data-page-node-id="Dbn6CCSqaAxCYc8LmsQomu">WebSocket 控制帧</b>，不是数据帧 —— 客户端只有在调用
+<code data-page-node-id="hpxNlCKGy4uhqI2hxCvudG">recv()</code> 时才会读到它，由 websocket-client 内部自动回 <code data-page-node-id="DAoOgGHauczsXTXJH4XCFY">pong</code>，
+服务端 <code data-page-node-id="oTcOznpeH0PuISGgYpVvYw">pingCount</code> 才归零。</p>
+
+<div class="banner" data-page-node-id="8kIzwgZN7vYYi7WcB3n26O">
+  <b data-page-node-id="EJiREqI7QG7qlnEC0oIegV">所以修复起作用的原因</b>：新增的 <code data-page-node-id="Wuz3wQ8v3uurwXJL7h5osa">drain_inbound()</code> 让客户端周期性调用
+  <code data-page-node-id="RCspZOBWAXqNpdZ2k7Fc7y">recv()</code> → 读到服务端 ping → 自动回 pong → <code data-page-node-id="YFgZMJ2FE4DMwG3wmqraCg">pingCount</code> 归零 → 不再被
+  <code data-page-node-id="ELkeDtqXoOD9AO3VuHedTa">terminate()</code>。它<b data-page-node-id="iseuNH6KBSwNEnAZ4H8VGH">并非</b>在清空缓冲积压（本就没有积压）。
+  这也解释了「排空只读到 1 帧却仍让连接活了下来」这个看似矛盾的现象。
+</div>
+
+<h3 data-page-node-id="KhzdVfbEVXElm74C805eGI">顺带修正：上一轮「C 组空等 11s 仍存活」的对照并不成立</h3>
+<p data-page-node-id="iktCTTaZiJwBvecL7dzdGg">改前那组「不发不读、静默 11s 后首次发送成功」曾被当作反证。实际上 TCP 发送缓冲
+会先接收写入、<code data-page-node-id="ReJLvO3bQCUymPDNFFVShg">RST</code> 稍后才反映到下一次发送，因此<b data-page-node-id="USgPZgNpJlOyY3WPWImtwh">单次成功发送不能证明连接仍在</b>。
+该组不构成有效对照，已被本轮的 3s×3 算术 + 9.15s 实测取代。</p>
+
+<h2 data-page-node-id="oEehrjkFMTqZNKMoDH7qRJ">4. 改动安全性论证（为什么非阻塞读取不会读坏帧）</h2>
+<div class="card" data-page-node-id="tVXijwCNgqbVxTnRA1Is87">
+  <ul data-page-node-id="h4echIiR4nLXNxZGtQOYfD">
+    <li data-page-node-id="fHdGrknTbOZnjOTjXD4Iiu"><b data-page-node-id="Lsi0qIDdoez3bwBfEFgoxH">不会死循环</b>：<code data-page-node-id="RdrbzFYu5rm5MTC6Eeym7E">websocket/_socket.recv()</code> 在
+    <code data-page-node-id="CnDJ58piLGoyE53E2m2Rdm">sock.gettimeout() == 0</code> 时直接调用 <code data-page-node-id="VyINPuFEuf0b1oCQCIHA4Q">sock.recv()</code>，无数据抛
+    <code data-page-node-id="Z7xDLWuTzjbgAFQKoEIWe7">BlockingIOError</code>；该异常<b data-page-node-id="Z3FlEeRma14xdBSvmSIUNx">不被</b> <code data-page-node-id="U5HyZoXxOe68nu7gZAjn0Q">except TimeoutError</code> /
+    <code data-page-node-id="cMEEZ65tVYxERorREfdYXr">except socket.timeout</code> 捕获 → 直接向上传播，<b data-page-node-id="6PeesflQ2RECGHmwNoqCkJ">不会</b>落进
+    <code data-page-node-id="pDO9UL4SVwJlETKWiHvtmc">select</code> 分支返回 <code data-page-node-id="MGBQj0kYQOaklMKEjEcpA8">b""</code>（那条路径才是死循环风险）。</li>
+    <li data-page-node-id="XmNHpAsqEsB88G8WpdB0r8"><b data-page-node-id="gSA9bPVpmPGEjPYWaOlJ9V">不会读坏帧</b>：<code data-page-node-id="ZSUqpUWiJAqbB48raTBDY8">frame_buffer</code> 跨调用保留半帧状态 ——
+    残量留在 <code data-page-node-id="0PkRUQ670tU9NUGcxrqCP1">recv_buffer</code>，<code data-page-node-id="ilxOBKXahMKWlYXDLFAgeF">header</code>/<code data-page-node-id="m6ZKi4sI15doWLjZ16qJBw">length</code> 只在整帧组装完成后
+    才 <code data-page-node-id="RLQg88IalLCJde0g4fjvcZ">clear()</code>，故某次 <code data-page-node-id="77WVByFeyBViU57GwDULnb">recv</code> 因无数据中断后，下次调用可无缝续读。</li>
+    <li data-page-node-id="oNhg2JTLterXR0B0kF7f9l"><b data-page-node-id="rKfWRbJ32HopBTMeLldRbQ">不影响发包节奏</b>：<code data-page-node-id="wu84gkGUtuDFnchXgkkCOF">finally</code> 恢复原超时（10s），
+    <code data-page-node-id="LS3yExJrKkO8n3wuqXCHWC">send</code> 语义不变；<code data-page-node-id="uCwAr2OXgiaEkFd1xKrALr">time.sleep(0.1)</code> 与
+    <code data-page-node-id="BS65a81IgvSKH5ftDGAGXm">random.randint(10,20)</code> 均未改动。</li>
+    <li data-page-node-id="oSfrLxmin5gZ011KblgiLO"><b data-page-node-id="jey1UXAM7YkZ0kMhB6B4ZW">不修改被测对象</b>：未改服务端的 <code data-page-node-id="bGpUnZpQ7ZHKi22GmclxHb">pingInterval</code> /
+    <code data-page-node-id="D0oivPm0j76zc1PHCBn8Bs">pingMaxRetries</code> / <code data-page-node-id="qTyy1BRy38GLLIWXJeCDyH">patchRate</code> —— 避免「改被测对象以迁就测试」。</li>
+  </ul>
+</div>
+
+<h2 data-page-node-id="SwApKxvBlRbfGQcgMXGIWd">5. 平台侧证据</h2>
+<table data-page-node-id="bqiL5X4vfOxnXkjRjT6OyS">
+  <thead data-page-node-id="qhM2ugN9RlJFKd8bpR9ap6"><tr data-page-node-id="pJt0mtM7mC3qiQOZr1iZKV"><th data-page-node-id="KKB0biKd2wZAmLeG4Qgiyp">项</th><th data-page-node-id="h1OFKgskAWQLTaqVbsRJlD">结果</th></tr></thead>
+  <tbody data-page-node-id="0ETjsJoK8beSFx9lTqvBtO">
+    <tr data-page-node-id="3iBaInbx26G1iaHmwUt7Kr"><td data-page-node-id="IqDteiNRkIGAzkyK9YwCUy">计划</td><td data-page-node-id="8gQcn44vRU2lYVzFzRj6Fo">id=15「Locust-Colyseus 完整局(60s)」，由平台既有 API 创建（未改平台代码）</td></tr>
+    <tr data-page-node-id="fXP5JIQEF1ZQiW8nXQ1wOz"><td data-page-node-id="gE0b2x5OSQWZEECDKuFPXE">参数</td><td data-page-node-id="KYJeGdlOGhIKbByMLEvESQ"><code data-page-node-id="kIHKJnWa9GrQ37bt8BSgyN">users=3 / spawn_rate=1 / run_time=60s / csv_full_history=false / timeout_sec=180</code></td></tr>
+    <tr data-page-node-id="LJJvXEVXZOpjBYuVo6pxku"><td data-page-node-id="CW10ChDMvLwrGCP2It3EWD">受控引用</td><td data-page-node-id="fepQz1m6BZmCGvtcBqs7Ol">env=1 <code data-page-node-id="VNclM05l1AFoYZURBkRHsq">local</code>(localhost:2567) · exec=3 <code data-page-node-id="9Kjb5rzJVplKnvElFYUeHg">anaconda-locust</code> · asset=4 <code data-page-node-id="ltM9Is0gD0iTxgtqzmwcbO">locust-colyseus</code> · 场景 key <code data-page-node-id="siCLqBZE3myAlDfwcExQIl">colyseus-bot</code></td></tr>
+    <tr data-page-node-id="hYlAEiSx3IOmFGotTvi3xT"><td data-page-node-id="BxRONLn1YA5avGYKelGUhD">预检</td><td data-page-node-id="dbalAW4eMv06B9Z6exPiCq"><code data-page-node-id="LBabQMU41hq7JRPiEpPFTt">ok=true</code>、<code data-page-node-id="ZIR1wLH3DQ0yWVbEZJQHWT">no_side_effects=true</code>、<code data-page-node-id="obrhmbCEx8I4ztcWy09CVa">missing=[]</code>，环境 TCP 连通性通过</td></tr>
+    <tr data-page-node-id="UkGOxqFHtBPs1n30veUMZo"><td data-page-node-id="OGKbWKRIWO9BsuuFtPISfQ">状态转换</td><td data-page-node-id="RbYWhoUyyubC6wbTtkQ6vz">PlanRun <code data-page-node-id="Cu7AKw8pOPHSPNyVwLMBdW">queued → running → success</code>；Job <code data-page-node-id="eJgCgCIESEbANn6mNzpvlq">queued → running → success</code></td></tr>
+    <tr data-page-node-id="8UA7Obujr9OWETnIXCFN9G"><td data-page-node-id="OUzklAHcxZx4VzcPQF5nDI">报告产物</td><td data-page-node-id="nEq6JdnqdZzzno572mBq3p">5 个：<code data-page-node-id="2Lzt1QSfLsRAf6KOlF8Khh">locust_report.html</code> / <code data-page-node-id="MSs3BNRS6CAv2GcT4rneGd">locust_stats.csv</code> / <code data-page-node-id="7f4i85gFBR3QGYvNck0fl8">locust_failures.csv</code> / <code data-page-node-id="eXQjsoi4nEBNQF63cwu93m">locust_exceptions.csv</code> / <code data-page-node-id="Z4cThzmy8PU4NPAyQEmW6N">locust_stats_history.csv</code></td></tr>
+    <tr data-page-node-id="nsMPCsJ8Ly2n31L4jMqDcN"><td data-page-node-id="IvGEZ2oNP5UEzVbDTE8UHA">报告中心</td><td data-page-node-id="iuiECe7glo7gvKiCGfoMIa">索引 <code data-page-node-id="7rOiNt5cMODh6tA5lv401p">job_id=30</code>（plan_run_id=24→23、29 亦已入索引），<code data-page-node-id="giG8DzJ2kHdjlhmcJgME0r">status=success</code></td></tr>
+    <tr data-page-node-id="UadpcYFTRRQKBQizQ9tqGc"><td data-page-node-id="V4bBpNRFek0dF8rpNK1Syb">脚本一致性</td><td data-page-node-id="02YygURvWCvllyJhSWer5u">平台解析的即为被改文件：<code data-page-node-id="VCX5paasdCUx2JF1ZYlw2S">F:\测试平台\Colyseus-Storm\locustfile.py</code></td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="oAMmYTA19KU3ESrPOdfOnh">6. 数据安全</h2>
+<table data-page-node-id="R7wvzgclKMTK0A6yrCmRvV">
+  <thead data-page-node-id="kyhHuVGxNbKMC6UbkgUvic"><tr data-page-node-id="oBP95ftzAQRRVpHjg84L6X"><th data-page-node-id="pFsdRHppMdenrVAJ9LxT9W">项</th><th data-page-node-id="OmcUUCT5GlC3iRF5lZF6uw">结论</th></tr></thead>
+  <tbody data-page-node-id="bIzjNUuPiXJoKxNmQZRlfJ">
+    <tr data-page-node-id="uIptKfCcXkN7Pn0HJlm0i5"><td data-page-node-id="jGVRgeuDFm26BC1RdnBSfy">改数据库</td><td data-page-node-id="BUxeZUf6M6RAL7550OncV0">未改结构、未改写历史行。仅平台自身按执行流程<b data-page-node-id="JmDe6HFDfHmST34fB6vCpy">新增</b>记录</td></tr>
+    <tr data-page-node-id="NdKHf8gLPum4cR8xD7tFl0"><td data-page-node-id="jqBsQFksgtfa7zR3uSnPjQ">增量</td><td data-page-node-id="FaRnu8Ae48JMJZZoQZiktr">plan_runs 23→25、jobs 28→30、plans 15（未新增）、reports 26→28、report_index 26→28</td></tr>
+    <tr data-page-node-id="EFwXQiW0Z4NSw0VjA6HiT1"><td data-page-node-id="VKpNpKGUCD2FWy9IybNige">历史不变性</td><td data-page-node-id="jyvAw5aLJWkIGCWplEChUc"><code data-page-node-id="cD2uglQehihw2cAsvMHbjs">run#1..19</code>、<code data-page-node-id="UelXoTajWc8L1RtcVYpdrA">job#1..23</code> 与 11:11 备份<b data-page-node-id="4TCWXkYfbjftxYIWHihCUN">逐行一致</b>；备份时 <code data-page-node-id="COwCaadjdabkCaKR9icyAo">reports</code> 行全部仍在</td></tr>
+    <tr data-page-node-id="uHJcXqwlyL9svWNivEBqkn"><td data-page-node-id="ZS7hRxCcdUucsIV4NK6EoL">前几轮未被改写</td><td data-page-node-id="utJqA3XIiy2WukSPpJSM4Z">#20 failed · #21~#25 success；Job#24 failed / #25 skipped / #26~#30 success —— 状态均保持原样</td></tr>
+    <tr data-page-node-id="bqRUgDHrQP2YfSLumUkdAV"><td data-page-node-id="FQ9MED8hzsnNXiKyjG9FUk">真实资产</td><td data-page-node-id="2wvCxGLQd3t2ka4w7N2GWw">未改：tpl 23 张（mtime 09-29 10:33:21）、scenes 5 张（09-29 10:35:45）</td></tr>
+    <tr data-page-node-id="r0H6OjsDopbcHDRWqFyxfE"><td data-page-node-id="XD6bRPPLvzfNzAHOXVitCI"><code data-page-node-id="sEovv6DFYAWai7SbIjo0On">match_eval.py</code></td><td data-page-node-id="mSiu96jbUSdCmORDmrAOak">未改（mtime 09-18 19:16:22）</td></tr>
+    <tr data-page-node-id="YIUOiPlXp2M1DUv2eDsNrf"><td data-page-node-id="RPQ09BOBwhdva46RAreB2p">临时探针</td><td data-page-node-id="1Xo1jW4c6xLaQ1F9Hmrupr">建于系统临时目录，用毕已删除</td></tr>
+    <tr data-page-node-id="ikjfwgRgFtm0AweKOMEXGS"><td data-page-node-id="hoyzEeKXeRddi5mrWkaskn">被测侧副作用</td><td class="warn" data-page-node-id="mKIeiqRsPx0IXYNRxyU2Ef">被测服务 MongoDB 中新增若干 <code data-page-node-id="mGIZGvrAV1GL0AsMQWzuiq">locust_*@test.com</code> / <code data-page-node-id="DT7hDVFoDhTj2M986bb3I5">probe_*@test.com</code> 测试账号（脚本固有行为，不可回滚）</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="HU1m0m1pH8f7aiOMEAPdUt">7. 仍然存在的限制</h2>
+<ul data-page-node-id="XDGpT36Ho3W7AldFslicTs">
+  <li data-page-node-id="jqS9OmvofFJQZ0SyxBcHS3"><b data-page-node-id="oCkjJcsGYoxG20bsbw6ZCR">未跑第 3 轮及以后</b>：第 3 轮进入 30s 登录冷却等待后被 <code data-page-node-id="Z7dBwfFvB8p4DbKhgpmIrN">run_time=60s</code>
+  正常截断。要覆盖第 3 轮需 <code data-page-node-id="gtG5jtmwtE09PzPPgZrTOm">run_time ≥ 90s</code>。</li>
+  <li data-page-node-id="Ml6OWttDYyAp9VG3iaA7xm"><b data-page-node-id="5YBNYr59EUxaCk8lwlAZj5">入站流量极低</b>：本房间对客户端几乎不下发数据（6s 内 1 帧），所以该脚本
+  实际测的是「高频写入吞吐」，<b data-page-node-id="4AAsh1cpqPaJKWrgzcHUJs">不是</b>「收发双向负载」。若需要真实双向压力，
+  需另写会消费状态的场景（本仓库 <code data-page-node-id="o62vMzpCDadJOirEkmc0Ly">Server/loadtest/</code> 用的是官方
+  <code data-page-node-id="dMW2DDJg8EvXCkFbIM6bEG">colyseus-loadtest</code>）。</li>
+  <li data-page-node-id="FKXbnWmHKpw9L8qah8xSYA"><b data-page-node-id="Spji9IhQFLJkJWwNDLMGJe">并发规模仍为 3 用户</b>：属保守链路验证，不足以反映容量拐点。</li>
+</ul>
+
+<h2 data-page-node-id="O2G7r5Qg2fHIUle2MN4PxE">8. 结论</h2>
+<div class="banner ok" data-page-node-id="WX4L0aMShBRJVLViS4PM6w">
+  <p data-page-node-id="TwOcxazJABXulFBKGxVKCH"><b data-page-node-id="cGR6KXu2Ql5LD12EkcXXHU">修复有效、可重复，且根因已从源码与实测两端闭合：</b></p>
+  <ul data-page-node-id="eAh6dbw0onKNne3Cq7ZZof">
+    <li data-page-node-id="9IMaQF5gEHO1pwNHj4iqSs"><b data-page-node-id="AVxqHCb8K2f1zcqH13yyH4">被测脚本缺陷</b>：对局循环只 <code data-page-node-id="3B9v4UExlvYEKaakChnbVr">send</code> 不 <code data-page-node-id="EZTVhXtaYZtGamHoUCUvNq">recv</code> → 无法应答
+    Colyseus 的 WS 层 ping → 约 9s 后被服务端 <code data-page-node-id="79PDwRsIIW38haH4B8r1PJ">terminate()</code>；且异常未进统计，
+    使其被「0 失败」掩盖。</li>
+    <li data-page-node-id="NqEdchNdeVb6mSjgXqouXF"><b data-page-node-id="gugJE0agTVsXKdm1GbK8o3">平台无责</b>：正确拉起 Locust、正确归档产物、正确建立报告索引。</li>
+    <li data-page-node-id="tTITcpgLQhd87F1rFI1AbW"><b data-page-node-id="ViamAsWtk9pSSe5HQ5tXjC">服务端无责</b>：心跳踢掉不响应的客户端是正常保护行为。</li>
+    <li data-page-node-id="32F9ebZug6mhaAYXhHPIdk"><b data-page-node-id="lXYOTshCmIKaMBtQag9dBE">修复方式</b>：仅改被测脚本（+80/−2），未碰服务端、未碰平台代码、未改并发与时长参数。</li>
+  </ul>
+</div>
+
+<p class="muted" data-page-node-id="jd3dj8xkSuFyFy7nzNSOnq">报告生成：2026-10-01 · 对应 PlanRun #24 / #25，Job #29 / #30</p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="7laFkEV2lfzDjS1e5QODs8">
+<head data-page-node-id="nSfHFzyyAlvVrbtlUJ85fu">
+<meta charset="UTF-8" data-page-node-id="TYBtf4UWRW15vNTnSapaeE">
+<meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="XoW3L3cnooPd55wtCgQ92s">
+<title>v0.2 TestCase / TestSuite 数据模型冻结前 · 只读设计评审</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --line:#e3e6ea; --text:#1f2328; --muted:#6b7280;
+    --accent:#2563eb; --ok:#0f9d58; --bad:#d93025; --warn:#b26a00; --code:#f2f4f7;
+    --new:#7c3aed; --frozen:#0f766e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+       font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.72}
+  .wrap{max-width:1060px;margin:0 auto;padding:34px 22px 72px}
+  h1{font-size:23px;margin:0 0 6px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:22px}
+  h2{font-size:17px;margin:38px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:14.5px;margin:22px 0 8px;color:#111}
+  h4{font-size:13.5px;margin:16px 0 6px;color:#333}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:14px 0}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12.7px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:#f0f2f5;font-weight:600}
+  code,pre{font-family:Consolas,"Courier New",monospace;font-size:12.2px}
+  code{background:var(--code);padding:1px 5px;border-radius:4px;word-break:break-all}
+  pre{background:#f7f8fa;border:1px solid var(--line);border-radius:8px;padding:11px 13px;overflow-x:auto;line-height:1.55}
+  .ok{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}
+  .warn{color:var(--warn);font-weight:600}.muted{color:var(--muted)}
+  .new{color:var(--new);font-weight:600}.frozen{color:var(--frozen);font-weight:600}
+  ul,ol{margin:8px 0 8px 20px;padding:0} li{margin:4px 0}
+  .banner{border-left:3px solid var(--warn);background:#fff8e6;padding:12px 16px;border-radius:8px;margin:14px 0}
+  .banner.ok{border-color:var(--ok);background:#eefaf1}
+  .banner.bad{border-color:var(--bad);background:#fdeeed}
+  .banner.info{border-color:var(--accent);background:#eef3fe}
+  .flow{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:12px 0}
+  .node{border:1px solid var(--line);border-radius:8px;padding:7px 11px;background:#fff;font-size:12.3px;text-align:center;min-width:88px}
+  .node.cur{background:#eefaf1;border-color:#9dd9b4}
+  .node.fut{background:#f5f0ff;border-color:#c9b6f7;border-style:dashed}
+  .node.frz{background:#eafaf8;border-color:#8ed4cc}
+  .arrow{color:var(--muted);font-size:14px}
+  .prob{border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:8px;padding:10px 14px;margin:10px 0;background:#fff}
+  .kv{display:grid;grid-template-columns:78px 1fr;gap:3px 10px;font-size:12.7px}
+  .kv dt{color:var(--muted)} .kv dd{margin:0}
+  .p0{border-left-color:var(--bad)} .p1{border-left-color:var(--warn)} .p2{border-left-color:var(--muted)}
+  .frzbox{border:1px dashed #9dd9b4;background:#f3fbf6;border-radius:10px;padding:4px 18px 14px;margin:12px 0}
+</style>
+</head>
+<body data-page-node-id="SDaDn3uuYpJoq2mj3TpQjs">
+<div class="wrap" data-page-node-id="JjSdrJSIGDu776epF3EcNG">
+
+<h1 data-page-node-id="aQwRsHIDz6umXTEra7sFLa">v0.2 TestCase / TestSuite 数据模型冻结前 · 只读设计评审</h1>
+<div class="sub" data-page-node-id="BBiaS358YiZgTInUanpd8R">
+  统一游戏测试平台 第二阶段 v0.2 · 以当前仓库实际代码为准（非凭空设计）·
+  评审日期 2026-10-01 · <b data-page-node-id="5D5Q01C9eqUcnhuGd6m1Mb">READ-ONLY</b>
+</div>
+
+<div class="banner ok" data-page-node-id="3GnhaBGADOahVTr3qj7xze">
+  <b data-page-node-id="3aKK5EfRB36PHfx1CDO2DK">本轮只读。</b>未修改代码 / 数据库 / 前端 / 配置 / Runner / 测试资产；未创建 TestCase·TestSuite 表；
+  未新增 PlanRun / Job；未启动服务；未运行任何测试。所有结论均标注文件与行号依据。
+</div>
+
+<!-- ============================================================ -->
+<h2 data-page-node-id="2ePXDeLmX17rrpKY2cuQrd">Part A · 代码复核（先确认再设计）</h2>
+
+<h3 data-page-node-id="VIbIQXv9W7zp3YcwhfTodV">A.1 复核范围</h3>
+<p data-page-node-id="o7MWgFxSpwII7zgwNvmpT1">按要求逐项复读了 <code data-page-node-id="iciFmF0LAjmQEAVwIJJb1R">db.py</code> · <code data-page-node-id="qU1nsmuuNtJJRQAH2YSj2a">api/router.py</code> · <code data-page-node-id="zFOd1W7UWJ8HRAm5Z4OlpC">config_center.py</code> · <code data-page-node-id="lGN6lMLcN1xD7eRaEP4Vm9">preset.py</code> ·
+<code data-page-node-id="QFlORsxOLALq4JJQOmNkTE">executors/</code> · <code data-page-node-id="CxKpY5r3NvAQcGyhKMPsXg">frontend/index.html</code> · <code data-page-node-id="i4BCrfVHa2LDtZe9Raj01f">domain.py</code> · <code data-page-node-id="vb5hqyG8D4L3yuDCNkQMHZ">schemas.py</code> · <code data-page-node-id="2AwTTGE4a8idqESWLFNKf6">report_center.py</code>，
+并再次只读查询了运行库结构与数据，用于验证《第二阶段v0.2架构审计报告》的结论。</p>
+
+<h3 data-page-node-id="xyDap0RY0U2uKyCTOjZyBF">A.2 与上一轮审计报告一致的部分（复核通过）</h3>
+<ul data-page-node-id="vHbwt9DCJG06TgBhJAmTUX">
+  <li data-page-node-id="wZWf6UPG6oO6FuWTBYsaN1">全库 <b data-page-node-id="YMK0xYoaqB4RjF02jLWDk7">0 个 FOREIGN KEY</b>；10 张业务表；<b data-page-node-id="Zp21bLcffCjQrx49GlIC8J">不存在任何 TestCase 实体</b>。</li>
+  <li data-page-node-id="HAX1j1EHuirltMo7f8UBm7">「一个测试」= <code data-page-node-id="oXmLDKLT4UaofDWw4IQgqC">plans.steps[]</code> 内的匿名 JSON（<code data-page-node-id="C11XzJmAMrm4F1kdgItruZ">domain.py:127-132</code> 的 <code data-page-node-id="iIkxo2J5yhVlgRphq4SFPq">PlanStep</code> 只有 4 个字段）。</li>
+  <li data-page-node-id="XrfnGgFDqqGBVTcew6VH5C"><code data-page-node-id="tB1QiJj4Wr1yIJimu42bb3">_STEP_PARAM_KEYS</code> 按引擎分派（<code data-page-node-id="jIVWZehjNBMJDASIoLtGVB">config_center.py:853-859</code>）；<code data-page-node-id="qYpoxDelvyMi6B77nKYjCx">engine_compare_key</code> 按引擎生成比较键（<code data-page-node-id="bCaPnjfbXERFDppfxHLxPa">report_center.py:41-83</code>）。</li>
+  <li data-page-node-id="O2U8yhlCHoWCcQ41BpYsK3">快照不含内容指纹：<code data-page-node-id="X53uvH8G6t8IliyH6sVAyK">asset_fingerprint()</code> 只哈希受控 key（<code data-page-node-id="2zwa12DdYhS9H3xScAlVqp">config_center.py:385-391</code>）；
+    <code data-page-node-id="wOqAuEeVzgFQowpSp79wZF">dir_fingerprint()</code> 只在 <code data-page-node-id="w2A8sp6DQBqgeT07mCew9D">precheck_asset_source</code> 使用（<code data-page-node-id="KTpOBF377Rcn21fj1CsHe9">:665-683</code>），<b data-page-node-id="eHZ2SE6dKfHSZXpXlGGksi">从不入快照</b>。</li>
+</ul>
+
+<h3 data-page-node-id="blx5weZThoDupyAbFR2S4m">A.3 ⚠️ 本轮新发现（上一轮审计报告未覆盖）：Plan 写入路径会<b data-page-node-id="9MHjyAvWgPYe5Ge0oStygk">静默吞掉</b> case_ref</h3>
+
+<div class="banner bad" data-page-node-id="1BfBbQylZfXeCkdI1Q8s0t">
+  当前 <code data-page-node-id="UY2qG26WkCdDBJDiWB8jVN">PlanStep</code> 被硬编码为 4 个字段，<b data-page-node-id="TuoBZroEAeIlhPoRIHrWns">从数据库到前端共 9 处</b>都会把额外键丢掉。
+  这意味着：<b data-page-node-id="9443lSB8nGtaOteUh8QS1z">「Plan 引用 TestCase」在本轮之前不仅"没有实现"，而且会"静默失败"</b> ——
+  提交带 <code data-page-node-id="qIwHzaF8UPOqMCKuABnWvb">case_ref</code> 的 steps 不会报错，键会凭空消失。
+  <b data-page-node-id="CADKPPbEBoKAXGpkCjsTWo">这 9 处即 v0.2 的最小改动面。</b>
+</div>
+
+<table data-page-node-id="KalMoIrWiFWD6dsp7sBRMJ">
+  <thead data-page-node-id="9tFWZrJaB5qPMLEliHJgr8"><tr data-page-node-id="ClqzVKRjWIAQwOxgEwnQ0s"><th data-page-node-id="lvLU8jdWSoJKczbWwOvLm2">#</th><th data-page-node-id="zKS8qRIeG3T5Fuu87qTdCy">位置</th><th data-page-node-id="MxJcTXvkpLa9yGfqtHabVh">行为</th><th data-page-node-id="q2zHvk7tdaVSY6WuJeIysB">后果</th></tr></thead>
+  <tbody data-page-node-id="4p0CbqmWraXdyAVFXIYo8G">
+    <tr data-page-node-id="Q7ZYVTDxX97PiVguHTsXzd"><td data-page-node-id="y7xVOWvkACUo2QncOcN0om">1</td><td data-page-node-id="uKccHNsbwbAfU07pZ9GRwE"><code data-page-node-id="YHwTO80oSCtNj8QCfKQB98">domain.py:127-132</code> <code data-page-node-id="xsjfrtXrwrHfarD0qIvRZA">PlanStep</code></td><td data-page-node-id="W5KuFd3L6uTbGv5MrtPnEA">dataclass 只有 engine/name/requires_exclusive/params</td><td data-page-node-id="bD7N9vUr8hBSTwHw9Q2SAq">内存模型中无位置容纳 case_ref</td></tr>
+    <tr data-page-node-id="WR40oVqGAPcbG5wRavQhpa"><td data-page-node-id="n9BvB5TPXb3E1hXsnBiJsp">2</td><td data-page-node-id="iB8j30tbYqvm8TBWdyEXED"><code data-page-node-id="E1crc9Uaw3MbQs6AE0aELR">router.py:289-291</code> <code data-page-node-id="YAY7jpNdDcCOYDgNFdBFEA">_plan_from_body</code></td><td data-page-node-id="evIv3buPc6dXlqDSRXxNwY">只取 4 个键构造 PlanStep</td><td class="bad" data-page-node-id="PmwJY6ZsBUsjT2tAIY0BTm">POST/PUT /plans 时 case_ref 被丢弃</td></tr>
+    <tr data-page-node-id="Doc9PVuulzkyeRfcqJQA3l"><td data-page-node-id="zo3UMEjtVpWTGKpu4CZGtf">3</td><td data-page-node-id="mfklMHBnneWLvrHjadDGmB"><code data-page-node-id="Ic4LuU2z02gVemgMtpFNmx">router.py:319-321</code> <code data-page-node-id="OFnqqxOr7SKE15TOr0INIp">update_plan</code></td><td data-page-node-id="jVYLVqvyJuCpJVGWCdCAl0">显式字典，只有 4 个键</td><td class="bad" data-page-node-id="wt4klnmb6gaF1UPlrsuMyr">编辑保存时 case_ref 被丢弃</td></tr>
+    <tr data-page-node-id="qbXiHEnrtMFnjUWFrKbJB8"><td data-page-node-id="4i2pe7KSDUN0dDcqblv7Ru">4</td><td data-page-node-id="EFQajb66jRACkEYdnFT9uG"><code data-page-node-id="HzBhYu1smecYcJIZ46xdF6">router.py:380-383</code> <code data-page-node-id="fHui2Jy6Wrlyn6JuMWM1nO">_plan_dict_from_body</code></td><td data-page-node-id="CClv5Hfl2T1icHwd1QZw9p">预检用的规范化 dict，只有 4 个键</td><td class="bad" data-page-node-id="rdsH46atNAKIgGjskZclBu">预检看不到 case_ref</td></tr>
+    <tr data-page-node-id="IFs79cB5fjmC1Mw3nHxU34"><td data-page-node-id="Piv3QtLpz1XFGuY5wbh9cR">5</td><td data-page-node-id="06Q1pGQILEhIaxOtDJLDak"><code data-page-node-id="JnFDMNvCxfCiVpksvof8vE">router.py:360-363</code> <code data-page-node-id="jSEAnvZFj0nejTtZmKEmym">copy_plan</code></td><td data-page-node-id="CfhQ6vWruFvUgQcCUikTK0">复制时重建 steps，只有 4 个键</td><td class="bad" data-page-node-id="AmovaIwMoBMR9kUKruylC1">复制计划会丢失用例引用</td></tr>
+    <tr data-page-node-id="y1euerBqnITk33blvhYAFo"><td data-page-node-id="AoSh5ItZW7G73lBswLkWqh">6</td><td data-page-node-id="Fyg11xJhd3w6xBB9LpCsX9"><code data-page-node-id="7klPl1aCo362OWAfqsmP4W">db.py:344-346</code> <code data-page-node-id="kyueytNCpZg2ylvLQqhHcK">create_plan</code></td><td data-page-node-id="9Q7juMXOHd35FmBXJ711qO"><code data-page-node-id="HnFKE9zdqUGJdYl6J75bsi">json.dumps</code> 只序列化 4 个键</td><td class="bad" data-page-node-id="hyQFrrmKJXRovk1u8CmNp6">即使 router 传进来也会在落库时被丢弃</td></tr>
+    <tr data-page-node-id="hRZNrlQK8aUP4ehWHpR9hR"><td data-page-node-id="59eMkWk8VyqgESRPkUEPMV">7</td><td data-page-node-id="VforhOjlyCBjSV33hDNXHR"><code data-page-node-id="ZhwlbfLxKs1hg6SKfmzXdv">router.py:274-279</code> <code data-page-node-id="O08mE0xKxNtZdE4qncYKvS">_plan_errors</code></td><td data-page-node-id="tjGjV1q5SnbQmDCOUgmEAo">要求 <code data-page-node-id="4BM1hvNf71NlHujjNfmxN4">s.get("engine") ∈ ENGINES</code>，随后校验其 params</td><td class="bad" data-page-node-id="uftUOBwtSwpfy3jNqHcx5Y">只有 case_ref 的步骤会被 <b data-page-node-id="Rbhh97e4BCSbrvd9LPb1e0">400 拒绝</b></td></tr>
+    <tr data-page-node-id="QaIsk0YWRtBbKxcR7eAlPi"><td data-page-node-id="KZX6S3sqLM5qGZFUC7l4wT">8</td><td data-page-node-id="XrNGm26tGSMbfgjTX9qO6d"><code data-page-node-id="yAX8n4HvpHv1FzbgjkIVaP">index.html:637-638</code> <code data-page-node-id="VhYMTh92RBfPlcpX0FIA1N">renderPlanEditor</code> 载入</td><td data-page-node-id="121yjoaq22x0OIHur4H37g">steps 只映射 4 个键</td><td class="bad" data-page-node-id="44gicV9Ost6aqAsfWjjJso">打开编辑器即丢失 case_ref</td></tr>
+    <tr data-page-node-id="YBN6qj1DGcepniVPOVTZ1A"><td data-page-node-id="ReRw3cvJl3LPXJFJ5pB6fM">9</td><td data-page-node-id="8RBmdrnIl1n837JJBZUHWv"><code data-page-node-id="DjTkOG6xAv5sqgwO390LwF">index.html:794-795</code> <code data-page-node-id="FPIrtncyml1QxMpy33B1YZ">plPayload</code> 保存</td><td data-page-node-id="rSLUMA1XWBpVxFfyZa7Yqr">steps 只回传 4 个键</td><td class="bad" data-page-node-id="5bApjohGNWqI5YpgAhNCQ0">保存时再次丢弃</td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="DJEzvTRvPlz2YgpxSH9leB">对照：<code data-page-node-id="tjyPH3R4CKuYrwHe0ALlot">db.update_plan</code>（<code data-page-node-id="apUoFcSUvF9Vz3qNX1PZWj">db.py:360-382</code>）对 <code data-page-node-id="f3DfDi3Hlysxk00F5nRf9O">steps</code> 是「传入什么就 JSON 存什么」，
+所以第 6 处（<code data-page-node-id="zUHXbxmEPTxjsGoz8ChyXt">create_plan</code>）是唯一在"建计划"链路上额外收窄的点 —— 容易漏改。</p>
+
+<h3 data-page-node-id="JjZHiG0V035djlH3lquzUs">A.4 其余关键复核事实</h3>
+<table data-page-node-id="CY97iKWs3r2imI8kOqGJqS">
+  <thead data-page-node-id="1GKp9dOIVfTYz9FKNOLkdO"><tr data-page-node-id="P1MpplqElNmZbIFJvDSaEi"><th data-page-node-id="KrXYdqYLT8d4y2XagRuKQL">事项</th><th data-page-node-id="Ux0AaurLZaClXCYXA8LzDr">实际实现</th><th data-page-node-id="cS0p1nuRXCsCgfXm7e0Qx7">对设计的影响</th></tr></thead>
+  <tbody data-page-node-id="5axr1sG2g79kVFPxTivc9l">
+    <tr data-page-node-id="886gue9vw0pjM7XHt2Xi4U"><td data-page-node-id="OjawR40n2l4DyGkcfaFEK0">Plan 版本</td><td data-page-node-id="9yupdj5yARmAp7EgQyLB9Z"><code data-page-node-id="yZS9QPpJcgmPC0n25rPlD9">update_plan(bump_revision=True)</code> → <code data-page-node-id="SJOp8qO7wIKvtIqp26LM2A">revision=COALESCE(revision,1)+1</code>（<code data-page-node-id="RHnnco0gjgoK4osnf0G1ec">db.py:378</code>）；预置/回填可 <code data-page-node-id="980kad1rLIsldmhEdz10a1">bump_revision=False</code></td><td data-page-node-id="UpSNMWAsq3a0XnMsO2Dqvv">TestCase 的 revision 可完全照抄这一惯例</td></tr>
+    <tr data-page-node-id="PXr9wG0dRM40NYAO1FOzrY"><td data-page-node-id="gMq7F3EKjlEHp1EBVUfaEG">计划快照</td><td data-page-node-id="bEXHCGs3QHi45l81LDPniA"><code data-page-node-id="cUiNUsAUvpr8w4KfW8sFHU">build_plan_snapshot</code> 存 steps 全量 JSON，指纹含 <code data-page-node-id="GtthlFRJHkK0TzGK5k09QZ">plan_id</code>（<code data-page-node-id="EZAEyCEdKGKvD0AquzjqBe">config_center.py:832-836</code>）</td><td data-page-node-id="IAMwxbP6sgyDLsg5W3Qryt">草稿态与已保存态指纹不可比（已有实际踩坑），新指纹要沿用同一纪律</td></tr>
+    <tr data-page-node-id="GPT028fYNbmTPsLlcvx4il"><td data-page-node-id="fJcHB0W9HcjCmQmuSe8NuK">执行参数解析</td><td data-page-node-id="1ajQDuEE0t6YOKSUbWH22I"><code data-page-node-id="V5ZifSDSO0SJzGFsmp1AqZ">_resolve_step_params</code>：<code data-page-node-id="JAYD88uD8jVsOexsvNyPFz">cwd_root</code>→绝对 <code data-page-node-id="MQU17zMPdk7PjDuKAy8REz">cwd</code>；按 kind 兜底注入 <code data-page-node-id="yNHJFNJBUKz1fxHI3qfRI9">dataset</code>/<code data-page-node-id="DDZJW2xwMDbpo8eicuc47k">locustfile</code>（<code data-page-node-id="LSP6xlSdY6A0TuI4Wan00F">router.py:429-453</code>）</td><td data-page-node-id="AaYd6YHktP29zoVPBTyTsW"><b data-page-node-id="KLGOpbo2EOiRgWMzBHkhXB">展开后仍必须走这一步</b>，不要在用例层做路径解析</td></tr>
+    <tr data-page-node-id="xfqmamCzg0dsbPsPRE8REF"><td data-page-node-id="emSBRvyOVOOez46uqnacfx">资产注入的静默行为</td><td data-page-node-id="kXxM0NPJDLvgriSELXTrKj"><code data-page-node-id="uLq3vCpq9JswTzDZ0UbEqM">_asset_key_for</code> kind 不匹配时返回 <code data-page-node-id="GAC0FjMXaBgYatDzjPMwwk">""</code> → <b data-page-node-id="2bA1aCueYVD9T3PMBw8k1M">静默不注入</b></td><td data-page-node-id="l4M4ulsF4hV2gb6PkjW7e6">TestCase 的 <code data-page-node-id="ZYdqU5fe1uLrFmcXdYTr1x">asset_kind</code> 声明可把静默变成显式预检错误</td></tr>
+    <tr data-page-node-id="5kFtEDfH7UpfuInXG9qGCz"><td data-page-node-id="Cqw2dPRXU7KQ4pd7Vy8hXi">Job 参数落库</td><td data-page-node-id="7H7CpYkFb5XPdM2jMiIYQP">Job 存的是 <b data-page-node-id="I7Njw7EZytdtSnnqae06eB">已解析后的 params</b>（<code data-page-node-id="APfsA1QBfDIWfYtwow7Iv3">cwd</code> 已是绝对路径，<code data-page-node-id="dLWKirPQdBwqRNY5zCREE3">dataset</code> 已注入）</td><td data-page-node-id="c4pQttEmMM59pKs54yBKkz">展开必须在 Job 创建之前完成</td></tr>
+    <tr data-page-node-id="Vfu6L0Uk1hvgKkKHjWJ7sR"><td data-page-node-id="Bi0j53csEMhks7cS51LgdD">比较键</td><td data-page-node-id="0j3CkQLZPBf2jrdCkJDdjT"><code data-page-node-id="1Aq6CczKynIIY1NShopUi3">engine_compare_key</code> 只读 <code data-page-node-id="O3COmDPoKzc7ykFZQR9BZP">job["params"]</code> 与 env，<b data-page-node-id="tTymiSpZHl3gkBb4BZbnYW">不读 plan_snapshot</b></td><td data-page-node-id="FjdmV6EWrcwOBVoTQH19vH">snapshot 结构变化<b data-page-node-id="CnnqtcSuw2BhNJXahO2t4q">不会</b>影响历史比较结论</td></tr>
+    <tr data-page-node-id="HT8jEXylnq15gQ805KlOLT"><td data-page-node-id="47AB5IuyihYiy9KYv2uDJA">哈希函数</td><td data-page-node-id="qDZMDYWUAmSKsZufkz5S6R"><code data-page-node-id="1AQ8tg83oOd2fLVXzepvmI">_h(*parts)</code> = 字符串拼接后 sha256 取前 12 位（<code data-page-node-id="BMmd8oUFPDm8J21fY9WbkG">config_center.py:64-67</code>）</td><td data-page-node-id="wO8RdygdzxGrz8RLO945GW">新指纹复用同一函数，保持口径一致</td></tr>
+    <tr data-page-node-id="emAjZd33GbY5cyA9vkGSnr"><td data-page-node-id="jXRVBWglOFpjPOkQ7rZOy7">目录指纹</td><td data-page-node-id="effyDR8RFADsbTZ0RcfM7I"><code data-page-node-id="jhIMFNUAJbh69pQ3gbOkLW">dir_fingerprint</code> 只哈希 <code data-page-node-id="qLdBcDtIomiR7j0KGdMEvq">(name, size)</code>，<b data-page-node-id="PPub4HKiJQL60zFuHM2b7o">不读内容</b>（<code data-page-node-id="hdx9FqCd0PMIYXUZhdlvoa">:397-412</code>）</td><td class="warn" data-page-node-id="Z67zQdR6ZPM74BKuZhIXs7">内容改了但大小不变 → 检测不到。这是 P0 fingerprint 必须处理的点</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 data-page-node-id="m0MU7Etysb5qaQXTJouOhm">Part B · 八问作答</h2>
+
+<h3 data-page-node-id="7ty8kPFDEEaDWPtVu7CRaP">B.1 TestCase 到底代表什么？</h3>
+<div class="banner info" data-page-node-id="FIXlFcq9W7ru9De04N3x71">
+  <b data-page-node-id="P5MYrQCjB5G6qcivj53udd">TestCase = 「一个可复用的测试<u data-page-node-id="JddEI4XCs8QJ8md9XduVv4">定义</u>」（定义层）；Job = 「一次实际执行」（执行层）。</b>
+  二者的分界线在当前代码里已经存在且清晰：<code data-page-node-id="VAkptSHVWy42raD8FBUHIs">plans.steps</code> 是定义（可编辑、有 revision），
+  <code data-page-node-id="2a6oA3CgggNBTdQXdhRqCC">jobs</code> 是执行（有 status/exit_code/log_path/started_at/attempt，状态机不可回退）。
+</div>
+<table data-page-node-id="Ou4Vbbe9Rdusj8sabP4KJX">
+  <thead data-page-node-id="pKNHIlAlyGUR3bSD8icqXQ"><tr data-page-node-id="3s1vwP1mPo45p44WzDbIvm"><th data-page-node-id="iCPT7gTyDnoJIE5CbJw76G"></th><th data-page-node-id="CUd3oYUqBiYRFkwSZoU4hg">应保存什么</th><th data-page-node-id="Tx6QuUr0EJmeAan6EzKjjt">不应保存什么（依据）</th></tr></thead>
+  <tbody data-page-node-id="15yUqv7FdjifQ7ybtbgH5D">
+    <tr data-page-node-id="1SV2lxKfsSwOh3DD1c7K8i"><td data-page-node-id="WwiWjm8iN7It8qgeW5jIcj"><b data-page-node-id="leYNYMDTRh2nBXmDDU8294">TestCase</b></td>
+      <td data-page-node-id="Nn0dKGVGS6JH8SReNp38Rp">engine + 受控 params（含 timeout_sec）+ requires_exclusive + name/description + revision + enabled</td>
+      <td data-page-node-id="3iKm2pwmdUSBNGli8jnCoZ">执行态一切字段（status/exit_code/时间/日志路径）—— 那些属 Job（<code data-page-node-id="7oTkg8f2YhO4P8CGrZiiEE">domain.py:157-181</code>）；
+        Environment / Executor / AssetSource 的 ID —— 属 Plan（<code data-page-node-id="dA9PKq63HYHxnA0z0C91tC">db.py:60-73</code>）</td></tr>
+    <tr data-page-node-id="FA1xflWOR7uYhJjAIL5bl2"><td data-page-node-id="GYA1J3UwdAfl6cezniwRgm"><b data-page-node-id="tOxxWZj00LaLjinnduXQNC">Job</b></td>
+      <td data-page-node-id="AOnTtldNe5r93AWuHbgWrz">继续保存：plan_run_id / engine / name / 解析后的 params / timeout_sec / requires_exclusive /
+        config_snapshot / status / exit_code / 产物路径 / retry 链</td>
+      <td data-page-node-id="tuWcBnhqgfkw8969mlxnVC">不需要改任何字段</td></tr>
+    <tr data-page-node-id="Z53hB1yP1kLFW6jG4vVC9F"><td data-page-node-id="CsEzLINNgLQcsrnNvmGX1l"><b data-page-node-id="idlIZX0j0nrLRK6Pm9HBCS">Plan</b></td>
+      <td data-page-node-id="jhMNsKIUc9oMI4KoILHR8i">继续保存：三个引用 ID + steps（顺序）+ fail_fast + owner + revision</td>
+      <td data-page-node-id="YFklsPzeCs8Me94g9gR5G1">不保存用例内容副本（否则两个事实源）</td></tr>
+  </tbody>
+</table>
+
+<h4 data-page-node-id="LE6WlIj3gzSiglh6rbdiGr">验证「TestCase 不应绑定 Environment / Executor / AssetSource」—— 与当前代码一致</h4>
+<table data-page-node-id="Gb7GiqQm0mQaKuUs3SzpvL">
+  <thead data-page-node-id="Egth1Pqea3oKR9BkRJK2Dy"><tr data-page-node-id="y9rffyLGbgskvoBkDGq8iv"><th data-page-node-id="UbGj4NEnIpekgAqREu32oZ">候选绑定</th><th data-page-node-id="x98Tf6fBxT1OB3FxgkPBR1">代码证据</th><th data-page-node-id="hWpdciE93OFHU4FQj1Pagq">结论</th></tr></thead>
+  <tbody data-page-node-id="1VBYDYqp8xEebJWWQl5eDk">
+    <tr data-page-node-id="Y9AQIM61kEAFgLtJW3df92"><td data-page-node-id="fGZycsspub9jGwRBxUFWw0">Environment</td><td data-page-node-id="dunA8wMLjZhEmIBXAThtFc">Plan 已持有 <code data-page-node-id="4dOQxEYxbV4jgDcJGXuVzg">plans.environment_id</code>，Job 在执行时从 plan 复制（<code data-page-node-id="SwJL7ufcmErmVnEOVaoV6u">router.py:420</code>）；
+      <code data-page-node-id="GH166mHdrqpYtudVu7Of5D">build_config_snapshot</code> 把它固化进 Job</td>
+      <td class="bad" data-page-node-id="LNHOYRr9y5waq1cwEGzngx">❌ 不应绑定。会造成「计划环境 vs 用例环境」双源；且同一用例无法跨环境复用（比较/回归的前提就没了）</td></tr>
+    <tr data-page-node-id="6XK3H8gtim8nliA6KUIQFc"><td data-page-node-id="BdEIRRWSaxn3jjP5Y6hYur">Executor</td><td data-page-node-id="9WgJFKulQ2oFnwdnIE7kQC">Plan 已持有 <code data-page-node-id="RXad1rZDrDEkA92J2L7HAg">plans.executor_id</code>；「哪个引擎能在哪台跑」由
+      <code data-page-node-id="S1EXDpRRL8gUW5AQy1DZ9W">executors.allowed_runners</code>（<code data-page-node-id="BtGrTvQtAOA4zOnPlgrbtX">scheduler.py:271-274</code>）+ <code data-page-node-id="aTXjW2XfvP4ACXDM5FnieW">_ENGINE_DEPS</code>（<code data-page-node-id="ln5B83tjD24fjvNUSs9EVE">config_center.py:157</code>）表达</td>
+      <td class="bad" data-page-node-id="zGEDI5qNvQhqBphBdGzJzd">❌ 不应绑定。解释器需求已由 <code data-page-node-id="7vJic9KylMZv9eL9TEaTEn">engine</code> 推导，再绑是冗余且会打架</td></tr>
+    <tr data-page-node-id="u19Fq4IqZHmXOqL4ng3RRL"><td data-page-node-id="PXIGzqidOFBuu1qRzFmGsf">AssetSource</td><td data-page-node-id="kkuFUtrkFTzhpNVuWlCgml">Plan 已持有 <code data-page-node-id="pMcfQLvY0yWawxz76iIj0C">plans.asset_source_id</code>；实际数据集由 <code data-page-node-id="k2JGkysiWUCAQngGAu6j1O">_asset_key_for(asset, engine)</code> 注入（<code data-page-node-id="JkiwBIHY5pGYrVLWQZlrMJ">router.py:448-453</code>）</td>
+      <td class="bad" data-page-node-id="QkJftqWPRjSiypD71N2kAF">❌ 不应绑定<b data-page-node-id="rIriMItryb79oB9QW2vDsN">具体 ID</b>；但应允许声明<b data-page-node-id="yz6JtG3btDstmCOdIM0uRm">种类</b>（见 <code data-page-node-id="oDJfcGiDxOYYTjCPQ9HuGv">asset_kind</code>）</td></tr>
+  </tbody>
+</table>
+<p class="ok" data-page-node-id="Th6dufTAPVyyxqilr0RAmc">→ 审计报告的结论 <b data-page-node-id="4EzmX8JUhI6etm0MkQuBZ3">经代码复核成立</b>，并补一条更精确的表述：
+  <b data-page-node-id="Q1tCH6UWc0NmbvMsGZzVqK">「用例声明"我要跑什么"，计划声明"在哪儿、用谁跑、用哪份数据跑"」</b>。</p>
+
+<h3 data-page-node-id="hjUfqV160HSCoMHCmcPHQ9">B.2 TestCase 最小字段集合 —— 逐个裁决</h3>
+<table data-page-node-id="yOl8Zq8wRObeEVkF85Wx6d">
+  <thead data-page-node-id="m4uTu9uatekSOzS1mRMKZA"><tr data-page-node-id="rC12DPrtdndSqohAnNHpto"><th data-page-node-id="AxjoxgZjEXoL53CTqEyeYe">字段</th><th data-page-node-id="IxqDcXYpEoKLBP3WauYtca">是否必要</th><th data-page-node-id="Mc6wTwX1v5gaNX2XpGRLL5">原因（含代码依据）</th></tr></thead>
+  <tbody data-page-node-id="cYcEUNxwuFTje0wUB0duzT">
+    <tr data-page-node-id="YRAS5FhzgGgaorHdu4eTrc"><td data-page-node-id="DP9MAmKvaaE1OGYrTP9aCJ"><code data-page-node-id="xvVIEL9WZJcIl7QUBmJRDQ">id</code></td><td class="ok" data-page-node-id="JDQA9REuNoagaPbLe7Rt7C">必要</td><td data-page-node-id="nCmKbxBxxGcDPtOOapTYR7">全库主键惯例（<code data-page-node-id="G2ocEPIRSbSqPDibJf1ITp">INTEGER PRIMARY KEY AUTOINCREMENT</code>）；Plan 需要稳定引用目标</td></tr>
+    <tr data-page-node-id="ot9kvQ44J4xe0VXRz4edte"><td data-page-node-id="IAqxXYkeSICRcsBVrI7sd8"><code data-page-node-id="AcN0cKX7tVbJ15MDBHQFws">name</code></td><td class="ok" data-page-node-id="Nya732YlMw7oMPIkEIbLXE">必要</td><td data-page-node-id="71muIsMM1cLcxmaA0vwvMp">现状 <code data-page-node-id="xAthzxylFUvrZHhWGSKbRR">jobs.name</code> 直接来自 <code data-page-node-id="LCe4bxFijhR049hcuVDSpx">step.name</code>（<code data-page-node-id="qQdj5hrCzXCBarLFi5xIFX">router.py:419</code>）；报告 <code data-page-node-id="5SnxKCFbxWEpcfp9fnABUv">extra.job_name</code> 也用它</td></tr>
+    <tr data-page-node-id="6j4LQLzv9retRpBkvqAG17"><td data-page-node-id="3YhdrEPeN10sbsPy1d5oRO"><code data-page-node-id="lBAlwxdGUGwRv2lkfTFHUx">description</code></td><td class="ok" data-page-node-id="huj0y3CDXelEktio3vGvZd">必要</td><td data-page-node-id="phK4SKbGv302GaKiCkHsvR">与 <code data-page-node-id="Nw4agZcSXo2Lvk1cIAegGY">plans.description</code> 同层同构；是"定义层"的说明位</td></tr>
+    <tr data-page-node-id="yY1fEhp7x1dQX3kER4Qihj"><td data-page-node-id="63grGfxFXHWAWeFL65tafG"><code data-page-node-id="XjcDBQWPIXtEadpnn0qkjB">revision</code></td><td class="ok" data-page-node-id="WzHQyxxAr4LHxRxIw5mcFz">必要</td><td data-page-node-id="JI2PJ1iSYVlJV0wQkttNcA">核心问题（见 B.3）；<code data-page-node-id="LAYycgXFBy3Jp2EeFhG901">plans.revision</code> 已有完全可照抄的实现</td></tr>
+    <tr data-page-node-id="BA2bCZsv7VAf6s6pHGDieq"><td data-page-node-id="y1aKnzePyW4rApIu0D1Ujn"><code data-page-node-id="KxNWIyF8TGVloomMvaIjzK">enabled</code></td><td class="ok" data-page-node-id="TRcg4qEHKqDNzfmAkImruA">必要</td><td data-page-node-id="0V6SIwTfhZTohHdUO2X2A6">三张配置表同款（<code data-page-node-id="irFGEfoZT8LtZv1WWg0Xtq">db.py:56/35/110</code>）+ <code data-page-node-id="gbsGHQt8TM9tlu7zBjy5EG">/toggle</code> 路由同款；停用后不应被新计划引用</td></tr>
+    <tr data-page-node-id="AAH0voJwTPt29HJxJppLcw"><td data-page-node-id="jkTPeoOYxGrseW46grzDXh"><code data-page-node-id="8SSo2KaSxFNUrFjDIH4bze">engine</code></td><td class="ok" data-page-node-id="ytYPYtVcc3pIEjFNG6KeH1">必要</td><td data-page-node-id="z7udd96Vyau6aHHZKv2XDY">决定 Runner（<code data-page-node-id="Z1FqooaqM0DTnpD1RfOKKF">get_runner</code>）、参数白名单（<code data-page-node-id="PRwjORK0NWIX2V4dDWOMHe">_STEP_PARAM_KEYS</code>）、依赖检查（<code data-page-node-id="FHiERXBW3HKtBmGYjfhUh9">_ENGINE_DEPS</code>）</td></tr>
+    <tr data-page-node-id="LZR5IKDwrjRxsW6c3KTQ9b"><td data-page-node-id="DGnqFw1WtPY96DjyOYuHBz"><code data-page-node-id="ElnJFbEe5E4R0LsDOtmZgW">params</code></td><td class="ok" data-page-node-id="vYBTaTjUZRKhOoldkr6Qb1">必要</td><td data-page-node-id="WBe3K9yGr2CWwSJ8hfS3vB">受控参数容器；<code data-page-node-id="9VERornXCDRHI5GRvCP8SU">validate_step_params(engine, params)</code> 可直接复用，无需新校验器</td></tr>
+    <tr data-page-node-id="VsIxCKUPZ7B5TzkanELBMg"><td data-page-node-id="PE9jhalAvnH11THuzJfglo"><code data-page-node-id="1jQlWJ60sLarhEirE0Xvlw">fingerprint</code></td><td class="ok" data-page-node-id="D3IrZ1BLYCwlbXMfgdk7Hc">必要</td><td data-page-node-id="TptS6q9AKUbrWpz05RlqSN">P0（见 B.5）。没有它就回答不了「这次跑的是哪个版本的定义」</td></tr>
+    <tr data-page-node-id="2LsO6aN6Pt80uunXDw3k9N"><td data-page-node-id="saHPOQKNGHyBik1KQUPvSM"><code data-page-node-id="hnuZARxYvDMFEx86fIrHy0">owner</code></td><td class="warn" data-page-node-id="K3nyu0oMlEbZCW41GVkszu">建议保留</td><td data-page-node-id="Z7eARGsFKMe0zAzRQgM4FX"><code data-page-node-id="SxWnB6fvfk1Q8oQIPuHNEj">plans.owner</code> 已存在（<code data-page-node-id="vSGSFNWUbVGRclODbTbXa7">db.py:69</code>），成本 1 列；利于多人场景的归属查询</td></tr>
+    <tr data-page-node-id="FY7NDvUzA2dCmpUp82bfyg"><td data-page-node-id="HMgHZRG2HaQKHlQCCKsxeC"><code data-page-node-id="Re8FZD0AfhGErcmmQRbqrV">notes</code></td><td class="bad" data-page-node-id="hwfqOygFX2IS7k4rCf5EbZ">不建议存在</td><td data-page-node-id="AVCyKz9LeQ3SDmOqUnPYUx">与 <code data-page-node-id="GP3pF85ZSZ0PHH7dDR3dJw">description</code> 语义重叠。项目里 <code data-page-node-id="nEyscz9kWyB9iH9lDz7Qe8">notes</code> 只用于三张<b data-page-node-id="uJQNrKelFvf8F8M5NlUo4D">配置表</b>（运维备注）；
+      「定义层」用的是 <code data-page-node-id="gLRlSGIGSpLz1tm6rFFK9K">description</code>（见 <code data-page-node-id="82jAkwdTIvMF4o9kvyNNHV">plans</code>）。<b data-page-node-id="QSL7Bx0kwHxQ2JCMeKoAAN">两列并存会让 UI 与文档都要解释"哪个填什么"</b></td></tr>
+    <tr data-page-node-id="oZ1sZfZRBrkNhICHS6WPam"><td colspan="3" data-page-node-id="lEOD3tVZdRgGCYD4Jj5wgs"><b data-page-node-id="iyWeBKlVeZkONbi62CHiqb">建议新增（本清单之外，但代码依据充分）</b></td></tr>
+    <tr data-page-node-id="jVwJQ3jjP5C25VprAzVUgW"><td data-page-node-id="BAO2DhT8j6AVwdt3pcsxgu"><code data-page-node-id="YjEmcWYOwtIn71v05VxHJW">requires_exclusive</code></td><td class="ok" data-page-node-id="nVF5S26hvVy1mUsh9LtQbp">必要</td><td data-page-node-id="N6gtYDskbEVeoHRW28LQnF"><code data-page-node-id="ugAf6A9Bn95W8oiJFTuwG6">PlanStep.requires_exclusive</code>（<code data-page-node-id="TjLBxmlwcAx0IQkmIz2Qsm">domain.py:131</code>）已是步骤级语义；
+      它描述"这个测试要不要独占执行机"，属<b data-page-node-id="4qKcEBh3AwcIWOOxT9zNkL">用例本质</b>而非计划环境</td></tr>
+    <tr data-page-node-id="HZFjmBBpvkMh3utnQgBvRq"><td data-page-node-id="H6aUVq7DsRiu22B93GvVzc"><code data-page-node-id="6dje25OtomTSoEFcwxIJLA">asset_kind</code></td><td class="warn" data-page-node-id="fNej0Ia7uWBUpIsn3G6giM">建议</td><td data-page-node-id="TDaDxbpeekgq4PKYODShSj">把 <code data-page-node-id="6O3aoLS0jlgNBBDqrSeiW1">_asset_key_for</code> 的<b data-page-node-id="20CJ2qJedkUEEh7E47Ce7r">静默跳过</b>变为<b data-page-node-id="oaTPFoTiTjHU5vVodAiqnr">显式预检错误</b>（<code data-page-node-id="XZzHJNGWYtEPxOLnGD6kT9">router.py:448-453</code> 现在 kind 不匹配返回空串，用户看不出没注入）</td></tr>
+    <tr data-page-node-id="LUE1MnyHG1vEesvRSv2L8a"><td data-page-node-id="JMDaJxX9OcFxwjuhGIOHIG"><code data-page-node-id="8DCG9IVFKUdV82bNH2t1up">tags</code></td><td class="warn" data-page-node-id="ts2WPgKIx5tSf7uL20ACK6">可选 P1</td><td data-page-node-id="Ao8MwJ81uaVfUuPkKbmBUY">与 <code data-page-node-id="IQHs25HA5Vf7qHofFRg15c">environments.labels</code> 同风格，<code data-page-node-id="4PDO7rleKC1us83Y1HWKnO">_json_list</code> 工具已存在（<code data-page-node-id="sDAzqKyELGdw9RfG7oQEk8">config_center.py:70</code>）</td></tr>
+    <tr data-page-node-id="Z8xF4BKhDUMOz9osLSfbyt"><td data-page-node-id="1xSz7BjZUF66Bnspb0S0lk"><code data-page-node-id="Nc9vIINJnI7UkxFQAfP62g">created_at</code> / <code data-page-node-id="3iEcW6HjDTIBFUuFHSxVwG">updated_at</code></td><td class="ok" data-page-node-id="DbiRBuA55d9TafFpF4UGoa">必要</td><td data-page-node-id="MBGIslrQD0eJ7hDSilSjET"><code data-page-node-id="uAYjwmDOWx4SElQ1I7VYj8">_now()</code>（<code data-page-node-id="OfUseIzef8GuLf6DRfpWMU">db.py:15</code>）与三张配置表/plans 完全一致</td></tr>
+    <tr data-page-node-id="4A4DPtyGpXZx32DH38EQq7"><td colspan="3" data-page-node-id="ZtAPA5YRZ4E0dqcaR9jxic"><b data-page-node-id="17vi1vHrbb2zRhzBeZn65V">明确不应存在</b></td></tr>
+    <tr data-page-node-id="RMmkIkwsi5UbwO7XwTiLYK"><td data-page-node-id="NEzXzngIre5YxaNcIhAw5C"><code data-page-node-id="o59fjZhc2sdGnqji2okGf1">entry</code>（统一入口）</td><td class="bad" data-page-node-id="F5Y0uNmHPaNPxGRVnHYgDB">禁止</td><td data-page-node-id="5n87vhztjYiz9UgixyB22D">三引擎入口语义完全不同（见 B.6 对照），统一字段必然扭曲语义</td></tr>
+    <tr data-page-node-id="9PFmJ5xsXJWJufr8qZD0nX"><td data-page-node-id="kXfdCSVRs4pQmFYcq73bHZ"><code data-page-node-id="urkk9OZ1W2DuPWLWuxniUl">expected_result</code></td><td class="bad" data-page-node-id="gZC7okHLLUfTKS0BnsdLd7">禁止</td><td data-page-node-id="TDE7DcI9femqUjsFEvHbzL">三引擎判定口径不同（junit / requests-failures / TP-FP-FN-TN），且判定由 Runner 产出到 <code data-page-node-id="Hn80bJrAR6lgMvz9pqU2Yl">metrics</code>；
+      用例外挂一个无法机械校验的字段只会造成"写了也没人看"</td></tr>
+    <tr data-page-node-id="NxFjHVCizYLIcHp11NMguX"><td data-page-node-id="khc6CrXBfOjGqPsHOO7Wd9"><code data-page-node-id="bMzOAdXdhmB9kuI3J6e9L8">environment_id</code>/<code data-page-node-id="Bc76Fx0Tvsy5TT6TfHmQgU">executor_id</code>/<code data-page-node-id="zL4IC1kISzCpCpjJrhmJTf">asset_source_id</code></td><td class="bad" data-page-node-id="E8dULSPEGFtdzhdgzOjTaA">禁止</td><td data-page-node-id="ZDCJ0VMxs2gvBoK0IDLXMK">见 B.1 验证</td></tr>
+    <tr data-page-node-id="z3Mj6QwFZzzexMUqygCZtr"><td data-page-node-id="R7bX9HGeTPHymjQs7E9Rz3"><code data-page-node-id="MpDoz8epLiNH8esjHBlIFX">status</code>（执行态）</td><td class="bad" data-page-node-id="mA8Bp9XaWoball0G48m9Am">禁止</td><td data-page-node-id="9PBKnUo2pLU098PLwTzAih">会产生第二个事实源；「最近结果」应由 <code data-page-node-id="B7xlKGVVdpQ1cejS6w0ScA">report_index</code> 派生查询</td></tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="65EWwDm5cu6DPGmhBl7Gl5">B.3 TestCase 是否必须有 revision？</h3>
+<div class="banner ok" data-page-node-id="cjAQWYay3RWgoBOG8WPtZt">
+  <b data-page-node-id="q1u2JgTyZomMxl7CMLLn1y">必须有。</b>理由不是"要有版本管理"，而是一个具体的正确性问题：
+  若 Plan 只记 <code data-page-node-id="3krocd7Fs1JGTBf8MJHr6e">case_id</code>，那么<b data-page-node-id="fb7IDA0mwHaTQcd9zkRrZA">用例被修改后，一个"没被动过"的旧计划会静默地改变行为</b> ——
+  计划本身没变、revision 没变，但跑出来的东西变了。这直接违反第一阶段已建立的
+  「执行即固化、历史不可回退」原则（<code data-page-node-id="rIzXG6ukVTb5pMIgykKSVY">build_plan_snapshot</code> / <code data-page-node-id="l2xqH2HLm6rwjkKbTs0mAN">build_config_snapshot</code> 的存在理由）。
+</div>
+
+<h4 data-page-node-id="mgikmUtHmBEpw3tLJv7Cxx">三种引用方式的比较</h4>
+<table data-page-node-id="B8AjeWFUPf5JGXF7nLxTEH">
+  <thead data-page-node-id="whGHYSIFo0rTk3ggUqw1qF"><tr data-page-node-id="1mvc0A3rV41ABXhorjlrto"><th data-page-node-id="z6nSFapvjPPdKHtTi2xMQP">方式</th><th data-page-node-id="WU2I7zSJtWFFHiz9dvOH9R">能检测"用例变了"吗</th><th data-page-node-id="wAUUpAnQaJbm03aasxnkpo">旧计划是否静默漂移</th><th data-page-node-id="saJYwIkF05ShdPsyPrPU3t">能否回答"当时是哪个版本"</th><th data-page-node-id="WYJWIwdK3KTctOXonQRceS">评价</th></tr></thead>
+  <tbody data-page-node-id="SnncOVgq72C8aoL8W8Z8BE">
+    <tr data-page-node-id="LMM7GO2w42JyFtGmiLM6su"><td data-page-node-id="dvkjoA3Rs4BrmLq8EL42hW">① 只存 <code data-page-node-id="5FK2chrIhs0KxCY70M7D5r">case_id</code></td><td class="bad" data-page-node-id="lgA0UvbV7TFjMlCPaGkqRU">否</td><td class="bad" data-page-node-id="XluChe0GvfjyjYO5QQyAne">会</td><td class="bad" data-page-node-id="xjKokGu5YVygvmMXGT8EYW">否</td><td data-page-node-id="jG0UpXqMt2KJv3MVShtw2h">最差，等价于埋雷</td></tr>
+    <tr data-page-node-id="fqWFBQjm6wiwuCfvMNwJeh"><td data-page-node-id="fL98PtebrfDgkCOjqIqUEa">② 存 <code data-page-node-id="kPauehTF3ZUmtQBntWOXEO">case_id + revision</code></td><td class="ok" data-page-node-id="xLf5FXA8gff8CDgPglq3xB">能</td><td class="ok" data-page-node-id="uo2QUk6CFVgkM4Pelv7szd">不会（可检出）</td><td class="ok" data-page-node-id="JQ1HcR9wlwLzApuNmTnjVi">能</td><td data-page-node-id="34ge4tOrjFK74AB4wTmpCR">可用，但"是否漂移"要靠人去看 revision 是否落后</td></tr>
+    <tr data-page-node-id="86lMj3tYLiaXDEGzFcomlS"><td data-page-node-id="1g1iknDuKPLx6Wkt5fI4Ax"><b data-page-node-id="Kdxxnu6wM8xndx1UyrE9FZ">③ <code data-page-node-id="opR8OP6525y1xRKYGHilgP">case_ref = {id, revision, fingerprint}</code></b></td><td class="ok" data-page-node-id="DSFeB4jyEAODWqFtdxjvUn">能（自校验）</td><td class="ok" data-page-node-id="llOEXjXxtCHduuZVipbUd8">不会</td><td class="ok" data-page-node-id="EFYllB7RFhHwEwzaWjLSgx">能</td><td class="ok" data-page-node-id="1Iypn29UtlHEkGdJFbWdq4"><b data-page-node-id="bG4DBGn8qsT3V8nHV3waWv">推荐</b>：fingerprint 让"引用是否与当前用例一致"可一行代码判定，无需比对 revision 数字</td></tr>
+  </tbody>
+</table>
+<p data-page-node-id="GsiFS5fW5wKnYzR8mkxGaj">三条与现有实现的一致性论证：</p>
+<ul data-page-node-id="tGtrfTUSjCtgPxFsNuia3D">
+  <li data-page-node-id="HeZaFpca5nnlxMQCrqdfXI"><code data-page-node-id="dNUiF2KchQkJZEDQ2eSYFT">plans.revision</code> 已有现成的递增惯例与 <code data-page-node-id="dmflQxeSAkOMslJIJIy3bW">bump_revision=False</code> 的非用户编辑旁路（<code data-page-node-id="cw98XRO4oE4HBexTweCrGt">db.py:360/378</code>）→ TestCase 直接照抄。</li>
+  <li data-page-node-id="weGj4IqRrKoB2quG4kXXU9">现有 <code data-page-node-id="eL9DmJWsZRFcEFvEpYArto">plan_snapshot</code> 把 <code data-page-node-id="w3e1MLrisEYkszPZuzFuoi">revision</code> 与 <code data-page-node-id="JQoxaNhoDPjBWEx8TprA6R">steps</code> 一并冻结并算指纹（<code data-page-node-id="qyyiJTsU2t5AOAxQgWyLhv">config_center.py:820-836</code>）→ TestCase 的引用采用同样的「版本 + 指纹」双保险。</li>
+  <li data-page-node-id="EwsVSu9EcmiOLEGwS9qsqT"><code data-page-node-id="MX6xOzUc5QQ7Ft5YSxNBrH">_h()</code> 已存在且口径统一 → 不需要引入新的哈希约定。</li>
+</ul>
+
+<h3 data-page-node-id="DdlpbK6ezZHQaTsFv9lHzR">B.4 Plan → TestCase 引用方式（方案 A/B/C/D 比较）</h3>
+<table data-page-node-id="mlHvJC9tbbHvdAFFuNCfla">
+  <thead data-page-node-id="IAX4x5ROZgZnfSpyXTRawL"><tr data-page-node-id="nFJ9EKvlrZVHUlxt5ChRrF">
+    <th data-page-node-id="qAnAL6oU6NwG5Se9QS0Aaw">维度</th><th data-page-node-id="uMPTY3OmrCiy7VIFYDWVgN">A：<code data-page-node-id="M6Zm6elFajZybreG5gwYTL">case_ref{id,rev,fp}</code></th><th data-page-node-id="hF20Jo4ptBCPfUAQALb9ra">B：<code data-page-node-id="xlbApdygZFyGz07N8EkkR5">case_id</code></th><th data-page-node-id="ebyjseAovB13t9SwsLEYpW">C：<code data-page-node-id="ZTpWnxNUPApfUrHWYnhxld">case_id + params</code></th><th data-page-node-id="k8HUWAJZktVVpCo8LAgDWZ">D：全量展开(inline)</th>
+  </tr></thead>
+  <tbody data-page-node-id="rEgDWOZITGCsuTkUJ9qPEe">
+    <tr data-page-node-id="l3ahXr1k5aVQOu10t8eDZy"><td data-page-node-id="HjNgCV6almnMTUuIVdSpZn">可复用性</td><td class="ok" data-page-node-id="IE9VAhuWByAQjlhOcbcYhG">高</td><td class="ok" data-page-node-id="PNPrPLNbQkI1f8rcAObWqI">高</td><td class="ok" data-page-node-id="TZBTo0hP9hlAUhYviopEDw">高</td><td class="bad" data-page-node-id="3jttSAgDl3MExIsGlwAzDz">无（复制即分叉）</td></tr>
+    <tr data-page-node-id="EcFRhZ6AfhtsH7Bue28yc2"><td data-page-node-id="qHFk6dOUTaW67AZFAF1Vci">历史可追溯</td><td class="ok" data-page-node-id="hE4FvX5pPaQFEm7wzFxFHR">强（含 fp）</td><td class="bad" data-page-node-id="XW6SJDnEGzDMftkrtEdSWH">弱</td><td class="bad" data-page-node-id="6y2lNchq4B9NiMrhThAy6C">弱</td><td class="bad" data-page-node-id="IXUxHW76LF6TclF6ieLYEe">无（无法回答"这是哪个用例"）</td></tr>
+    <tr data-page-node-id="0B2oZvvigE7zYlOYaSpFie"><td data-page-node-id="GWxtLVQAkXw0ySgN09GMVq">Plan snapshot</td><td class="ok" data-page-node-id="VvXxfB4TMszpjBnCjRK5FS">引用 + 展开并存</td><td class="warn" data-page-node-id="wmw7gPTKzHw7mTWB7WCBvM">只有 id</td><td class="warn" data-page-node-id="PMhkqJbKP7BD7TZAjXD3Nz">只有 id</td><td class="ok" data-page-node-id="a5SwxuXUoO8DW2ibOZCInc">自包含</td></tr>
+    <tr data-page-node-id="jYErY9x7emOt6M7wrAkJ3w"><td data-page-node-id="76HGpF2nQDwES7UjEktUCm">用例被改后的影响</td><td class="ok" data-page-node-id="06Lj18X81DE2PK2UKmuRfi">可检出、可决策</td><td class="bad" data-page-node-id="2SqhhPGopDd6LXHIDLwqsb">静默漂移</td><td class="bad" data-page-node-id="nBDXGkapHSCY1hZ0H4ksmA">静默漂移</td><td class="ok" data-page-node-id="UqAZRp3rns8obHo1V9IuA3">无影响（但也没复用）</td></tr>
+    <tr data-page-node-id="lFs4GRkTJJFBD5sOkFIndw"><td data-page-node-id="s4LAM31GXh11AtJUSMT9K3">向后兼容</td><td class="ok" data-page-node-id="2kMiQTSIV8uqF6MCsmXGMH">好（新键可选）</td><td class="ok" data-page-node-id="i4VbpbECBPkgW5R6GrrCFQ">好</td><td class="warn" data-page-node-id="vh0rJUHVKFaRp1gNnMjkCr">中（<code data-page-node-id="RHMX9fwjmpG8P3ac9IkBXW">params</code> 与用例 <code data-page-node-id="QZYGXLFsGocBOQJkROQMCU">params</code> 同名易混）</td><td class="ok" data-page-node-id="uk3CZtrcmbpN19EuWD7S7W">最好（= 现状）</td></tr>
+    <tr data-page-node-id="p2CXU9wsrGwk88fbjCPSv3"><td data-page-node-id="WP8uZeASoIERB02gvbKISH">数据库复杂度</td><td class="ok" data-page-node-id="ocmK0HJhQC8SgEENBVuGj3">零（steps 是 JSON）</td><td class="ok" data-page-node-id="XOHBqsxIK56ireVrIGjQb9">零</td><td class="ok" data-page-node-id="0r5s2jk6FPEIgsXXxcKrcd">零</td><td class="ok" data-page-node-id="BenfX54HBMWylTmdyCGSvK">零</td></tr>
+    <tr data-page-node-id="8zIRt0BpA7cUBuxdlwRFL6"><td data-page-node-id="tmvFzdvTuyJ79PC4UkGwlA">前端复杂度</td><td class="warn" data-page-node-id="bxne9D1EaILIWBXG8iYJBF">中（要显示"与当前版本不一致"）</td><td class="ok" data-page-node-id="CSL7YhJG6UzP6tVMs7XLt3">低</td><td class="warn" data-page-node-id="7hywRxRIDJ3Z8rGRAEFaTm">中</td><td class="ok" data-page-node-id="CGxzIP3hEkXvG6b8gg3lBw">低（就是现状）</td></tr>
+    <tr data-page-node-id="eDBIbYOlFOW9XuDDFhGVmd"><td data-page-node-id="NikSRv5P4h7IEoaiveoVIm">改动面（见 A.3）</td><td colspan="4" data-page-node-id="E79sl4Oflz2Kgin3wLDKmn">A/B/C 都需要改 9 处透传点；D 改动面为 0</td></tr>
+  </tbody>
+</table>
+<div class="banner ok" data-page-node-id="DaXo9N2AzmGQrbKe1mogDH">
+  <b data-page-node-id="F7wxGwyegj0eBd8CM5PJoV">推荐：方案 A 的定稿形态 —— <code data-page-node-id="sJu7jZgwpKTUXgUrPVEdyS">case_ref{id, revision, fingerprint}</code> + <code data-page-node-id="SvLJCmA6F9Q52cxoSimNM0">override_params</code>。</b>
+  <ul data-page-node-id="1IXKc6NSkE6fOqcGGOX9bU">
+    <li data-page-node-id="8RVcmrKjp3qE5i6DVgl43n"><b data-page-node-id="RUoZMQVH8SDBXMA6e1eJnK">不用 D</b>：D 就是现状（inline），等于放弃"用例"这一概念本身 —— 而"同一测试被多处复用/改动要能追溯影响面"正是本次要解决的问题。</li>
+    <li data-page-node-id="zt9Vk6HvaJNHscafY8KRqj"><b data-page-node-id="tqNQU3qf9CBATIZoFwMYLr">不用 B</b>：无法检出漂移。真出事时（用例改了小参数导致回归结果变化）平台无法给出任何提示。</li>
+    <li data-page-node-id="DiiHHeBc5hwavAcBfYdZCJ"><b data-page-node-id="Bdg15cBy7Q276xjXSf1wUU">不用 C</b>：<code data-page-node-id="4TN1PrHlIBkTzs03kIFITH">params</code> 一词在 step 与 case 两层含义不同（step 是"本次有效值"、case 是"定义默认值"），同名会造成长期困惑；用 <code data-page-node-id="6O6hnWlk2eo4VDzjKVIyFm">override_params</code> 命名把语义钉死。</li>
+    <li data-page-node-id="lKGVVuf76g9KTqvsgnVOB9"><b data-page-node-id="RTW7dAo87RJ7x55qDLw3Tw">D 的保留价值</b>：作为<b data-page-node-id="MHkNU0luk1bik2zw48Jeke">legacy 形态</b>永久保留（不要求迁移历史计划），见 §冻结设计 9。</li>
+  </ul>
+</div>
+
+<h3 data-page-node-id="36Sv1hOpukCobC0Enx90cs">B.5 override_params 是否合理？规则是什么？</h3>
+<p data-page-node-id="NBHWFpmU46cRtCtJM3YKvZ"><b data-page-node-id="CNNSVzsH3uFpDZvyMC4CSp">合理，且是 TestCase 的核心价值所在。</b>你给的例子（同一用例被 Plan A 覆盖 <code data-page-node-id="STrDSGFtyizXRfurGzxPlR">run_time</code>、被 Plan B 覆盖 <code data-page-node-id="s9jUkDoLFOYLHH8sNcHY8L">users</code>）
+正好对应当前运行库的真实情况：计划 id=10（<code data-page-node-id="R5A4xzBVRcKzOmwLj1Hhus">run_time=10s</code>）与 id=15（<code data-page-node-id="7duq8NGIDCMrw64pHtHvMk">run_time=60s</code>）
+本质上是<b data-page-node-id="4C6MlCQa12DpJqWHKdsRTa">同一个 <code data-page-node-id="4AdTMLnhjTtdcAjIO5qlPW">colyseus-bot</code> 用例的两次不同规模执行</b>。</p>
+
+<table data-page-node-id="pUtD1oF0CJGKnatnLSREXc">
+  <thead data-page-node-id="MGwViBdnwyLYAlnBjJKutd"><tr data-page-node-id="nUhCROXHHDKYeuC8bYETD6"><th data-page-node-id="MyMjkdxNBVH3eGbrAbckIG">#</th><th data-page-node-id="4y8UVszBFjjwTbsE97QUs2">问题</th><th data-page-node-id="s41vzmVAsFgQM5HLu0ja3u">明确规则</th><th data-page-node-id="Xf6xOyh3oxCaKiC8kiuPqs">依据</th></tr></thead>
+  <tbody data-page-node-id="gYX1I2FIrEE7Bb02vYDFDg">
+    <tr data-page-node-id="RxJbyBLDSL7DHUYlFbucB4"><td data-page-node-id="9Yk2PCgCiLZIHZXjivywZA">1</td><td data-page-node-id="4fXV8Ha6Purf5afuizM49v">override 是否只能覆盖白名单字段？</td><td class="ok" data-page-node-id="BRvp2x8LvLBsBDHCuV6YeJ"><b data-page-node-id="Dv7ef0hIA6d1oGBv064Qso">是。</b>键必须 ∈ <code data-page-node-id="QW3zbYb5b265fA9srUdylW">_STEP_PARAM_KEYS[engine]</code></td><td data-page-node-id="Z6Nhtz710knUIFOzygZ2uX"><code data-page-node-id="YUuNjkYFGXYeG1VC5WnrOt">config_center.py:853-859</code></td></tr>
+    <tr data-page-node-id="f55uh6kxQysWQexBZi9yLY"><td data-page-node-id="qp6q2ZyyjESL3dLvYbAzzY">2</td><td data-page-node-id="s37FhyztDcu8cYWKfQmV7s">白名单定义在哪？</td><td data-page-node-id="cd02bQG4zhsPUx7UAyGRNy"><b data-page-node-id="TVqB1CEmec6qjEKns64JMT">不新增白名单</b>，继续用 <code data-page-node-id="6tCLtOPBe8zaZIm7KmI0z2">config_center._STEP_PARAM_KEYS</code> 单一来源</td><td data-page-node-id="Zj6HGPRxurvjS0h65museS">避免出现第二套校验（项目已有"登记层唯一来源"的纪律，见 <code data-page-node-id="rcFjV9YbmeQlJJLGBuoeaq">locust_runner</code> 的单源化）</td></tr>
+    <tr data-page-node-id="p4GyqWCKRFJW7vvXTfcLJD"><td data-page-node-id="4OBFlFMbcEF5LtmDHf4p7H">3</td><td data-page-node-id="XECWfsUvgSlRinlHnKyXmg">是否复用 <code data-page-node-id="U1r0yQ2cjApUcLLf7EyPr7">validate_step_params</code>？</td><td class="ok" data-page-node-id="xCvDkymTEUAKuWZ7jO6xiM"><b data-page-node-id="Ngm7FnKLUYGBmm9e6jSJRq">是，且必须对合并后的结果整体校验一次</b>：
+      <code data-page-node-id="IZm1hn1zEM0xrl1h2rNb68">validate_step_params(engine, merged)</code> —— 只校验 override 本身是不够的</td><td data-page-node-id="W36AKXyCvpzcYdFjqB8kw8"><code data-page-node-id="xoJHaEGNjHAn3LtPlBEMfO">config_center.py:868-917</code></td></tr>
+    <tr data-page-node-id="UidquJ4SM312NmkJzHfHhx"><td data-page-node-id="ALUWccBAOlpWO31wTE33FL">4</td><td data-page-node-id="RgfFDrpIeDpOw9k3ha7IEk">engine 是否允许 override？</td><td class="bad" data-page-node-id="4uFukC4F9tRSfBYGehJcYU"><b data-page-node-id="y73oDIRZpeoOHdSQEQK7Sx">禁止。</b>engine 由用例定义；若允许改，同一 <code data-page-node-id="fbvCKeBHYjn8ZcXgGbvJ8T">case_ref</code> 会指向两种执行语义，身份崩坏。
+      （工程上也不用特判：<code data-page-node-id="PeUFWWCGbKrkFMTzG9YaEV">engine</code> 本就不在 <code data-page-node-id="iGyTjoVLicCChSgeyHsUxW">_STEP_PARAM_KEYS</code> 内，会被第 1 条自动拒绝）</td><td data-page-node-id="oaeTnPaJuCLKuHuuF2Qts0">天然由白名单兜住</td></tr>
+    <tr data-page-node-id="7SHpcJYA57L49C5X7JSfYS"><td data-page-node-id="a9XPRamKVfV2X87C09EJvZ">5</td><td data-page-node-id="D3YDInetXc5KQvpSSV1ebO">name 是否允许 override？</td><td class="warn" data-page-node-id="59vR63el0DMASSzlxBvBtm"><b data-page-node-id="osWer381YnOH3np386gCXe">允许，但在 step 层而非 params 层</b>（<code data-page-node-id="rV6OrFAhNhljGKeELGx1ex">step.name</code>）。
+      它只影响 <code data-page-node-id="YHw0hB8gehhSATILcLaTWi">jobs.name</code> 与报告显示，<b data-page-node-id="jyHFdHsHgD1tI0jxVxGTdl">不进入用例指纹</b></td><td data-page-node-id="HUCoTtEGL2jqFRFdmZEFmY"><code data-page-node-id="ILDGkqg6d3qiN38X9CsT4G">router.py:419</code>；<code data-page-node-id="EkqkEM5mKkMfdGdHecNEwu">build_plan_snapshot</code> 把 name 存在 step 层</td></tr>
+    <tr data-page-node-id="oYXdHUKnPE8NMI5o3zACMH"><td data-page-node-id="Pr0wa1hA1dyiRFxXiYZBl5">6</td><td data-page-node-id="Z8ytRDk1ZDFBj6592Fiy5Y">asset_ref 是否允许 override？</td><td class="bad" data-page-node-id="GvNLOgOdaQJw00IOoHEOYd"><b data-page-node-id="IQeZfr8t9I7detKCXGYHlH">禁止出现在用例与 override 中。</b>虽然 <code data-page-node-id="wFjCt4d4p9W7Jq8S5tA4Ho">asset_source_id</code> 目前在三个引擎的白名单里，
+      但它是<b data-page-node-id="9lcEKwysOKWp7a9YIuateD">内部兜底注入键</b>（<code data-page-node-id="Oov2BjndNr3t7liRHYMDwx">router.py:434</code> 会 <code data-page-node-id="g8XtSVUZvnDeYa2dc8RgoO">params.pop("asset_source_id")</code>），属计划/执行级。
+      → 用例保存与 override 校验时都要<b data-page-node-id="bcA7I9Iw2USmEjIw5AU7B0">显式拒绝</b>该键</td><td data-page-node-id="lcUn1NVPFCNt5fgCPExVES"><code data-page-node-id="o8ObQarghLBp5OBoXD57Pj">router.py:429-445</code></td></tr>
+    <tr data-page-node-id="85oDRPAmPK90JBTsr8srCL"><td data-page-node-id="qjtlY3PxxmGNp0dcxjyBNu">7</td><td data-page-node-id="Bv2xZYQYiGkDsZSHJDDgWZ">是否允许新增任意字段？</td><td class="bad" data-page-node-id="v7G8HXEUr1jHGPQ31QT3Ke"><b data-page-node-id="a5XUD7yKpjekKthkOPrzYn">禁止。</b>合并后的 params 里出现任一非白名单键 → 400</td><td data-page-node-id="C3yvMy9QRdcAHT8UIt0tRE"><code data-page-node-id="kg16d5mtsA3lgph1HwoCZh">validate_step_params</code> 的 <code data-page-node-id="eYnbzBvnnSofdoDgu8rR2C">k not in allowed</code> 分支</td></tr>
+    <tr data-page-node-id="aihrhsAADiLmf1Vuu0Pujz"><td data-page-node-id="BkLU1du40Q4PTVG1th3JKu">8</td><td data-page-node-id="LkDCMrqve5nUnUtPhPGW4y">能否覆盖用例<b data-page-node-id="gfCGXP1jmX6bBtIFW6OyRl">未声明</b>但属白名单的键？</td><td class="warn" data-page-node-id="GyvCRGt768XGDZd49Vqxor"><b data-page-node-id="CJyQHRfOEybEfRo8EqmqRO">允许</b>（例如用例未设 <code data-page-node-id="TBqggrBQk337fQBqeBo5bU">csv_full_history</code>，计划可为诊断开启）。
+      理由：白名单已保证安全，且强行禁止会迫使人为"补全用例定义"而频繁 bump revision。
+      <b data-page-node-id="7jF3cjJHvmUt7VsVkLAozu">代价是"用例定义"不再是参数的封闭集合</b> —— 接受，并在 UI 上把覆盖项标为"本次覆盖"</td><td data-page-node-id="sOj8WqD3F86RpCLr0g4zvj">权衡结论</td></tr>
+  </tbody>
+</table>
+
+<h4 data-page-node-id="JENYjakpa3PhoDe27KrCRN">合并与校验的最终算法（伪代码，仅设计）</h4>
+<pre data-page-node-id="z9YgSdbCoB9nZNW9TApCE6">merged = {**case.params, **override_params}          <span class="muted" data-page-node-id="nvkVkrDLrVz7Nq0kBoEaNd">// override 优先（浅合并，不做深合并）</span>
+errors = []
+if "asset_source_id" in override_params: errors.append("override 不允许包含 asset_source_id")
+errors += validate_step_params(case.engine, merged)   <span class="muted" data-page-node-id="peBuGL81AHxPCDPsa92qJE">// 整体重校验</span>
+if "cwd_root" in merged and merged["cwd_root"] not in WORKDIR_ROOTS: ...  <span class="muted" data-page-node-id="HhVxE01DDFiM3QAJBPAui1">// 已由 validate_step_params 覆盖</span>
+if errors: raise HTTPException(400, "；".join(errors))   <span class="muted" data-page-node-id="S7J3Yx8PfVZF3wRc2nYONp">// 沿用现有 400 + 分号拼接的错误格式</span></pre>
+<p class="muted" data-page-node-id="NGFL4UmtrDBxVCy8XkwB7y">校验失败返回值：<b data-page-node-id="OhxNgpIPRPuYQzAbINh6nS">HTTP 400</b>，正文为「；」拼接的逐条中文错误（与 <code data-page-node-id="66Sn0cIAnbkCAdGJTMwcAF">_plan_errors</code>/<code data-page-node-id="VkAhiL9XX11DfNWcxkPvbn">create_plan</code> 完全一致的现有格式，
+例如 <code data-page-node-id="wQlfFhdFSfbeoAnX7JNgBc">[locust] 不接受的参数键：'foo'（只允许 [...]）</code>）。<b data-page-node-id="FvqyVsaoQ9WNVfkZrokerx">不引入新的错误码体系。</b></p>
+
+<h3 data-page-node-id="F73UThDRLRmUIdvGRCTbnw">B.6 fingerprint 应该计算什么？</h3>
+
+<h4 data-page-node-id="CaSuGlQAFIGL3LjF2kDUVb">先厘清现有四个东西各自做了什么</h4>
+<table data-page-node-id="hECeAV2nWAxL63U8Lg6PCM">
+  <thead data-page-node-id="SkmdTyW4KIotibNEdAAUCc"><tr data-page-node-id="PSXASw9zYW5URU0cNqPQym"><th data-page-node-id="YnYUrKecN4HiRimdDHZg39">机制</th><th data-page-node-id="lCEJy4yyRxzLhtMRBEH1IR">哈希输入</th><th data-page-node-id="7GBEjboplHuglB5VtGoCNi">是否含内容</th><th data-page-node-id="3OmMEAsKZzlC9XZjbl7Mo9">存放位置</th></tr></thead>
+  <tbody data-page-node-id="LaKIJJlpnZG7xgOPzfvVYU">
+    <tr data-page-node-id="ltH3JAxaPuNTHJzVFArrwb"><td data-page-node-id="HxzY3yfjYU4oD57zRSuulS"><code data-page-node-id="VGkm6gxrB0RJhvYEFFrLk9">asset_fingerprint(kind, src)</code></td>
+      <td data-page-node-id="YMGwCHWUrX0lNNWJ5h0h5i">locust: <code data-page-node-id="ofRh5vzcdpKhEuKNZXGotZ">scenario_ref</code>；matcheval: <code data-page-node-id="dGvwF3sCGrQnC9sHisM7uh">dataset_ref + tpl_ref + scenes_ref + ground_truth_ref + airtest_ref</code></td>
+      <td class="bad" data-page-node-id="TmLrf7CxKvrZft3xiRDm32">否（纯 key）</td><td data-page-node-id="Q7lVYXI4KWKaBWWT6HSwsE">Job <code data-page-node-id="gewyXAi0GI61uLF8Ohjsrv">config_snapshot.asset_source.fingerprint</code></td></tr>
+    <tr data-page-node-id="qtb4inxmzqE9X6Zw45ZDO6"><td data-page-node-id="r5PhIOeH1HLThDFEOJlP1m"><code data-page-node-id="dIZlZy98cgLslJaRH1to3x">dir_fingerprint(path)</code></td>
+      <td data-page-node-id="aGCLA3z2OKMh5jtHqVihtD"><code data-page-node-id="9wNcJCpPad6AaBDtOE5Ap2">basename + 排序后的 "name:size"</code>，limit 4000</td>
+      <td class="warn" data-page-node-id="QQzwk4J5Yszx2ihQhidBDM">否（<b data-page-node-id="yAfbyKXOSaSXBgKFhZjALW">只 name+size</b>）</td><td class="bad" data-page-node-id="xr1sbK5GZDkSnT7YaW9oTs">仅 <code data-page-node-id="trZxe7kVwmy6kvRVFEhQdH">precheck_asset_source</code> 返回值，<b data-page-node-id="GSoBJFw5UZ7lYYCtnioD8X">不入快照</b></td></tr>
+    <tr data-page-node-id="4wmyPb5OkzrAsc2uWTjB1T"><td data-page-node-id="nfa9wbNZ9a0tF7GeHtUVet"><code data-page-node-id="LgcnF1ZUSajcbtHrCMkMVg">build_plan_snapshot</code></td>
+      <td data-page-node-id="ECExI2GBZECdRRTktdAQvA"><code data-page-node-id="tsNd2VOeWOBKLTJcytCbJ2">plan_id + revision + steps JSON + 三个引用 ID + fail_fast</code></td>
+      <td class="bad" data-page-node-id="NdokfriZc2IdX9pys0YHix">否</td><td data-page-node-id="6YKpI9lYvGddLY9PvV5ADY">PlanRun <code data-page-node-id="BX4fkH4qUum2XUiwNYAIl8">plan_snapshot</code></td></tr>
+    <tr data-page-node-id="oLigYuQHM4NpmNlClasoAl"><td data-page-node-id="g1MJYQeHpitG3NllhozkSb"><code data-page-node-id="2dfez9Cu8vOigEaC3Nc8r7">build_config_snapshot</code></td>
+      <td data-page-node-id="D7GJExMtCghesCYU8x5XLT">env 指纹 + exec 指纹 + asset 指纹</td>
+      <td class="bad" data-page-node-id="ys2sGrk8vL6cBKjxqDm3RW">否</td><td data-page-node-id="Bfmj2aw7qwmPacGCN0YzpJ">Job <code data-page-node-id="2viTgBkXZmdB7n5mqE3VCv">config_snapshot</code> + report <code data-page-node-id="IW2CEl3SpkqliIi96EBPdE">environment_snapshot</code></td></tr>
+  </tbody>
+</table>
+<div class="banner bad" data-page-node-id="QIzkL2zv08OxS9QIYwBwks">
+  <b data-page-node-id="6FZ1TzAznBYASM49cUhFfE">已复现的实证</b>：PlanRun #23/#24/#25 的 <code data-page-node-id="btbp2PeXDHaWeO1ObFd55W">plan_snapshot.snapshot_fingerprint</code> <b data-page-node-id="8uyF8d8jDa7DDY1CdI0OES">完全相同</b>
+  （<code data-page-node-id="qOAxK8cLJSApQ1POZUECHo">96885f59a1b6</code>），而期间 <code data-page-node-id="FuPLSeKkJtP74ZBHV5Ukc8">Colyseus-Storm/locustfile.py</code> 被修改过（md5 由
+  <code data-page-node-id="FAlX46V9puk2PjDwQv3GAf">5301bb78…</code> 变为 <code data-page-node-id="M3zl59kUDzy4NeKpEshl1x">4699824c…</code>）。
+  → 现有快照只能证明「结构与受控 key 没变」，<b data-page-node-id="30HBWxhQIKIO4BiAULnZY9">不能证明被测脚本内容没变</b>。
+</div>
+
+<h4 data-page-node-id="lcjvBclobVgiXFhxoOgh0v">候选方案比较</h4>
+<table data-page-node-id="YvaDD5igOS1JXlT74vEOyl">
+  <thead data-page-node-id="9Xp99Z7KJxOOPfE2Mw1cIC"><tr data-page-node-id="H5Ot3mbeGz5h3GGnMnE8tG"><th data-page-node-id="grL3LV0SSGLXt6M6I9yWKA">方案</th><th data-page-node-id="IwxKpFlP0KZaeRyz02jkAk">含义</th><th data-page-node-id="SPaAis5wGFF4BmgycaTV5A">能防什么</th><th data-page-node-id="DkHXrIm3U1kLBiOCC7Ap1d">代价</th><th data-page-node-id="Tig4HB01AA6mWALOk88Mwe">评价</th></tr></thead>
+  <tbody data-page-node-id="HXD3wEqrd4zJaQY2nrnc6A">
+    <tr data-page-node-id="WwihUNmZlxmsQgkCAfZJlC"><td data-page-node-id="8cd8lBkA1uTLMAJFrYss9x">A</td><td data-page-node-id="xCMCABO8KRHJ6pC3r0yDri">只哈希 TestCase JSON</td><td data-page-node-id="ulT3j4nSJJufvzG0AXfr7I">定义变更</td><td data-page-node-id="VkcUuOvHfR8Esfagl4tGtB">零</td><td class="warn" data-page-node-id="G51QuDMP4snbLgvKCE0JZt">必要不充分（就是 <code data-page-node-id="WcP6luIHqdHErG7ICCUwAA">test_cases.fingerprint</code> 的最小形态）</td></tr>
+    <tr data-page-node-id="Wgiab6nbK3PFQiYNAn2z1M"><td data-page-node-id="OyqCUVb2Y5KkbuReg0QNCc">B</td><td data-page-node-id="ivxfg6LRCVdIo8BNOzwwYM">+ engine params</td><td data-page-node-id="SMo8QbEUKyfKfEWX6G0ht0">参数变更</td><td data-page-node-id="QeQo7TZOH4Ph0bNlci5XlS">零</td><td class="warn" data-page-node-id="SFTFljFZAnmtIbPmMmyiX3">A 与 B 实际等价（params 已含在 JSON 内）</td></tr>
+    <tr data-page-node-id="yEj0xS9IEBvZ677wOhbfCJ"><td data-page-node-id="z63F5igXOTE56zQvjGxBnd">C</td><td data-page-node-id="kbNqFA4uDiAdx40vIdLVX0">+ 被测脚本内容 hash</td><td data-page-node-id="HQE00WQt89i7O03JDBRaXF">脚本变更</td><td data-page-node-id="d8UQ8eiK3HqCWZLOXcGuAg">读 1 个文件，极低</td><td class="ok" data-page-node-id="CEmGPwrHPkNKeYX7aO4hNU">对 locust 场景完全可行且廉价</td></tr>
+    <tr data-page-node-id="AdG4VL4j95cGdwqa3lgTqe"><td data-page-node-id="Xo8DScbPD6PlGKv1njxsoO">D</td><td data-page-node-id="e2PNR6yNwCR3dbJudkHRuk">+ 所引用资产内容 hash</td><td data-page-node-id="qr3IaJVcmgjAI5hSl5alJw">素材/真值变更</td><td data-page-node-id="m8FhDFcx573oFrsaJKLOCi">读数十 MB</td><td class="ok" data-page-node-id="G2wpblPJHzXIdHkUZooQrL">对受控素材目录可行</td></tr>
+    <tr data-page-node-id="r3Ex3RgwmmKFHj6OYsr4pi"><td data-page-node-id="332FaAIPalfiTvHroLZTj6"><b data-page-node-id="Q3GKNXMiwCzyPZj1NXsmER">E</b></td><td data-page-node-id="WBZPAJXOelvEm7CA0wRkIv"><b data-page-node-id="lOeaFS9oDPlUeHCJ7W8HWR">定义指纹 + 内容指纹，分离存放</b></td><td data-page-node-id="KGWXNtIe9CZ444Rv3BUpml">两者都防</td><td data-page-node-id="aNQBmqCH2seOiUSo4dC9xS">可控（见下）</td><td class="ok" data-page-node-id="kY17lO4tK3cAAlpaflXgHj"><b data-page-node-id="ADuvI1av9SOdwW88hzG9Mg">推荐</b></td></tr>
+  </tbody>
+</table>
+
+<div class="banner ok" data-page-node-id="kocjBJx6KbHxLNfOOXJm1c">
+  <b data-page-node-id="TBu2U4g6VMyUqUI86mC0SA">推荐方案 E：把「定义指纹」与「内容指纹」<u data-page-node-id="tPV66VdiwMZtxWcEFdB8A6">拆成两个概念、两个存放位置</u>。</b>
+  这是本轮最重要的设计决定 —— 因为两者<b data-page-node-id="fyFJdWVak3B7w35VxxDtMj">成本差 4 个数量级</b>（纯 JSON vs 读磁盘），
+  混成一个字段会导致「保存用例时被迫读几十 MB 磁盘」。
+</div>
+
+<h4 data-page-node-id="jjvPEoA6nvZ9qIHx3srYXE">① 定义指纹 <code data-page-node-id="W6Y0jTLZpVK7BFhV8FkZMq">test_cases.fingerprint</code>（保存时计算，廉价）</h4>
+<pre data-page-node-id="xCAnlfLDyjSAebprBAMHcq">definition_fingerprint = _h(
+    "case",
+    name,                          <span class="muted" data-page-node-id="4rATNeChEfBL9LtkhIKZKR">// 进入：它会成为 jobs.name，影响报告可读标识</span>
+    engine,                        <span class="muted" data-page-node-id="XsALBd1TOtBbKEPPUGjEtE">// 进入：决定 Runner 与参数口径</span>
+    json.dumps(params, sort_keys=True, ensure_ascii=False),   <span class="muted" data-page-node-id="Qbwv6q1X0MTgfPaVzj0KNU">// 进入：规范序，避免键序差异</span>
+    int(requires_exclusive),       <span class="muted" data-page-node-id="Rr8R1DmcoAif6CmrwA1ccT">// 进入：影响执行机互斥</span>
+    asset_kind                     <span class="muted" data-page-node-id="YFAXbpROs555vhVTBG2DGx">// 进入：影响资产注入与预检</span>
+)
+<span class="muted" data-page-node-id="tNOjnXEpANa3wI04LXWxjc">// 不进入：id（身份，非定义）、description、tags、owner、enabled、revision、
+//         created_at/updated_at（管理元数据，改它们不应让"同一定义"看起来变了）</span></pre>
+
+<h4 data-page-node-id="rimE3oXFGzu4iDRj2Cfx2E">② 内容指纹（执行时计算，写入 <code data-page-node-id="Dd9prgDFMRCqWdcN42OamM">config_snapshot</code>）</h4>
+<pre data-page-node-id="sQy0prD0jFFF9B16hBORBo">content_fingerprint = _h(
+    "content",
+    script_fp,        <span class="muted" data-page-node-id="wj5dKLaY4uefk6dTzLWb0M">// 受控脚本文件内容 sha256（见下"哪些能算"）</span>
+    asset_dir_fp      <span class="muted" data-page-node-id="TBSWsSyxYGPzrpmDdGblbJ">// 受控素材目录的内容指纹（升级版 dir_fingerprint）</span>
+)
+
+<span class="muted" data-page-node-id="vUHgBotNBdB90cAflTD2ml">// 升级版目录内容指纹（替换现有只算 name+size 的实现）</span>
+dir_content_fp(path) = _h(
+    basename_only(path),
+    *[f"{name}:{size}:{sha256(content)[:16]}" for name in sorted(listdir(path))[:4000]]
+)
+<span class="muted" data-page-node-id="c7IO0WDuou5gkhqQZitAwQ">// 单文件超过 MAX_FILE_BYTES（建议 8MB）→ 只计 name:size 并在结果里标 partial
+// 不落绝对路径（沿用 path_basename_only）</span></pre>
+
+<h4 data-page-node-id="YjVAEC2CE9ADZjSmzAttv0">哪些内容能算 / 不能算（严格受"受控登记表能否定位"约束）</h4>
+<table data-page-node-id="oKjV1f7ET195OSXT5xMBRQ">
+  <thead data-page-node-id="S7ZtLLCwSPe582dpd7UDq8"><tr data-page-node-id="BxwyfIfKaZdpHXdzeohuPk"><th data-page-node-id="pUNLLMYPj3PTZbVZoQE9Ir">对象</th><th data-page-node-id="wmHdFt9ZoHYFgEKev65kEf">能否定位</th><th data-page-node-id="BqN3VNQJPh6ReYrxIzmCV5">v0.2 是否计算</th><th data-page-node-id="EVXFvL4BAZc46dpbpHuMAQ">理由</th></tr></thead>
+  <tbody data-page-node-id="X7ilG17x3vr5VOVIwhfXkD">
+    <tr data-page-node-id="BFT1m3nFIl6DGO2mkIdulj"><td data-page-node-id="6Ztno5eeFkUrEgFEGUoxEh">locust 场景脚本</td><td class="ok" data-page-node-id="nRcns6Kec70FLxHt2MjfPN">能 —— <code data-page-node-id="JuCxXMdrt8d7upxG5aykYN">LOCUST_SCENARIOS[key]</code> → 单个 .py</td>
+      <td class="ok" data-page-node-id="76DqJRwzuY9W2jQD9aTQJ4"><b data-page-node-id="plwr69MM8b4FbQilMewDoB">算</b>（读 1 个文件，~10KB）</td><td data-page-node-id="wUtKLGXM8ncIAnAagAOmJL">这是"被测脚本内容"最典型、最廉价的情形；正是本次踩坑的对象</td></tr>
+    <tr data-page-node-id="NnlQ3nMw0ANFSKXmF72KmA"><td data-page-node-id="xYiPZupit5f94WPCLcGyyl">matcheval 素材目录</td><td class="ok" data-page-node-id="hUIwZUVJ9LGiXPoZkJl7KW">能 —— <code data-page-node-id="KpzGDAPDNl3Kd4gSHUFHNo">TPL_DIRS</code> / <code data-page-node-id="WrPfGNX1EfDhju7q7k2El3">SCENES_DIRS</code></td>
+      <td class="ok" data-page-node-id="FHmizrB3mHTLFngGHAkaWF"><b data-page-node-id="tgDpkcHhYa77BKMXr8jh6M">算</b>（23 + 5 张 PNG）</td><td data-page-node-id="1OOU3AlmWTvG6aMKoFTNpZ">受控目录、文件数有限（远低于 4000 上限）</td></tr>
+    <tr data-page-node-id="yMtpaBUL9XjBPt8VyClEpD"><td data-page-node-id="NNEBHWKwGFTomaPpQ5e2wz">match_eval 算法脚本</td><td class="bad" data-page-node-id="fTFUF13acgehydRIlel1Ay">不能 —— 路径来自 legacy 环境变量 <code data-page-node-id="DqA7rHQXSnxu0m6lw6WNH8">PLATFORM_MATCHEVAL_SCRIPT</code> / 项目根（<code data-page-node-id="c0mQl1hQIm85SecZHgSioe">matcheval_runner.py:29</code>），<b data-page-node-id="eol5NhD5HPJL0IZiwTDMHk">不在任何受控登记表里</b></td>
+      <td class="warn" data-page-node-id="saaM3fmEAUsHwrxYUB7xJE">P1（需先补一个受控 key）</td><td data-page-node-id="9Gkup9IZ6xdGYrFeZPc0tk">顺带修掉这个遗留来源，符合"登记层唯一来源"的既有纪律</td></tr>
+    <tr data-page-node-id="zF5s6Xbq2eq3NJopqDDEMA"><td data-page-node-id="cWfCRIaosn9vjxf2sOqxiT"><b data-page-node-id="cAKmQFRq8flcA7iNibrSwS">pytest 测试用例源码</b></td><td class="warn" data-page-node-id="ofR4fQeJ8YFCzuYzWFcSUk">半能 —— 只能定位到 <code data-page-node-id="hzpArrNEelQUmw8qKiHy1m">cwd_root</code> 目录</td>
+      <td class="bad" data-page-node-id="dcFEJFTvtdGi7kMv1UxFhr"><b data-page-node-id="ZweK3YwGlVkRUfn5ECiZqG">v0.2 不做</b></td><td data-page-node-id="rQpw6cRIiqeorLMDYdVXoo"><b data-page-node-id="UhtsoGe9KJa0wTZSUna5EU">边界不可界定</b>：<code data-page-node-id="jnmWiAXHfha96fypCiqrjg">cwd_root</code>（如 <code data-page-node-id="aWtE46xOQai5LFtbEQ4A7E">privahigh-backend</code>）下既有被测系统源码又有测试文件，
+        还可能含 <code data-page-node-id="zSkdxAHlzMIgoOfTlcTTYO">.venv</code>；全量哈希既慢又不属于平台职责 —— 这是<b data-page-node-id="2BQE4AKTT44uWZN0GvHBou">被测系统版本控制</b>的职责</td></tr>
+    <tr data-page-node-id="1tdF4I5giwcpun3DRhX7xB"><td data-page-node-id="y3nkPw1QykaipOEJeBoRna">解释器环境</td><td class="ok" data-page-node-id="YHP0tCXjOu81CtTeqbRQNC">能 —— <code data-page-node-id="v2MM5ohJNWbbW0Y4ejhWbI">INTERPRETER_PROFILES</code></td>
+      <td class="bad" data-page-node-id="L4iuw2SbdydujASWSfJZl1">不</td><td data-page-node-id="0loKU4L3MzgEHictGNDdv9">目录极大且非"测试定义"；解释器差异已由 <code data-page-node-id="Drc7qlxy7kr890EwdyIzbi">executor.fingerprint</code> 覆盖</td></tr>
+    <tr data-page-node-id="x0jYP1kYjFZBFJhBgqnDQZ"><td data-page-node-id="0wGUQSNVdByFIlQ54jWcEC">整个项目目录</td><td data-page-node-id="RLBwrgp2I7e2oMceREZOb5">—</td><td class="bad" data-page-node-id="rVa9xzZxEGbVq4pq8srFHg"><b data-page-node-id="8HRBe5yKCYxkbCgvEYMxsk">明确不做</b></td><td data-page-node-id="E7BaQJN0MnukkepTkfiqCj">你已指出：不要因为"理论上完整"就 hash 整个项目目录（性能、可重复性、Windows 路径、大目录都是坑）</td></tr>
+  </tbody>
+</table>
+<div class="banner info" data-page-node-id="nRqi8VbMqK9MC0ClnECQmm">
+  <b data-page-node-id="XTSOUEL5ztVcsIi6a0eMZE">性能处理</b>：内容指纹在 <b data-page-node-id="mMYnrg7ffEzGiZRKuABVOQ">PlanRun 创建时算一次</b>（不是每个 Job 算一次），
+  按受控 key 做 <b data-page-node-id="3FaB2R6h9sWtnMSwsoqTF2">进程内缓存</b>（项目已有同类做法：<code data-page-node-id="B7ZRE7uCifm0CTA3MBlcoQ">_MATCHEVAL_PY_CACHE</code>，<code data-page-node-id="x5jpXFLCnYnshdNmE33BEO">config_center.py:205</code>）。
+  实测规模：23 张 1920×1080 PNG + 5 张整屏 ≈ 数十 MB，一次读取在 SSD 上远低于 1 秒。
+  <b data-page-node-id="r8Pm2lQNW4zPjKkAHTS3hC">若未来素材涨到数 GB</b>，再引入「只在 precheck 与显式刷新时重算」的策略。
+</div>
+
+<h4 data-page-node-id="sQ6OZQnyT7AMVjDXjE7GeH">最终定义：fingerprint 到底代表什么</h4>
+<div class="card" data-page-node-id="G0iZGoBkZJxHrCABaO0wlD">
+  <p data-page-node-id="gafW7kIlJKiWtobGTOMuEm"><b data-page-node-id="9SyknMGaGAFYEqmYXWOiJZ">定义指纹</b> = 「这个用例作为一份<b data-page-node-id="9AgjvjbtW6DyiqptF0Z0jF">定义</b>的稳定标识」。改 name/engine/params/requires_exclusive/asset_kind 会变；改 description/tags/enabled/revision 不变。</p>
+  <p data-page-node-id="O9DvA6HbulNDHMd9DNAzFB"><b data-page-node-id="KpsPPDmQSeWH3pIggRSmeJ">内容指纹</b> = 「<b data-page-node-id="xgUJXf5lCbfAPjotlVuN8g">这一次执行</b>所面对的被测脚本与素材内容」的标识。它不属于用例，属于<b data-page-node-id="wdyEHIFESKYpD8aa9AOOa4">这次执行的环境事实</b>，因此放在 <code data-page-node-id="NSiFsuECXotVm1Hj1QPBW2">config_snapshot</code>。</p>
+  <p data-page-node-id="qpt7FHph5ubhaFuRQx9UoA"><b data-page-node-id="JRvqM1au2UvMNL3aPCDAIU">二者合起来才能回答</b>：「同样的用例定义 + 同样的内容 → 结果应当可比」。</p>
+</div>
+
+<h3 data-page-node-id="ZQ1rZ0RquOxZtnDWr3yrMF">B.7 「展开 TestCase」的时机</h3>
+<h4 data-page-node-id="R3qrvlohszPsqwTyBPvHeM">当前 <code data-page-node-id="ezbEXtRhjBHQsr76aeK8Qp">router.run_plan</code> 的真实流程（<code data-page-node-id="lJurgAlh164PKWBM1Bcn2j">router.py:390-426</code>）</h4>
+<pre data-page-node-id="1Yw9iQUuT9rBgun8iaslZq">run_plan(pid)
+ ├─ ① db.get_plan(pid)                       <span class="muted" data-page-node-id="cnRR8FJHYrds2DBe6DDjEL">// plans.steps 读出来</span>
+ ├─ ② 空步骤检查（400）
+ ├─ ③ validate_plan_refs(env, exec, asset)   <span class="muted" data-page-node-id="kqBnypsZp4s1oPiC7BqNux">// 仅启用的可引用</span>
+ ├─ ④ build_config_snapshot(env, exec, asset)         <span class="muted" data-page-node-id="YCBjiIQXkWqJ8s4rmkXXgR">// ← 配置快照在此生成</span>
+ ├─ ⑤ build_plan_snapshot(plan)                       <span class="muted" data-page-node-id="LeWDBR9G55R3cTPkD8qXOU">// ← 计划快照在此生成</span>
+ ├─ ⑥ db.create_run(plan_id, plan_revision, plan_snapshot)   <span class="muted" data-page-node-id="ZMqwJFnEBskyW958q4tdX7">// ← PlanRun 在此创建</span>
+ └─ ⑦ for step in plan["steps"] → _resolve_step_params → insert_job</pre>
+
+<table data-page-node-id="mBVv8Fxm1ZIcUIsB6CvBTX">
+  <thead data-page-node-id="hqGbNL4hEZY7pwIn1eYkeW"><tr data-page-node-id="Si1dP0dR37uqRMmdL3qlJS"><th data-page-node-id="Pnf52uzALyktx36M3UFAUW">问题</th><th data-page-node-id="zxVozdqAiBGaYm6uYdDgbG">答复</th><th data-page-node-id="yvtVOGEuOa3DNUeeX3gjVN">依据</th></tr></thead>
+  <tbody data-page-node-id="xIXdYx39mgOGAi0VMqp5cn">
+    <tr data-page-node-id="zINawjfeNE2t7Ngmx2W7yO"><td data-page-node-id="0986CBK5OsMt5Clwv5neSu">1. 何时解析 TestCase？</td><td data-page-node-id="CsNkRTVOXO1EJE3wSQZ93d"><b data-page-node-id="33Mxo0FCpbeWnefWSxz1Su">在 ⑤ 之前</b>，即第 ③ 与 ④ 之间插入一个 <code data-page-node-id="BCJom4PGuHCdS0mp1sH0ku">expand_cases()</code></td>
+      <td data-page-node-id="7AIUvZAJPZYdq03quCMK3n">必须在快照前，否则快照存的是引用而非内容</td></tr>
+    <tr data-page-node-id="XdeqJkWfbdQf9wX8dHSBFN"><td data-page-node-id="GTa28dXdoPIEFtZSMoIgbr">2. 在创建 PlanRun 之前还是之后？</td><td class="ok" data-page-node-id="3NGisMaBtuO3rOM8esvh6W"><b data-page-node-id="2sH24fmOzEXSEyVTCQUHqN">之前</b>（严格早于第 ⑥）</td>
+      <td data-page-node-id="TKIOXwSBEJKu9hyvdOfGGw">展开失败必须<b data-page-node-id="OvRfHgafjtT56RUeoj10by">不产生任何 PlanRun/Job</b>；现在 ③ 的失败是 400 且不建 run，展开应沿用同一保证</td></tr>
+    <tr data-page-node-id="tpNztKnxCHpYDIak6GEyzS"><td data-page-node-id="aCfy9aK6h0cPVbDYbs5zGm">3. snapshot 存引用还是展开内容？</td><td class="ok" data-page-node-id="5zhylLrteZiuIzmjv2x5sC"><b data-page-node-id="62sLPNyiSItxUCaZhFmTNt">两者都存</b>：<code data-page-node-id="7AuEQNBu6aIS2WEfyFztEJ">case_ref{id,revision,fingerprint}</code>（溯源）
+      + step 上的有效 <code data-page-node-id="yB4HANrKp98tKvAmBeLROG">engine/name/params</code>（复现）</td>
+      <td data-page-node-id="5EGn3iBKvbX5VXvDQGb16x">有效值必须落在 step 原有字段上，才能让 <code data-page-node-id="d8rUiBEnrAheR0ANavhYw6">_resolve_step_params</code>、比较键、报告<b data-page-node-id="OqV9cHEiVvRMZsQLW76oH0">零改动</b></td></tr>
+    <tr data-page-node-id="lGDKRMtBmYcXKVC4FIUudO"><td data-page-node-id="Z3aDQgahbFm0xzMgVfgNJp">4. 用例后续被改，历史 PlanRun 是否受影响？</td><td class="ok" data-page-node-id="pStnOuQZr0KztryZwbRMSn"><b data-page-node-id="adBoCoJgVCBlRVE1FThBtv">不受影响</b></td>
+      <td data-page-node-id="XBNln2HC0UrPz9OPffJ1WP">snapshot 已自包含；且 Job 的 <code data-page-node-id="mFzYorrcmgTBM8EeTL3Dob">params</code> 也在创建时固化（含已解析的 <code data-page-node-id="AkZpYpPZGtxawr3Qv661vZ">cwd</code>），
+        执行阶段<b data-page-node-id="RU4Ps6YqRJSZmYq0WH9oI5">不再回读 <code data-page-node-id="fapzduMamLpHQSj7hkCxE5">test_cases</code> 表</b></td></tr>
+  </tbody>
+</table>
+<div class="banner ok" data-page-node-id="fHtWAXJyqIrDIlD3flQ7NI">
+  <b data-page-node-id="N045DlxNhK91RF668UEC0r">原则「PlanRun 创建后即使 TestCase 被修改，历史运行也不能变化」在当前结构下可成立</b>，前提有三条：
+  ① 展开发生在快照之前；② 固化后的 <code data-page-node-id="IWGvW5rojS2xttPAxVr4ok">plan_snapshot</code> / <code data-page-node-id="2CzBFHpQqP8eKxPbyPN2Uz">jobs.params</code> 在执行期不再回读用例表；
+  ③ 不新增任何"报告页实时 join test_cases"的展示逻辑（否则展示会漂移）。
+</div>
+
+<h3 data-page-node-id="ndBKfS8hf9joTBIzlhuEvk">B.8 legacy inline step 兼容 & 混合 Plan</h3>
+<table data-page-node-id="VZAQXJXZCCXg7DlljjsEeb">
+  <thead data-page-node-id="t8CKvF15Hf3kPp1rxXKuy4"><tr data-page-node-id="ju7l482Mrl0SJXyqeYWABg"><th data-page-node-id="DkWTQBl3vrKEofnMcDgLRO">形态</th><th data-page-node-id="XNISNlh62VFl4TME8GBaBy">当前是否支持</th><th data-page-node-id="d5XryYraco6HA8Nx9rhdMF">需要做什么</th></tr></thead>
+  <tbody data-page-node-id="PXU02GwFCD6Pf6BvJfSQUX">
+    <tr data-page-node-id="5HUppGjS9wgI0A0SpqSY1y"><td data-page-node-id="GoWkzNhu3RIgjb7uusWhqe">旧 Plan（纯 inline）</td><td class="ok" data-page-node-id="4WQFB4ZIXH3wUfBrsG4ZeF">完全支持</td><td data-page-node-id="lDqXKSfL7VtPSYzvR0rvnO"><b data-page-node-id="AhkM7Ca7BuEVxXB441ESAe">无需迁移</b>。15 个计划全部是这一形态（<code data-page-node-id="496Gj4UagwQtQ7bb03OMJP">plans.steps</code> 皆为 4 键）</td></tr>
+    <tr data-page-node-id="qbdeCTp0Zqgr0mDmFjbqb1"><td data-page-node-id="7NBhUgHGht0WQBLAfKk50W">新 Plan（纯 case_ref）</td><td class="bad" data-page-node-id="0KyfrkrUXFoIH9ftQXH2by">不支持（会 400 或被丢键）</td><td data-page-node-id="r8WbptlASlDfe4OHV6WbuM">改 A.3 的 9 处 + 放宽 <code data-page-node-id="F5tSrIwESmHIwa40ml1Jjp">_plan_errors</code> 的 engine 前置要求</td></tr>
+    <tr data-page-node-id="ZtHDw1VEAE9WKo5yESJzpy"><td data-page-node-id="Vk5GhnsYH1sVehEyofKE2o">混合 Plan（inline + case_ref 共存）</td><td class="bad" data-page-node-id="BdFYCyVQKQzFxQPfwUgHEA">不支持</td><td data-page-node-id="Gu2Hz991vHaJd6cYSJlOWF">执行侧天然支持（逐 step 判断即可）；瓶颈全在 A.3 的透传点</td></tr>
+  </tbody>
+</table>
+<div class="banner" data-page-node-id="pPNAyKbDfCaZbxzv3zYVlo">
+  <b data-page-node-id="8QMrGq4tW4NqhUISEsGTKM">一条可验证的强性质（建议作为验收标准）</b>：新键<b data-page-node-id="ziRkgGNGphVXDwZoshkks6">仅</b>在 <code data-page-node-id="tELPSA9lNVQD4X6PXizBV9">case_ref</code> 存在时写入。
+  这样 <b data-page-node-id="mvPHHi4zAT2tYGO6Nvctwl">旧 inline step 的 JSON 与改动前逐字节相同</b> → 旧计划「保存后重跑」的
+  <code data-page-node-id="bmuywUH3zehopQVl3SNC8s">plan_snapshot.snapshot_fingerprint</code> <b data-page-node-id="DX2ZzcR8Q92cBfxdbzNMm3">保持不变</b>。
+  若实现时对所有 step 无条件加键，会导致历史计划的指纹在"什么都没改"的情况下变化 —— 必须避免。
+</div>
+
+<h3 data-page-node-id="k3kDDQOyFb5iiZUPXZgzHW">B.9 TestSuite 是否需要独立关系表？</h3>
+<div class="banner ok" data-page-node-id="HT0B4JRkXJO7VwvfMRvZxw">
+  <b data-page-node-id="axwOlH4gNKUhXBw7pfLnAC">不需要 <code data-page-node-id="z1hjZso2c7cFfhxApI0zK8">test_suite_cases</code>，也不需要 <code data-page-node-id="T85kSKxybI8qBRIwUBK83L">plan_cases</code>。</b>
+</div>
+<p data-page-node-id="LfpBWdjM9eazh42EfeDjxf">直接对着执行逻辑论证 —— <code data-page-node-id="N8z3KI7yZorjjyZ4HidQFE">router.py:414</code>：</p>
+<pre data-page-node-id="ceJwaDPoppKWnryCm2AtDR">for step in plan["steps"]:                    <span class="muted" data-page-node-id="ADJszzhZLD3cLD9iYeBvmO">// ← 执行期唯一的顺序来源</span>
+    params = _resolve_step_params(step, engine, snapshot, asset)
+    db.insert_job(...)</pre>
+<ul data-page-node-id="SCLzbHLJIdyKtrlBW6EPxu">
+  <li data-page-node-id="Fmm2pNTmNy0d4pXUXdPZgB"><b data-page-node-id="qTl4JjEEgTLxP9IsIAJLYT">Suite 不参与运行期</b>：Suite 只在<b data-page-node-id="H4m588fRzqs1w5q0Oh7ZIK">编辑期</b>展开为一段 steps 数组被写进 <code data-page-node-id="BA53GEUa9bJDR6C0dCLqrD">plan.steps</code>。
+    一旦落进 Plan，运行期只认 <code data-page-node-id="Ldz9ojthMxtPWC9eFdSt24">plan["steps"]</code> → Suite 的关联表在运行链路里<b data-page-node-id="PwOWc6fb4H0bGom99Q6SEA">完全没有读取点</b>。</li>
+  <li data-page-node-id="1mjAWwNrmgbyjLHllHyTJC"><b data-page-node-id="Yj07enZYEestjPbGa3LQ0S">引入 <code data-page-node-id="kP2UuaM96Kc8GvlJufWrOX">plan_cases</code> 会造出第二个顺序源</b>：<code data-page-node-id="v3Pwyx6DHDruSPOYkgBryl">steps</code> 与 <code data-page-node-id="gExHTFU1aATf7dv43qa8iR">plan_cases.ordinal</code> 谁是权威？
+    必须改动上述循环 → 直接冲击已验收的执行链路。</li>
+  <li data-page-node-id="gS45UO1ezhFphdomHhKueb"><b data-page-node-id="P6UT1F2IBkC3Ob4kicygcg"><code data-page-node-id="TvE2cTS9ymlH1IMXlnXuQ7">test_suite_cases</code> 与项目既有风格不符</b>：本项目表达"有序集合"的既有做法就是 JSON 数组
+    （<code data-page-node-id="crXFG5CPzU0p00fYwLkjYP">plans.steps</code>、<code data-page-node-id="IhlQ9dPLBoENFu7CKXV1cB">environment.labels</code>、<code data-page-node-id="W2hz4Zi4dtT8KBYlPKBDxv">executor.allowed_runners</code>、<code data-page-node-id="dgbLnoE5tsLxdoZA3C6IK6">matcheval.algorithm</code> 皆是）。
+    为 Suite 单独引一张关联表会造成两种风格并存。</li>
+  <li data-page-node-id="7hdE0gtC1gRA8ekTk3ERxn"><b data-page-node-id="8peugK5ytFg2FtDVWFXfQt">当前没有需求逼出关联表</b>：没有参数化、没有 DAG、没有跨 Suite 复用查询、没有"某用例被哪些 Suite 引用"的运维诉求。</li>
+</ul>
+<p class="warn" data-page-node-id="AdWxBxXvt3XJ3TSc5Pr754">→ <b data-page-node-id="Qo42sfJuqYlqFV2GmGbjaH">明确建议暂缓</b>：不因为"数据库规范化"就自动加 association table。若未来出现「反查某用例被哪些 Suite 引用」的硬需求，再引关联表也不迟（届时是纯新增，无破坏性）。</p>
+
+<!-- ============================================================ -->
+<h2 data-page-node-id="jesaNMMQyLyKjxHtfOQVT9">Part C · 冻结设计（最终建议）</h2>
+
+<h3 data-page-node-id="6FdfAuAue898LVevQb4IZL">1. 当前实际代码结构 与 TestCase 的插入位置</h3>
+<div class="flow" data-page-node-id="IAokKCOXKcHsqQRFYyeJMw">
+  <div class="node fut" data-page-node-id="4OjOWs1KD6tQvvguMMkPpd">TestCase<small data-page-node-id="hbFwEaDdGxYpwr7CE2nRHX">定义层·新增</small></div>
+  <div class="node cur" data-page-node-id="HuqvZzM98Xa2b9RGXo6iqs">Plan<small data-page-node-id="bP9rbRC2ZHSy4sSZ7gxfqj">引用 + 顺序 + 环境</small></div>
+  <div class="node frz" data-page-node-id="HtIcy5v3jJa3Iib2oW88vR">PlanRun<small data-page-node-id="f76kVaoPoNKYQTtfurRYtM">冻结展开后的自包含快照</small></div>
+  <div class="node frz" data-page-node-id="oKQjhpzNdBaWhngNcozbrD">Job<small data-page-node-id="NitUfJRhaMQZVJkOXhSNL9">一次执行（不变）</small></div>
+  <div class="node frz" data-page-node-id="SR75UKk1KYAlZRwa5faITh">Report<small data-page-node-id="55LwuRhyFQBacehnSh5xcG">结果（不变）</small></div>
+</div>
+<pre data-page-node-id="jp0U4FgSwiw7NTjIlw29Yi">现状：  plans.steps[] = [ {engine,name,requires_exclusive,params} , ... ]        <span class="muted" data-page-node-id="uQnrMRQZXj89EbSqEGOdF8">// 匿名内联</span>
+未来：  plans.steps[] = [ {case_ref:{...}, override_params:{...}, name?} ,        <span class="muted" data-page-node-id="rtktG9YsytqquGzUpxQuAH">// 引用</span>
+                        {engine,name,requires_exclusive,params} ]                <span class="muted" data-page-node-id="bYciLAHwjXoAR8m6KbL5Fb">// legacy 内联（永久保留）</span>
+
+插入点：<b data-page-node-id="wRjd4UliIbLWGPTEivE3rc">只在 Plan 的步骤来源之上</b>。
+        PlanRun / Job / Report / Runner / 状态机 / 报告中心 / 配置中心 <b data-page-node-id="Ak2dQUp8r4QrJ5iOYkpPHl">全部不动</b>。</pre>
+
+<h3 data-page-node-id="Q3KFAs1TE5Q8nSurvt7rEe">2. TestCase 最终字段</h3>
+<div class="frzbox" data-page-node-id="TUKOvHKsotZeLhCJ6qEBWM">
+<table data-page-node-id="ak5LRvf7LU4723PRxlxskw">
+  <thead data-page-node-id="IMcaGFKmtf5XlRlTy4tT9m"><tr data-page-node-id="LiFSfprlb3QASHgQ01n3y4"><th data-page-node-id="ctS3p4B7E4d8uEnOSrHuAL">字段</th><th data-page-node-id="JgSDidysg1PkF3efxyAhip">类型</th><th data-page-node-id="I8YyczO9ufCKPsaHgmLBjx">必填</th><th data-page-node-id="SkjDXYHkENxrnNzijNz5PW">说明</th></tr></thead>
+  <tbody data-page-node-id="C9EnEEImEziJpltXcQbsnO">
+    <tr data-page-node-id="0aYuat00qlRneBQafftECB"><td data-page-node-id="ab6J6amgfvRHIpwE7WytzN"><code data-page-node-id="o1Q68tuWpEm88CvVLECpXZ">id</code></td><td data-page-node-id="F2AlsEz6Qk7rYacDXezFpB">INTEGER PK AUTOINCREMENT</td><td data-page-node-id="hHZ0aAMgdawkHUXxaXEmx5">是</td><td data-page-node-id="RlZ3EGyf0kVIFFmGscJm0S">稳定身份，供 <code data-page-node-id="9X7Nyrb6rcnZd5j0z14MDZ">case_ref.id</code> 引用</td></tr>
+    <tr data-page-node-id="vo5Nzy0S9DjtlAW78YEquu"><td data-page-node-id="iOOcdlWDQI4bAr92XTLFtF"><code data-page-node-id="9gWIhiDAssOHUuPavE7akQ">name</code></td><td data-page-node-id="vlCICiVAEGfyNjF2uosULX">TEXT NOT NULL</td><td data-page-node-id="6OGE3R3zbtoNL7lSuyhugN">是</td><td data-page-node-id="gKXLYHQPu5hCOGLdIXaynk">展示名；进入定义指纹；展开后成为 <code data-page-node-id="IQfqeFEXvcXaLOVGwt8zzY">jobs.name</code></td></tr>
+    <tr data-page-node-id="awAMYTFCan6N8xN0gsAlC6"><td data-page-node-id="MG1CaIke47CQc6XrIbFJ9S"><code data-page-node-id="RoQZ7HuVcMwJQt1xdCqycn">description</code></td><td data-page-node-id="dsSpxrq9lDGpbBK0CqhD50">TEXT DEFAULT ''</td><td data-page-node-id="XpMDpHS8rx2murj0gAehVD">否</td><td data-page-node-id="oHBbkMBgc0qx9UsmTfEcoN">说明；<b data-page-node-id="RsssUHsTD3eaqjEtCSPUMC">不进入</b>指纹</td></tr>
+    <tr data-page-node-id="OTUrl7au8hQYGfLTexBD28"><td data-page-node-id="jaMeuJRufZQfn9jQ8mtPFZ"><code data-page-node-id="xX8PLNVpWXT4odk5znsLDD">engine</code></td><td data-page-node-id="u0hZAFIiQSASQ4hDwwaDoK">TEXT NOT NULL</td><td data-page-node-id="MHCZXShky3SYVSVra9EGYO">是</td><td data-page-node-id="geuHdmfCpx4vBR1RKgCAqj">必须是 <code data-page-node-id="bKtxneHXbxuFiQmqpO889T">ENGINES</code>（pytest / locust / matcheval）之一；<b data-page-node-id="66rnlDAWBPBowhUOaZ1evg">不可被 override</b></td></tr>
+    <tr data-page-node-id="qLbhqYj7BtnPXFHqMjtbn7"><td data-page-node-id="rHYHMHHXR2e0Kw9tBjyWBa"><code data-page-node-id="3xYeiaasDVa95uLha78Ir8">params</code></td><td data-page-node-id="ywSEk9hojDxYBF4PAXb7pT">TEXT DEFAULT '{}'</td><td data-page-node-id="GMBZ2falQOhD1hMmljS3OV">是</td><td data-page-node-id="uLGBm6f21G3zX0Fc27Bgf4">受控参数（JSON）；键必须 ∈ <code data-page-node-id="gth5dBDHtdaGZlOG9FqpFc">_STEP_PARAM_KEYS[engine]</code>；<b data-page-node-id="uvDAt5NRW1wWuhvna778vA">不得含 <code data-page-node-id="G8dGydSrHcyz1azEuNOdAZ">asset_source_id</code></b></td></tr>
+    <tr data-page-node-id="QOMguheroGmDL9YIsrhtOr"><td data-page-node-id="V62bZ81NeelvmVbwukCt4k"><code data-page-node-id="SMKUeTKKrQJz4XRWbqWA9O">requires_exclusive</code></td><td data-page-node-id="w9hLw0m1m85lV3anyEU4C7">INTEGER DEFAULT 0</td><td data-page-node-id="ffEypInUZt6joNBrya3npV">否</td><td data-page-node-id="CTWz4KlVfvKf48SeObWFBo">是否独占执行机（UI/Unity 类）</td></tr>
+    <tr data-page-node-id="iKEHLDNGOCHBRIczQacNtH"><td data-page-node-id="CzOXNf0VH4jrDfhYtmOqQZ"><code data-page-node-id="UiUwYgd2SodliIOxkFx1qg">asset_kind</code></td><td data-page-node-id="nEIC1rONQwcd0EyQ1UCsij">TEXT DEFAULT ''</td><td data-page-node-id="fPRMqCYByzqC4ikNdEqrQ7">否</td><td data-page-node-id="NZBUBihuSDoTuVHThMuxBq">声明资产需求种类（<code data-page-node-id="7dzCWtIwkAO4G9FN8FeaHj">locust</code>/<code data-page-node-id="BO20RjCq7EeC5TtPcY6sY6">matcheval</code>/空）；把静默跳过变为显式预检错误</td></tr>
+    <tr data-page-node-id="djOvA4AZ5cdWKCKbZLgn2r"><td data-page-node-id="qWQKVnOsGD2wm7lrYBQRnH"><code data-page-node-id="HXmZhWuN6y9HZHlF6IfF9w">fingerprint</code></td><td data-page-node-id="nxDMoSBHcE5URsL8eu4EqP">TEXT DEFAULT ''</td><td data-page-node-id="8amjkR54irpOWotwleFSe8">是（系统生成）</td><td data-page-node-id="YORvovqFpDHOnRZiqgWw73">定义指纹（见 §7）；只读，不接受客户端提交</td></tr>
+    <tr data-page-node-id="g7yxJCbP3g3EGne1w3wKk0"><td data-page-node-id="OHCgfvD2tpZCoBmOmPGv6c"><code data-page-node-id="5AWsJfbBpKBUnCF0bjJ3Et">revision</code></td><td data-page-node-id="3JyUEmzTLHX4a65g1PZIfg">INTEGER DEFAULT 1</td><td data-page-node-id="11sqHQRt1sbrJ25pmbuTOT">是</td><td data-page-node-id="PKlGfGnj0F6usEXH33P04o">定义版本（见 §5）</td></tr>
+    <tr data-page-node-id="Ldg5diC6kzotlyBXOy3zBB"><td data-page-node-id="hjCyaaOXWPqh9QvmonsVhP"><code data-page-node-id="qisovchCeCQoEnWprZuhK6">enabled</code></td><td data-page-node-id="A4dEh4a0T0nulCEopK9nIp">INTEGER DEFAULT 1</td><td data-page-node-id="51Rf18DNrMCkBz9AxCTC7I">是</td><td data-page-node-id="WFAOeDI7x5zrrZn2pnke2t">启停；停用后不可被新计划引用（沿用 <code data-page-node-id="gcSbFw1qiI7LbeIrAp4Evg">validate_plan_refs</code> 语义）</td></tr>
+    <tr data-page-node-id="DTVaugZg99N6AoOkLDrOG3"><td data-page-node-id="3nazTbzc2opzuVL2lmVrmd"><code data-page-node-id="pERX8Vh6DYAIcCIGM81uQx">owner</code></td><td data-page-node-id="dTOiL2RNcFtgadnLpSMNN4">TEXT DEFAULT 'local'</td><td data-page-node-id="QaDYFW64oyL5ksvQibYxE8">否</td><td data-page-node-id="5HAxFmexuIB3XVGQUG3nA6">归属（与 <code data-page-node-id="qsuP6dUcIzpCbkNKHVbWWD">plans.owner</code> 同构）</td></tr>
+    <tr data-page-node-id="NEOSwPI0aOQuDVhCZPYksl"><td data-page-node-id="ItAH1TicmoLPGIu0JXWP51"><code data-page-node-id="fNdBAFikrp1TQ0F4NU7IAX">tags</code></td><td data-page-node-id="QHkUYYCazcSR0MazHr3AEu">TEXT DEFAULT '[]'</td><td data-page-node-id="khO7X2jrDEisGiqHr8tr9j">否</td><td data-page-node-id="7OnXkY9c4YYH54UUrjHMus">标签（P1）；不进入指纹</td></tr>
+    <tr data-page-node-id="DPwmlp6S91mDrXOcrMjr3T"><td data-page-node-id="kG2q5OV0rNpEv0MuVaMWFf"><code data-page-node-id="SRAb24y96KZuWUQISCP8eQ">created_at</code> / <code data-page-node-id="G4qImAGHZCnkWyMsfbUrwA">updated_at</code></td><td data-page-node-id="9C64hUqCJNlclWHBHKmlJB">TEXT</td><td data-page-node-id="bZ07HZjNsFhchznXwfPrRs">是</td><td data-page-node-id="utqSyWi1gPmIeHDMVorGyh">时间戳</td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="pdSYgntsvfwKrQrKCxdeIZ"><b data-page-node-id="LxyL0bTg2Rue3xh6L0iTmV">共 13 列。</b>刻意<b data-page-node-id="JVdExiP83KJi6tanFkLGiS">不加</b> <code data-page-node-id="kYYIkk26NxzcRK8EbxbcAO">notes</code>（与 description 重叠）、<code data-page-node-id="jkgkXXM9GSZYAPeUlvsc9G">entry</code>（扭曲三引擎语义）、
+<code data-page-node-id="1IzGOpQIlSsmAbxdifvk1q">expected_result</code>（无法机械校验）、<code data-page-node-id="U77FBRfceXKf1kzp8VTpQC">status</code>（会产生第二事实源）、
+<code data-page-node-id="jnFQwZ5wTITsgd1J5I2p1M">environment_id</code>/<code data-page-node-id="SvZXWpG0i89sxfkwu0U35F">executor_id</code>/<code data-page-node-id="E2Fi7R1tD98SXqJR3SE1bJ">asset_source_id</code>（双源冲突）。</p>
+</div>
+
+<h3 data-page-node-id="m5ebtUlsb6A25g2jkbZhTb">3. TestCase JSON 示例（三引擎，均取真实参数结构）</h3>
+
+<h4 data-page-node-id="KFPqPzOYs8gvFlh80XGbFM">① pytest</h4>
+<pre data-page-node-id="oJxzAPDCa5KVdkeVyMX2kE">{
+  "id": 101,
+  "name": "PrivaHigh 后端功能套件",
+  "description": "校务/学期/师资/建筑/声望/地图规则接口契约；TestClient 进程内，不依赖外部服务",
+  "engine": "pytest",
+  "params": {
+    "cwd_root": "privahigh-backend",
+    "args": ["tests/", "-o", "addopts=", "--tb=short"],
+    "timeout_sec": 300
+  },
+  "requires_exclusive": false,
+  "asset_kind": "",
+  "fingerprint": "9c1d0a77be42",
+  "revision": 1,
+  "enabled": 1,
+  "owner": "local",
+  "tags": ["privahigh", "api"]
+}
+<span class="muted" data-page-node-id="wUrDtWhWgITM3K90gcGbem">// 与 PlanRun#20 / Job#24 的真实执行参数一致（46 passed / 3 failed 那一次）</span></pre>
+
+<h4 data-page-node-id="xmUUYIuBAYqFFRgM8dzRys">② Locust</h4>
+<pre data-page-node-id="kUwbAZSfbsIE1KdLce1vSG">{
+  "id": 102,
+  "name": "Colyseus 联机对局压测",
+  "description": "注册→登录→WebSocket 进房→高频 entityUpdate；需 :2567 服务端",
+  "engine": "locust",
+  "params": {
+    "locustfile": "colyseus-bot",
+    "users": 3,
+    "spawn_rate": 1,
+    "run_time": "60s",
+    "csv_full_history": false,
+    "timeout_sec": 180
+  },
+  "requires_exclusive": false,
+  "asset_kind": "locust",
+  "fingerprint": "3f7b21c8de05",
+  "revision": 1,
+  "enabled": 1,
+  "owner": "local",
+  "tags": ["colyseus", "load"]
+}
+<span class="muted" data-page-node-id="bpspJGJLCcOX6yBjY5EICs">// 与 PlanRun#25 / Job#30 一致。
+// 注：计划 id=10 的 run_time=10s 属"对同一定义的计划级覆盖"，不应新建同名用例 —— 见 §6</span></pre>
+
+<h4 data-page-node-id="56HF6mUziERDb782geDL8H">③ MatchEval</h4>
+<pre data-page-node-id="LW5zeYTb8u0OuxWyYAgUPJ">{
+  "id": 103,
+  "name": "PrivaHigh 真实 UI 视觉识别评估",
+  "description": "23 模板 × 5 场景，真值走 fixture-filename 约定；仅用 tpl 算法",
+  "engine": "matcheval",
+  "params": {
+    "dataset": "privahigh-real",
+    "algorithm": ["tpl"],
+    "threshold": 0.8,
+    "output_level": "full",
+    "timeout_sec": 600
+  },
+  "requires_exclusive": false,
+  "asset_kind": "matcheval",
+  "fingerprint": "b58e0c41af92",
+  "revision": 1,
+  "enabled": 1,
+  "owner": "local",
+  "tags": ["privahigh", "vision"]
+}
+<span class="muted" data-page-node-id="rTAHTHir9WGFLJmRNLBrXB">// 与 PlanRun#21 / Job#26 一致（TP=23/FP=0/FN=0/TN=92，P=R=F1=1.00）</span></pre>
+
+<h3 data-page-node-id="V5XJV1uenuHq0byBg62Swo">4. Plan step 最终结构</h3>
+<div class="frzbox" data-page-node-id="sbf83ZBxtCIbYb3GzKPovJ">
+<h4 data-page-node-id="LmoKxMb6hH2HPKlGAWB14a">引用形态（新）</h4>
+<pre data-page-node-id="Kws6OpBdkwqz3HzzjblnAf">{
+  "case_ref": { "id": 102, "revision": 1, "fingerprint": "3f7b21c8de05" },
+  "override_params": { "run_time": "30s" },
+  "name": "Colyseus 压测（短跑对照）",
+  "requires_exclusive": false
+}</pre>
+<h4 data-page-node-id="Flp10dIiyycOdbAPn26Bfw">内联形态（legacy，永久保留，字段与今天逐字节一致）</h4>
+<pre data-page-node-id="k0qW3wYXx0raGcgRCFp8nO">{
+  "engine": "pytest",
+  "name": "demo-smoke",
+  "requires_exclusive": false,
+  "params": { "args": ["demo/test_platform_demo.py","-o","addopts=","--tb=short"], "timeout_sec": 300 }
+}</pre>
+<p class="muted" data-page-node-id="WEDn5G1hCBrXDuM3G2Uooy"><b data-page-node-id="NOCQ0ekYJuJxmVvXnwcHy6">判别规则（唯一）</b>：<code data-page-node-id="S2jIcmK9UU9gqd2HrfSqBR">"case_ref" in step</code> → 引用形态；否则内联形态。
+  两种形态<b data-page-node-id="n9wnAnBSwu7hHQiZ4WF09t">不共存于同一个 step</b>。引用形态<b data-page-node-id="laRRktzIARWa9mUVhIqs0N">不写</b> <code data-page-node-id="iP6FBT4tbVRbPdySpQ9tcv">engine</code>/<code data-page-node-id="qazPAOxlPdlJLR4ZVGyqI1">params</code> 原始键（有效值由展开产生并写入快照）。
+  <code data-page-node-id="6pFIA5myrqaRWu5eQHMx0I">name</code> / <code data-page-node-id="jqUObG2wHOnTKp3PFwzQYZ">requires_exclusive</code> 在引用形态下为<b data-page-node-id="LisdB3pbDYkPX9ium0MB8H">可选覆盖</b>。</p>
+</div>
+
+<h3 data-page-node-id="38tNx51DHY6KCTaCtYOoNZ">5. TestCase revision 规则</h3>
+<table data-page-node-id="VceG4ANqG3ox7eEgFeecB7">
+  <thead data-page-node-id="EKAYKmv5UChC8FrOeIrQqZ"><tr data-page-node-id="LH1iarPNAELinQxUhPJ0GO"><th data-page-node-id="FQjlnv3kQKzxa26UunW4ny">事件</th><th data-page-node-id="PSYPpk4qpBaCsBxSWILOVK">处理</th><th data-page-node-id="1FsmSjyXpUGbKENKtufGIh">依据 / 类比</th></tr></thead>
+  <tbody data-page-node-id="mkh3eGlrzTRP9F4turKlE4">
+    <tr data-page-node-id="M5nsWkNxHsZF9qgkINZL6i"><td data-page-node-id="flW54IdMQBQzrMqNDvAHCE">创建</td><td data-page-node-id="3K77RtBwcJnyXAFCgMLIdP"><code data-page-node-id="VNKlbZw5GkcDDNSclmNEwA">revision = 1</code>，同时计算 <code data-page-node-id="2ljgoEH9iCAC6iSTQ2jUVq">fingerprint</code></td><td data-page-node-id="7tliu1vnbqbyO8YfZRWhlf">同 <code data-page-node-id="3E2pDiCVWidUBZJznr4QvR">db.create_plan</code>（<code data-page-node-id="IYoKAMx66M3LsRk28YRPlP">db.py:355</code> 写死 revision=1）</td></tr>
+    <tr data-page-node-id="4iYD7zWpFy1kzTDN8krwcy"><td data-page-node-id="AWKStEUdNXEI5t631Toeio">修改定义字段<br data-page-node-id="THD0GLAgxgOzRFGFEgJn6Z">（name/engine/params/requires_exclusive/asset_kind/description）</td>
+      <td data-page-node-id="IjK4uxDs2c2njNeAJhE1OS"><code data-page-node-id="TpMbdph0xMFqWDzEgntdpp">revision += 1</code>，并<b data-page-node-id="m9HzBntlB6L8o0EJKHgt5j">重算 fingerprint</b></td>
+      <td data-page-node-id="DFNLxCCnxnqCj8DHYiAnOi">同 <code data-page-node-id="9C7OIrZZr1fx0gnzsfjbgb">update_plan(bump_revision=True)</code>（<code data-page-node-id="pYtVxCmv7TlVCsClCvzRW1">db.py:378</code>）</td></tr>
+    <tr data-page-node-id="0kXWSLq1ojeGZUFgVgjGtq"><td data-page-node-id="JsFb3Wmx7qYuIgzJTg0eQP">切换 <code data-page-node-id="1R6UGxF6UqihM5HbbWlXCq">enabled</code></td><td class="ok" data-page-node-id="7HE8E6UgGThPikLNI0EdLC"><b data-page-node-id="xnEHIFYz1MdqxUuw1ar4hK">不</b>递增 revision</td>
+      <td data-page-node-id="WwGgqWVKpXSgqESuGuW8Dc">启停是"可用性开关"而非"定义"；它也不进 fingerprint —— 若递增会让"停用一下"污染版本历史</td></tr>
+    <tr data-page-node-id="S4RCBNXd1eeWVrosvVWAJS"><td data-page-node-id="u3lnC5iFd9xlDsXWawVDap">改 <code data-page-node-id="EJhlRl63kKiKXh6KRuo355">tags</code> / <code data-page-node-id="IE6OyxGbl9FDLrl6AxxDnw">owner</code></td><td class="ok" data-page-node-id="pvreC8o17mZqWTt8xB6W0K"><b data-page-node-id="6fxMeuL5iyQVFjhZjStwij">不</b>递增（P1 细化项）</td><td data-page-node-id="5ATfwYN9ryWnxbh9KSd18A">管理元数据，不进指纹</td></tr>
+    <tr data-page-node-id="6ivAJtBD5W4pUTZpmzaY5Z"><td data-page-node-id="bMB6OMkmRGRajGm8dJtTfw">非用户编辑（预置/回填）</td><td data-page-node-id="tdWY3Z4ESHcFuxXd9x96Dq">必须支持 <code data-page-node-id="mzDDPEUClr4sfl3znM8rnr">bump_revision=False</code></td><td data-page-node-id="H8H7BzDS5Fmq2Ld5dPZgOH">项目既有硬规矩（预置污染版本号会让快照对比失去意义）</td></tr>
+    <tr data-page-node-id="XB7IirsMDLvqbYxEHE0aFN"><td data-page-node-id="nw7a9vCYQ66bkmWVikaFdz">Plan 引用</td><td data-page-node-id="eCYqh1DL10oRYjjGDCTReJ">存 <code data-page-node-id="zMuDXFE9rpHRGc8KXauqxQ">{id, revision, fingerprint}</code> 三元组</td><td data-page-node-id="Jnp0YnUl9GnnY9VQzJlmcR">见 §4</td></tr>
+    <tr data-page-node-id="U7hwV77Lb1szl8u8doJ2KR"><td data-page-node-id="PimepUGkSsGu6IP5ViZSkK">PlanRun snapshot</td><td data-page-node-id="3W8lH54W6RvIpakYynfU9N">存引用三元组 <b data-page-node-id="2D4e9xvDGPCv6zKS6F9c6k">+</b> 展开后的有效 step</td><td data-page-node-id="9dYE23eJxvBWoMD2xpEuAi">见 §8</td></tr>
+    <tr data-page-node-id="HEz3jQBUfN3tBPDJGtlfnE"><td data-page-node-id="28vD7DpLk3PG25532Vtzyo">历史运行</td><td class="ok" data-page-node-id="X1EdJJX3FIurrWdeNehSrM"><b data-page-node-id="3vWImU2F5t5v6itwOVkfpn">不受任何影响</b></td><td data-page-node-id="mRGfwpadjBuxTabpNDNlpl">执行期不回读 <code data-page-node-id="bovkGFuywDzYzZg3QzIDSm">test_cases</code>；Job <code data-page-node-id="mBz0XPOAn85MgSXwl7CXkF">params</code> 已固化</td></tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="RcsyzsJyzbEHGhhvoVCf2K">6. override 规则</h3>
+<table data-page-node-id="ttiZK00tKCDZXY0EE5cb7G">
+  <thead data-page-node-id="V37XfVWlzYDSw7sFJg9ocn"><tr data-page-node-id="y6Hy1j3Hrz4HiggLZgr2DQ"><th data-page-node-id="9y3DzfRhYzJLdYpTrv5enf">规则</th><th data-page-node-id="bKTu37FFPpP8nPF531oBU4">内容</th></tr></thead>
+  <tbody data-page-node-id="IP3xJ9KEclsLgnvDwsfoX5">
+    <tr data-page-node-id="UbM0AgCDUf3Z55tbj4vszh"><td data-page-node-id="8F6NHFhdcgu9A1Fn5YrkJG"><b data-page-node-id="N7aBjED5OHwxq4gfEVqhSF">允许覆盖</b></td><td data-page-node-id="h3rqgn6x4wzxDXMEcDiw78"><code data-page-node-id="Wb4YkNTvKZx32f0mbj5wtM">_STEP_PARAM_KEYS[engine]</code> 内的键（含用例未声明但属白名单的键）；以及 step 层的 <code data-page-node-id="cNBY5faS6zoUhTDdwwRTrQ">name</code>、<code data-page-node-id="G2Q9N67kimAW72RiGRzeTR">requires_exclusive</code></td></tr>
+    <tr data-page-node-id="QOQvfO7THhv5qlg4vq2ZPT"><td data-page-node-id="qGxRpIRMKilDoFVMsDcwUE"><b data-page-node-id="qMn5HQonMaEOEOpaMvccK9">禁止覆盖</b></td><td data-page-node-id="HltOaF71etYcLSxVDHyy0u"><code data-page-node-id="Mj6819TEgcyygUUuQnCvxX">engine</code>（天然不在白名单内）；<code data-page-node-id="HDHowG23tzyWPkFiB9YZBE">asset_source_id</code>（内部兜底注入键，<code data-page-node-id="eU3MQZ1OYe8Gxa88avRkQv">router.py:434</code> 会 pop，显式拒绝）；
+      白名单外的任何键；绝对路径 / 盘符 / <code data-page-node-id="4PvdBQOzAMKKCqp39Cm1pX">..</code> / shell 元字符 / <code data-page-node-id="MILIDwONRsCzf9U32egGZX">.exe</code>（既有限制全部继承）</td></tr>
+    <tr data-page-node-id="LnOnyU3Cqh16kKpRQ7ix7n"><td data-page-node-id="bvGBJ708BMgbWY6v8c61LM"><b data-page-node-id="7X3GjPht5RApueBNz7hHzL">合并语义</b></td><td data-page-node-id="OxAvhpfhQ26LMAMiYZsso0">浅合并 <code data-page-node-id="xLbjHN4lqdMHiZTc85yUKB">merged = {**case.params, **override_params}</code>（override 优先）；<b data-page-node-id="S5rW2muk9mSSqvR1YHGhNF">不做深合并</b>（<code data-page-node-id="S1paNGLd3pT517XkbCwJ5d">args</code> 等数组整体替换）</td></tr>
+    <tr data-page-node-id="1Dl9ZDJHekV9X1LKSouKWh"><td data-page-node-id="cNiaQoqtQnvOFni5Kt3BTI"><b data-page-node-id="PZqz79K2rlmtUzOtn2cbbw">校验</b></td><td data-page-node-id="ph81qTzNEN88ZNBWGGEaPV">对 <b data-page-node-id="6aRIGXDl8FroIWGVnFAAlN">merged 整体</b>调用一次 <code data-page-node-id="ed0EIzW7DYpsnjNIi5pyoG">validate_step_params(engine, merged)</code>；再额外拒绝 <code data-page-node-id="r2YmTsEGVyofPC9b9xLQ7I">asset_source_id</code>；
+      执行期继续由 <code data-page-node-id="jIR3s42HLzRJnFFz3wgrWk">_resolve_step_params</code> 做受控解析</td></tr>
+    <tr data-page-node-id="wnCNC4yntvcN5Ji0YTkRpp"><td data-page-node-id="zTRBPR4me81XnslREHHxrZ"><b data-page-node-id="B6lIoxZfLJy1wXUqRWvmyt">校验失败返回</b></td><td data-page-node-id="asiHOiLtg0TovbtiFmDnAc"><b data-page-node-id="SvW9WFg9MVcfvF3fTGukFF">HTTP 400</b>，正文为「；」拼接的逐条错误，沿用现有格式（如 <code data-page-node-id="VCxI70WvHp9uK2iqeegj3k">steps[1] [locust] 不接受的参数键：'foo'（只允许 [...]）</code>）</td></tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="50ALO48MhDDXFOcNW4oM0o">7. fingerprint 规则（最终定义）</h3>
+<div class="frzbox" data-page-node-id="wrQ0HsVr78ATyIQCMizZeg">
+<pre data-page-node-id="BRbsxFygSuLiUXGzhCLcLB"><b data-page-node-id="Jat5kOUTGkBTQDs0YU34sv">定义指纹（TestCase.fingerprint，保存时计算）</b>
+fingerprint = _h("case", name, engine,
+                 json.dumps(params, sort_keys=True, ensure_ascii=False),
+                 int(requires_exclusive), asset_kind)
+
+<b data-page-node-id="kx4umAjjlAbh4Bg47U0krW">内容指纹（执行时计算，写入 Job.config_snapshot）</b>
+content_fingerprint = _h("content", script_fp, asset_dir_fp)</pre>
+</div>
+<table data-page-node-id="TJbN1qA7h1kavr5GaemOIK">
+  <thead data-page-node-id="UQcEDFOdndwA2lNJV95WXE"><tr data-page-node-id="C9VF24umjQ4iupb0VW0fla"><th data-page-node-id="LnIPi3K2ASLwT0EbrpVhDQ">进入定义指纹</th><th data-page-node-id="fRVC4mrr24AIBwBfPH5pEY">不进入定义指纹</th></tr></thead>
+  <tbody data-page-node-id="ewuZoq5QFpJq8JQkGo01tU">
+    <tr data-page-node-id="ohrihmGtAJtC3tUEmAcVyd"><td data-page-node-id="al77FKwuXTyfwt6DlSfWfY"><code data-page-node-id="jbQ7ZuPR5jDCmGyCRw6hXO">name</code> · <code data-page-node-id="9QForHiJXbeDOLoH4yY8ts">engine</code> · <code data-page-node-id="EGahlE20MxVCFJ57CtcfSS">params</code>（规范序） · <code data-page-node-id="V6bTuZQjdTptmyjiyRlCcs">requires_exclusive</code> · <code data-page-node-id="cajlJhHcrFafJnQoI4nqfp">asset_kind</code></td>
+      <td data-page-node-id="2CZjV6kMUb7qSYfm9uDKHw"><code data-page-node-id="nD5q9Up95ffuFvMWFghvBL">id</code> · <code data-page-node-id="73ClBidvqXegVxRtXMBSpz">description</code> · <code data-page-node-id="fF114eCljUOrMpPY01eGci">tags</code> · <code data-page-node-id="bjxkEUKehMPmJHXRiqDrwP">owner</code> · <code data-page-node-id="RPEIKNo0VwQ0Ia9F5rkXvt">enabled</code> · <code data-page-node-id="KOcie1cweLPXcozfNM0dhC">revision</code> · <code data-page-node-id="CluG8cvcKEyjd18OLglhFM">created_at</code> · <code data-page-node-id="U7IDKpsxY6N9x07z44cc6d">updated_at</code></td></tr>
+  </tbody>
+</table>
+<table data-page-node-id="pg4bKEaIUFeyLFIkAiALXb">
+  <thead data-page-node-id="omKb6yrpV0D8Jk2Y6HHzSX"><tr data-page-node-id="QYNmLlMEFFGMMIx7uBjopy"><th data-page-node-id="OkLvlaaYjWc01Nc7xFmVtR">进入内容指纹</th><th data-page-node-id="odR4eoPekUvpHDxWwZiGJG">不进入内容指纹</th></tr></thead>
+  <tbody data-page-node-id="BJ1AUaXuDkH1TlnkdA0GPL">
+    <tr data-page-node-id="F29FHGoXwRQmSDT30vMFJU"><td data-page-node-id="GJ07fgDZEG0ohRJvRdCOHg">受控 <b data-page-node-id="61zAaAjvz6y6XAC1VGu8EH">locust 场景脚本文件内容</b>（<code data-page-node-id="xg7yBZJ0yh0VTSc0Uj7RxD">LOCUST_SCENARIOS[key]</code>）<br data-page-node-id="ai809WUM4Km7m1kJSN0nfh">
+      受控<b data-page-node-id="IacrGlzlzYfoMCA8XGsyHD">素材目录内容</b>（<code data-page-node-id="iFF3xjHOd1Ci76Eym6ejd7">TPL_DIRS</code> / <code data-page-node-id="F2yywRyfFASGDJHIxh5DCX">SCENES_DIRS</code>，升级版 <code data-page-node-id="PpHwoJt1GjyP1pEPfkmNRH">dir_content_fp</code>）</td>
+      <td data-page-node-id="IObUzi4DwGLcMpQUpIspRW"><b data-page-node-id="omZumJ1BZzQBVY7vAURFEB">整个项目目录</b>（明确拒绝）· <code data-page-node-id="em0l1meXnUIp3sEPEoWLuJ">WORKDIR_ROOTS</code> 工作目录（被测源码，边界不可界定）·
+        解释器环境目录 · 单文件 &gt; 8MB 的内容（降级为 <code data-page-node-id="OFZpUjQMNKDXXzlHlv8WF0">name:size</code> 并标 <code data-page-node-id="BLYG9lJwrCMVXKdSLz7YiH">partial</code>）</td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="uUddkQraodhZ1WNcbjtdbG">计算时机与成本：定义指纹=保存时（纯 JSON，微秒级）；内容指纹=<b data-page-node-id="2jmLawzlxO3X2bI1V9nRHh">PlanRun 创建时算一次</b>（数十 MB，按受控 key 进程内缓存）。</p>
+
+<h3 data-page-node-id="7Vb0Zf0iykeHMCTTr24GCQ">8. PlanRun snapshot 最终结构</h3>
+<pre data-page-node-id="XtqRSvqKfdpAYUYAJs7U19">{
+  "plan_id": 16,
+  "name": "Colyseus 压测回归",
+  "description": "",
+  "revision": 1,
+  "fail_fast": true,
+  "owner": "local",
+  "environment_id": 1,
+  "executor_id": 3,
+  "asset_source_id": 4,
+  "steps": [
+    {
+      "index": 0,
+      "engine": "locust",                                  <span class="muted" data-page-node-id="8YcW6T8Z2KavrXWGHreQs3">// ← 展开后的有效值</span>
+      "name": "Colyseus 联机对局压测",
+      "requires_exclusive": false,
+      "params": {                                          <span class="muted" data-page-node-id="WzCb0espkA4Abh8QxDnNIr">// ← override 合并后的有效值</span>
+        "locustfile": "colyseus-bot",
+        "users": 3, "spawn_rate": 1,
+        "run_time": "30s",                                 <span class="muted" data-page-node-id="R8bnoHNNk0Gx9OJ1dgaE8F">// ← 被 override（用例原值 60s）</span>
+        "csv_full_history": false,
+        "timeout_sec": 180
+      },
+      "case_ref": { "id": 102, "revision": 1, "fingerprint": "3f7b21c8de05" },
+      "override_params": { "run_time": "30s" }             <span class="muted" data-page-node-id="gZEiSpoTaDvDmzLWUNEKps">// ← 记录本次覆盖了什么</span>
+    },
+    {
+      "index": 1,
+      "engine": "pytest",                                  <span class="muted" data-page-node-id="ZCsfjBWnvuQQ7NXSnAImHI">// ← legacy 内联步骤：不加任何新键</span>
+      "name": "demo-smoke",
+      "requires_exclusive": false,
+      "params": { "args": ["demo/test_platform_demo.py","-o","addopts=","--tb=short"], "timeout_sec": 300 }
+    }
+  ],
+  "snapshot_fingerprint": "…"
+}</pre>
+<div class="banner ok" data-page-node-id="x1JeSDjfTxihq6WN1Zgf1M">
+  <b data-page-node-id="UaDQAJ6rbJNbg5HDOBdkEY">关键性质</b>：<code data-page-node-id="g8PcEOmjCFiJDGyKgToetj">steps[i]</code> 的 <code data-page-node-id="jWxK9kvbA9Mg6i2pnS65Nv">engine/name/requires_exclusive/params</code> <b data-page-node-id="73vIQ46d4FDcTAxvsMeox0">始终是"本次执行的有效值"</b>。
+  因此下游全部零改动 —— <code data-page-node-id="jBBHKFJRYcFl2BW3ojVaaQ">_resolve_step_params</code>（<code data-page-node-id="q4ttKVEhgEZlRFDR0zEXGs">router.py:429</code>）、
+  <code data-page-node-id="dQU0Pd4ZtJ8llpDXCybqzY">engine_compare_key</code>（<code data-page-node-id="uHWmVcV4uxyO4r5pLc40MY">report_center.py:41</code>）、报告展示、预检都只看这四个键。
+  <br data-page-node-id="CVuEe3x9LpQOtvZIzrnB6g"><b data-page-node-id="11TvwOjNrnebLCOcXR9IgX">且 legacy 内联步骤不添加任何新键 → JSON 与改动前逐字节相同 → 旧计划重跑的快照指纹不变。</b>
+</div>
+
+<h3 data-page-node-id="ttfua6P9z3GPyNv0D5piTu">9. legacy compatibility</h3>
+<table data-page-node-id="1oen3bX57l4ibSqEQhnPQr">
+  <thead data-page-node-id="QHwGalKl6xhQFcvclvGFY1"><tr data-page-node-id="D7tFBSIpW6c0p4JoyvCrq0"><th data-page-node-id="Q6XeqXUIAgJSNdAy59d0uk">情形</th><th data-page-node-id="a5qAldkw6a0kMzRax7ikP1">处理</th><th data-page-node-id="9EmOqoVNJUPQlS9yLDat6E">需要改的地方</th></tr></thead>
+  <tbody data-page-node-id="AivPZALjBkUsSBRcOmNI4S">
+    <tr data-page-node-id="FWxDBlfKGQi4HYCnj5LvGq"><td data-page-node-id="MZA1CIyCyTb23859sLaNiW"><b data-page-node-id="tTcEOHEfSr02Io61cKncxi">旧 inline step</b></td><td data-page-node-id="kJ8XHLxkdABr9CPvndfmcQ">原样执行，不迁移、不改写。<code data-page-node-id="eadQulD83MeFfhSry4q2MV">_plan_errors</code> 继续按 <code data-page-node-id="fCnhLR9G6HvE8EuNRWBaoW">s["engine"]</code> 校验；
+      快照 JSON 与指纹保持逐字节不变</td><td class="ok" data-page-node-id="lvojiHoJaDsh5t44tIijSa">无（但要保证不"顺手"加键）</td></tr>
+    <tr data-page-node-id="GfAqsItClkZ1ZrZ72xCiUR"><td data-page-node-id="JI26uyoH56IgrVZXjHhMUa"><b data-page-node-id="cx0BgtcOQMhTHCsXfuZcHA">新 case_ref step</b></td><td data-page-node-id="rqIY37iXs8d0dzaGMA4Yr3">展开 → 合并 override → 整体校验 → 有效值写入 step → 快照</td>
+      <td data-page-node-id="bbnCQkLJsOkdt5IizT11Vo">A.3 的 9 处透传点 + <code data-page-node-id="f1VMFnKFyV24HMEj31KpUF">_plan_errors</code> 放宽（有 <code data-page-node-id="uoajk352DzDd7lI7ngIqvs">case_ref</code> 时以用例 <code data-page-node-id="t3N3Llc5SqBp8V7BbMGLK1">engine</code> 校验）</td></tr>
+    <tr data-page-node-id="2shBTWxI0mDQOQT60mEXoi"><td data-page-node-id="GEEySJ6ZAITcRduIpFj4CM"><b data-page-node-id="CL5AFeDJaM3wBizuEr47RN">混合 Plan</b></td><td data-page-node-id="Gh7dBolCq5jE8k7hFrDNGK">逐 step 判别 <code data-page-node-id="Q0kDS3sxF5GhgQTHh3xi7B">"case_ref" in step</code>，两条分支互不影响。<b data-page-node-id="FpIJlZsy1R1cWjN1x9sgXB">不做全局二选一</b></td>
+      <td data-page-node-id="0w41E7KsVrdwG4vLEE5zEw">同上；执行循环本身无需改（它只遍历已展开的 steps）</td></tr>
+    <tr data-page-node-id="A9kvP4apt96DUfZVVWVIUy"><td data-page-node-id="LPJiGnlIbUhExRArvJ3mVn"><b data-page-node-id="q6M6vMUyzmHZe9U6aqKP56">历史 PlanRun</b></td><td data-page-node-id="gj02IzVh4zciMKCsiqjUim">不回填、不重算、不迁移</td><td class="ok" data-page-node-id="326n9oJy5WoGHUn8pHqpaD">无</td></tr>
+  </tbody>
+</table>
+<p class="warn" data-page-node-id="ilvHiJTwe0UdEj6wliBORU">⚠️ 硬要求：<b data-page-node-id="HxBk7pwCs1euRXHDCkGol3">一次性迁移历史 Plan 是本设计明确拒绝的</b>。15 个既有计划的 <code data-page-node-id="qtX1ED29LXBqETqjfnXUCf">steps</code> 保持原样。</p>
+
+<h3 data-page-node-id="HINQQ6WpRNEgioon6YnWUE">10. TestSuite 范围</h3>
+<table data-page-node-id="BHig6TuKKT3gQwsLIdVtBU">
+  <thead data-page-node-id="undlItYMhEhcIA8EmKAugt"><tr data-page-node-id="oQbd73UjnOUVD7lBTJNQFg"><th data-page-node-id="7tD8AHhpxxgr7BioikP6oA">v0.2 <span class="ok" data-page-node-id="IE23x4pmNJZGUamtlEIawk">做</span></th><th data-page-node-id="jn1oPnEav9hUpAtscQ6t9K">v0.2 <span class="bad" data-page-node-id="Iyze9SddmWT2SJWVlcWMGr">不做</span></th></tr></thead>
+  <tbody data-page-node-id="75hu03WJz01smGK1KLNESb">
+    <tr data-page-node-id="JuDXJEDg9hU04gcTeYCR4M"><td data-page-node-id="Jmn50MhJxFAg2Haor9tgQF">
+      <ul data-page-node-id="XgiSiY1Y1Yk8l7ZhXPmbCl">
+        <li data-page-node-id="853QEdvoAig0lF1hFrEV1K"><code data-page-node-id="ahUAqX745xESc3xXH7Vmvn">test_suites</code> 表：<code data-page-node-id="d4lQsnx6ckddf7b6QAXIso">id</code> / <code data-page-node-id="W9ZTkYT4DJy8jEDXYXJzv9">name</code> / <code data-page-node-id="y7QVnBGDDevfjbfvNJFQlE">description</code> / <code data-page-node-id="ZfUALXAIhpy1Zwtl91njCb">cases</code>(JSON 有序) / <code data-page-node-id="WgLknwvjuPUMCFzaJPjCh9">revision</code> / <code data-page-node-id="3IGa8fBD1mYWGOEv0XTcWO">enabled</code> / <code data-page-node-id="VAIU0qXjuVgXy41Yrfwq1o">owner</code> / 时间戳</li>
+        <li data-page-node-id="BW7xl3EQmKWrGkMetK86mB">4 条 CRUD：<code data-page-node-id="766Ys8DNkBFtsZwLwhtFqX">GET /api/test-suites</code> · <code data-page-node-id="nwk4jcoJ4waWCdRQK9WBXy">GET /api/test-suites/{id}</code> · <code data-page-node-id="TWZqcqVFvjlj1nfX5ZUKA6">POST</code> · <code data-page-node-id="02Q08ftjzsy6s5nBIsa4Np">PUT</code></li>
+        <li data-page-node-id="a9qrXxywtYyTAhRsozsFou"><code data-page-node-id="1h0TQiTC8lIVWhtliNgmYw">#/suites</code> 页面（列表 + 成员选择 + 排序）</li>
+        <li data-page-node-id="ECGhaqJ6IreGlUUpljPNfK">Plan Editor 里「插入套件」→ 编辑期展开为 steps 数组</li>
+      </ul>
+    </td><td data-page-node-id="PY2CUXaLWWWqK5QNJtfurd">
+      <ul data-page-node-id="PUm1xwptQkwEJn1WE2IUDX">
+        <li data-page-node-id="8XYisWfyFKzNZMdj4F2c8u"><code data-page-node-id="wGQvaBGHt8Fll5Ud2jz3rq">test_suite_cases</code> 关联表</li>
+        <li data-page-node-id="X7UYPiqUlCmE7G8ISCswT8"><code data-page-node-id="bQYlIQve9wLo5mD0VA4XlG">plan_cases</code> 关联表</li>
+        <li data-page-node-id="hfEEP95M7FcCX3XBIIfAxA">参数化 / data-driven</li>
+        <li data-page-node-id="ObspNlvMgIXezC1IOXPa2E">DAG / 用例依赖 / 步骤依赖</li>
+        <li data-page-node-id="P69HE5tBfQj5GYLuxvuTdt">前置后置 hooks</li>
+        <li data-page-node-id="BUo0WhSiqP7GRy3L3D1Xce">AI 自动生成用例</li>
+        <li data-page-node-id="oAvug3jcTddhv2aEcaeqFs">智能选择（只跑受影响的）</li>
+        <li data-page-node-id="fEWNYfTTBQB61UI0AyaiCz">复杂 association table</li>
+        <li data-page-node-id="uyMa9SBtnebSCJNJzp4Jyi">Suite 级环境绑定 / Suite 级并发编排</li>
+      </ul>
+    </td></tr>
+  </tbody>
+</table>
+<p data-page-node-id="V3oEO5HfjTR95454TNkleL"><b data-page-node-id="a1AQtGdEnlfOjbUcnHhPD7">理由（再次对着 <code data-page-node-id="MJzDdsOeQK4PtT9tBBCcPx">for step in plan["steps"]:</code> 说）</b>：Suite 只在<b data-page-node-id="RNDByZY0kGoLY86IvrciQL">编辑期</b>存在，
+一旦写进 <code data-page-node-id="nE76CVuZ4GPivXoAUlySml">plan.steps</code>，运行期完全看不到它 → 任何关联表在运行链路里都没有读取点。</p>
+
+<!-- ============================================================ -->
+<h2 data-page-node-id="kL8DRTM8dHuHRYb8SThaNa">Part D · 风险清单</h2>
+
+<div class="prob p0" data-page-node-id="RA3I7kLCHLQJi96uMykaDR">
+  <div class="kv" data-page-node-id="8XEC5lNHWOwGCym6nFd48c">
+    <dt data-page-node-id="AkJNYYYvQQqae4EJOAFY0o">P0-1</dt>
+    <dt data-page-node-id="z2w0rSVxRpDk33XMI4kNz2">风险</dt><dd data-page-node-id="BVKn9Baxyo9wJa8GSvqtOp"><b data-page-node-id="p5eJBwNnPJUjRo7ZJjEKoJ">fingerprint 不能证明内容版本</b>（本轮核心问题）</dd>
+    <dt data-page-node-id="avL3DxFKpSre6rWGhScute">现状</dt><dd data-page-node-id="2Us9EK3aZlbPZlBwXGHK1d">已实证：#23/#24/#25 三轮 <code data-page-node-id="OTzN0IH3hLyHBhScDI09UI">plan_snapshot</code> 指纹相同 <code data-page-node-id="sUmXDp4qC9DMBA6pyGqFBP">96885f59a1b6</code>，而 <code data-page-node-id="xGGkZsoFF6hlSGPEFyL2c3">locustfile.py</code> md5 已由 <code data-page-node-id="nZmH5j6cn19mMVBBUwvUFJ">5301bb78…</code> 变为 <code data-page-node-id="H2mRQXEGWUJlWUFpSZ6Pw6">4699824c…</code></dd>
+    <dt data-page-node-id="gXD9O1vUqOOqDKOpxTcsvY">影响</dt><dd data-page-node-id="yVs3xcf5jKxx7Eben6pFwU">「同用例同结果」的承诺无法兑现；A/B 对比可能比较了不同的被测代码；用例化后此缺口会被放大</dd>
+    <dt data-page-node-id="VP7veCAukx9cYfGEJ1v6mO">处置</dt><dd data-page-node-id="ltO36zJLis8VdlJzbhslAF">按 §7 引入<b data-page-node-id="chL1qADyOS0cyIe5QGj0Jr">内容指纹</b>并写入 <code data-page-node-id="ZVishfvCrW0LsKiUXOEqCJ">config_snapshot</code>。<b data-page-node-id="vMDwAZOpaHihUYX5Pdygp1">必须与 TestCase 同批交付</b>，否则 v0.2 的"用例"只是一层好看的壳</dd>
+  </div>
+</div>
+
+<div class="prob p0" data-page-node-id="qOmcAmiXZxQ2D1BnlLQgTc">
+  <div class="kv" data-page-node-id="hd11bpCXTGAm1G2RVHGsm7">
+    <dt data-page-node-id="7GBpUzuZlxYGHEhtjklfXA">P0-2</dt>
+    <dt data-page-node-id="XDCXozSvEDmHLZ8tZgTwor">风险</dt><dd data-page-node-id="UQPRCuR6xiMU8bneUqeXyY"><b data-page-node-id="49ry2oiE1UYAYYLwyHwU9w">Plan 写入路径会静默丢弃 <code data-page-node-id="gGQ6A9iHTeeODS7R52PZcG">case_ref</code></b>（本轮新发现的 9 处）</dd>
+    <dt data-page-node-id="doua8Ddm5plEzTxlJsRmce">位置</dt><dd data-page-node-id="jFWx7PkZA3vNDGi6w0srDc"><code data-page-node-id="zKz1o31p0Dn12Pq334BH7E">domain.py:127</code> · <code data-page-node-id="5DFcUAMANNFfej51yhs86Z">router.py:289/319/360/380/274</code> · <code data-page-node-id="zC4YlALokE1NDYAYCBsQEJ">db.py:344</code> · <code data-page-node-id="3YLSTkvU381d3rHKs0RUOL">index.html:637/794</code></dd>
+    <dt data-page-node-id="2ecWToDAdetFBxfV2rThSv">影响</dt><dd data-page-node-id="OgqopTeqoaAnLoHh7AutSJ">只改后端不改前端 → 编辑器一打开就丢；只改前端不改 <code data-page-node-id="Hdne5uyvKvVXJBRJQ99jEY">db.create_plan</code> → 落库时丢。
+      <b data-page-node-id="JDGARUTUYbaNFdQx7wgB7S">最危险的是"静默"</b>：不报错、不提示，用户以为保存成功了</dd>
+    <dt data-page-node-id="Aft75QnoQWVi0mDO9HWd7D">处置</dt><dd data-page-node-id="WFziAcOHFdkXycnViT5RJI">9 处必须<b data-page-node-id="b29Mm49ZzAZWOd3ktsVqcX">同批改完并逐点验证</b>；建议加一条"往返保真"测试（POST 后 GET 回来比对 steps 键集合）</dd>
+  </div>
+</div>
+
+<div class="prob p1" data-page-node-id="zwsZ14MDFqtZFc7KiOiPZa">
+  <div class="kv" data-page-node-id="UpxkT3fmnZbjfMG9JAtjhx">
+    <dt data-page-node-id="UrJZG1uF05qwDPYgGDVyA8">P1-1</dt>
+    <dt data-page-node-id="uvRHEwnTUwR6w37ffxu7a2">风险</dt><dd data-page-node-id="R8aFcdU6BbADkOBPsqctzm"><b data-page-node-id="N5o2wL0FFtdBsEugByFhro">override 是否可能绕过参数校验</b></dd>
+    <dt data-page-node-id="6imWGv4igycmyCi2HJJ53t">分析</dt><dd data-page-node-id="BbVqWLEjHPsuZcZybwXDoV">若只校验 <code data-page-node-id="X0CxGbW185vDaVyqA8qC1h">override_params</code> 本身而漏校验合并结果，理论上可用"用例合法 + override 合法但组合后越界"的方式绕过
+      （例如用例 <code data-page-node-id="zXjLwIY9z7bL2EbAEYxJxU">cwd_root</code> 合法、override <code data-page-node-id="4HPgZxayEea394ZhmBYlOw">cwd</code> 也合法 —— 目前 <code data-page-node-id="dT4Cyss7kwEhfB3ZNVfgC4">cwd</code> 与 <code data-page-node-id="tek7j2sCPhMvvuRNGhfdyv">cwd_root</code> 都在白名单且都被 <code data-page-node-id="tpcS6sHQVNOq6EC3DOg9Ep">validate_step_params</code> 校验，暂不可绕）。</dd>
+    <dt data-page-node-id="tXkSQlUf2o2WlP3Zq8BXkH">处置</dt><dd data-page-node-id="CAvciEqpH2uoScZkAEj1Vd">按 §6 强制<b data-page-node-id="BfTUML2pXwuCYERappNCTz">对 merged 整体再校验一次</b>；并把 <code data-page-node-id="JQPOTuwW7OEBRlSqCMBE1V">_resolve_step_params</code> 留在执行期作为第二道防线</dd>
+  </div>
+</div>
+
+<div class="prob p1" data-page-node-id="diNMGC9AwN93pdimpYw0yT">
+  <div class="kv" data-page-node-id="qrYptW5v5cibf3UxXBDNCe">
+    <dt data-page-node-id="va0zBn4u0ar38Vr6JBuAdA">P1-2</dt>
+    <dt data-page-node-id="y67bjTdKnx6ZP0wevhYw9G">风险</dt><dd data-page-node-id="OAVfllmu3D1kzdDEGDmQx3"><b data-page-node-id="DiGwXcdGqxpRmj7Fa7I17F">snapshot 是否真正不可变</b></dd>
+    <dt data-page-node-id="txPEPtCi3qiXdDfNKG7c0L">分析</dt><dd data-page-node-id="FjqTQplB4tuRsTdm71KCne">结构上成立（<code data-page-node-id="FVc3er8zeIYEeRyK9xCBjf">plan_snapshot</code> 落库后只读；<code data-page-node-id="CgNsgSL89l1qVFZmS2cktA">jobs.params</code> 执行期不回读用例表）。
+      但有两处<b data-page-node-id="zTUFUVxRIxPXnJSjsY5rlV">展示层</b>可能破坏"看起来不变"：① 报告中心计划名已正确取 <code data-page-node-id="JMTXYFvtOn3cgNFMrICIOf">plan_snapshot_name()</code>（<code data-page-node-id="aAtL3Srz9Xv6rT7GoGGDek">scheduler.py:261</code>）；
+      ② 若未来在报告页/用例页做"实时 join test_cases 显示当前定义"，历史就会漂移。</dd>
+    <dt data-page-node-id="VvCei1mEyr7KCcAvO1kD20">处置</dt><dd data-page-node-id="pcBzirl9bdei9IGbfiG8LB">写进设计约束：<b data-page-node-id="DV40caYyIJuacsjZXHhhaE">任何展示历史的页面，只读快照，不回读定义表</b></dd>
+  </div>
+</div>
+
+<div class="prob p1" data-page-node-id="eMKQ2RMGqElYgKV2IWKuNv">
+  <div class="kv" data-page-node-id="NHWy2AuwKRrakhwocF1WTG">
+    <dt data-page-node-id="aFCoUmWO9lI4KgNPzPBK43">P1-3</dt>
+    <dt data-page-node-id="85hr3Bdc5HM4dZGPGRu3Wz">风险</dt><dd data-page-node-id="hIXorF0IYpzf5z5DyU5liJ"><b data-page-node-id="f1BQUmEPX74ZjlOBXYe4to">三引擎被错误抽象成统一 <code data-page-node-id="nNT2jUnRHQda3FoFVMCjv4">entry</code></b></dd>
+    <dt data-page-node-id="YWZHLrzKyA31TjV1UCG4mb">依据</dt><dd data-page-node-id="bqT0ecRDB67bU04pjcGlZp"><code data-page-node-id="9hv6wANlj8ldFF565NWquV">_STEP_PARAM_KEYS</code>（<code data-page-node-id="CxiiUXVAW5jeGsAa8DlQgA">config_center.py:853</code>）与 <code data-page-node-id="0IL0FEI3RDy4IKze9YskfQ">engine_compare_key</code>（<code data-page-node-id="nCegvpjljFsIpgmdBxa2mW">report_center.py:41</code>）已按引擎分派</dd>
+    <dt data-page-node-id="5aevM0oFpXqC9yvl2EJw4l">处置</dt><dd data-page-node-id="DHKCJsiIT4j24QhKEBoa3R">明确禁止：TestCase <b data-page-node-id="1jmqfHkDBDq9laGx8qM1k1">不设</b> <code data-page-node-id="Fpz7tt7ERabpcC5u1FAlKE">entry</code>/<code data-page-node-id="7MAck3Ys7BJdqmqs9DGcKd">expected_result</code>；参数一律走 <code data-page-node-id="XUVXDXpCqIAZ5IFunLVKtW">params</code> + 引擎白名单</dd>
+  </div>
+</div>
+
+<div class="prob p2" data-page-node-id="boE7aans4vHMeN6nFNaAwu">
+  <div class="kv" data-page-node-id="mHqp39YltZQebkigu9BVsW">
+    <dt data-page-node-id="bUhqHkuZCmr8lHj7vKB6TE">P2-1</dt>
+    <dt data-page-node-id="w5InowWiE9cy47MVIyFPKW">风险</dt><dd data-page-node-id="pR16vGlFT0fg4EE2iBa2Cq">TestCase 错误绑定 Environment / Executor / AssetSource</dd>
+    <dt data-page-node-id="4Tlvuqbot8pNqtrilOvGXr">处置</dt><dd data-page-node-id="MiWpoYvf4ll0NirDTsLZsX">B.1 已论证禁止；只保留 <code data-page-node-id="5XgpSDTozzbYs2VW9fnJXu">asset_kind</code>（声明种类）</dd>
+  </div>
+</div>
+
+<div class="prob p2" data-page-node-id="GBB69QbV6BiCi3KOARHI9G">
+  <div class="kv" data-page-node-id="HFy46WWRKsIocAq3W1Hb3O">
+    <dt data-page-node-id="tFY9CazFrN86oOybGYQZIL">P2-2</dt>
+    <dt data-page-node-id="FG86hQPngdKD4t2O1EDFCB">风险</dt><dd data-page-node-id="eqFQVBwlszHztaiqYggGYu">TestSuite 过度设计 / 引入第二套 step ordering</dd>
+    <dt data-page-node-id="IsACAxx07vmkTSXvAPhfat">处置</dt><dd data-page-node-id="CByI9WHuzGmzlhXTtxBc2K">§10 已定范围；<code data-page-node-id="fL10LYpHrrsDtPERNGLdDG">plans.steps</code> 是运行期唯一顺序源，Suite 只在编辑期展开</dd>
+  </div>
+</div>
+
+<div class="prob p2" data-page-node-id="vD0euQ1AGC4IQICUx4zt5v">
+  <div class="kv" data-page-node-id="AYilzKxNc1fJ1gHFt8UsDL">
+    <dt data-page-node-id="zA5tMMZv1UG7oYXiH7wSMX">P2-3</dt>
+    <dt data-page-node-id="SSdX63uNl2DlrC2nGVECx2">风险</dt><dd data-page-node-id="M8q4GEaDuykQdsvngEpawE">legacy Plan 兼容性</dd>
+    <dt data-page-node-id="BXM0y1CMv4pC8OW6IzeBii">处置</dt><dd data-page-node-id="HFl66dLoFEXvrpfwBAUtYc">§9；并强制约束"新键只在 <code data-page-node-id="GXjea9uZJHe9Lr5FmDzrVG">case_ref</code> 存在时写入"，保证旧步骤 JSON 与指纹逐字节不变</dd>
+  </div>
+</div>
+
+<div class="prob p2" data-page-node-id="iUR4CnvtkTltfSUePkhF0S">
+  <div class="kv" data-page-node-id="sfr7StntRCJwhjcapWYtTY">
+    <dt data-page-node-id="Or2ZnJEEKx5MOGWoqkeJ2D">P2-4</dt>
+    <dt data-page-node-id="hVQYSbDoFGh3QSNJcxnyO4">风险</dt><dd data-page-node-id="Q4JmZbzec7PR140r6zOTU4">快照过大 / 内容指纹性能</dd>
+    <dt data-page-node-id="UuucG7alTeIk3yKVLmh9bf">处置</dt><dd data-page-node-id="jNfYYvEwxXl3LwwWzGOAar">v0.2 不引入参数化，快照规模不变；内容指纹在 PlanRun 创建时算一次 + 进程内缓存；
+      单文件上限 8MB、目录条目上限 4000（沿用现有常量）</dd>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 data-page-node-id="xizXHUEryH6Ah7Dw0wzuIA">Part E · 最终结论</h2>
+<div class="banner ok" data-page-node-id="XGHemscOo83OchOfu8DGib">
+  <p data-page-node-id="6oQG9OuueMdOQar1zVqfaF"><b data-page-node-id="tYaWR9fid9VDxMg2gEKMES">可以冻结的设计：</b></p>
+  <ul data-page-node-id="9fzRJWAY1cH2ByEHZURrpg">
+    <li data-page-node-id="VaG5fMHoOREE2XHeXVhFeJ"><b data-page-node-id="3jfuW3NIDebKmvvqGKCyOm">TestCase 的身份定位</b>：定义层实体，不含执行态、不绑定环境/执行机/资产源。</li>
+    <li data-page-node-id="rMxxYcL8B2DoW6xZ1lRXVn"><b data-page-node-id="kKhjTsrHga4cHIOSbB86wj">TestCase 字段集</b>（13 列，见 §2），含 <code data-page-node-id="wvw43MdpYI8X7pTGkVeat6">requires_exclusive</code> 与 <code data-page-node-id="N5Cmvd9HLki2XoIWx3nePo">asset_kind</code>，不含 <code data-page-node-id="QCuFcKcONKCdjxiM45BGjC">notes</code>/<code data-page-node-id="GlF1TwXwhI6d1aMcajUmNV">entry</code>/<code data-page-node-id="TpTINFjDqozT8Yv85JZtLF">expected_result</code>/<code data-page-node-id="8L3k0JPWhzhKBssVhAAmh6">status</code>。</li>
+    <li data-page-node-id="N1wDUc8qaaM9b4XkEqXoCh"><b data-page-node-id="uzApWxmNYHpD1fmGtmcShg">revision 机制</b>（§5）：照抄 <code data-page-node-id="201ApN6AqSBFxSYk9Lb0ET">plans.revision</code>；内容变更 +1，<code data-page-node-id="SkyV7ZaX8uXbkaXwhqyHbF">enabled</code> 切换不 +1；支持 <code data-page-node-id="8kDbQMhu6m1vbHBT5iJyDy">bump_revision=False</code>。</li>
+    <li data-page-node-id="q82ZgiAD0JCzUs3Gkc2Xki"><b data-page-node-id="54TVVND8V9xnyECnBGYhVb">Plan step 结构</b>（§4）：<code data-page-node-id="Yjlhe7n08K9KGJHYnVtLBP">case_ref{id,revision,fingerprint}</code> + <code data-page-node-id="83ATMshEavHQg2uaCBgG7J">override_params</code>，与 legacy inline 二选一、可在同一 Plan 内混合。</li>
+    <li data-page-node-id="3WYepBjRYkO85C5CRB3E74"><b data-page-node-id="wgIBc7MODXWj3dYAORkSHM">override 规则</b>（§6）：白名单内、浅合并、对 merged 整体校验、<code data-page-node-id="iDTWsonQak7qWlwwcejGxa">engine</code> 与 <code data-page-node-id="GDWB32ZnOgOo67kjpPQ9F0">asset_source_id</code> 禁止覆盖、失败返回 400。</li>
+    <li data-page-node-id="HW5TYP8pJLleM9SMmtvQnJ"><b data-page-node-id="eCS4p2EANWUDf2XQmP4Hfj">展开时机</b>（B.7）：<code data-page-node-id="7j4QVJFxoSD9WIOCDSI7jd">get_plan</code> 之后、<code data-page-node-id="EOSphrZDlCkWOjKzOpXpdR">build_plan_snapshot</code> 之前；展开失败不产生 PlanRun/Job。</li>
+    <li data-page-node-id="VE4hJUDXssBsCBkHDFxrPw"><b data-page-node-id="BtwjITFWoUIMXmRec3FdRx">snapshot 结构</b>（§8）：step 保留有效值 + 附加 <code data-page-node-id="O15RFghnJRMq5QkthDIVm2">case_ref</code>/<code data-page-node-id="1xS0XQMPursmQQBUGHeYTE">override_params</code>；下游零改动。</li>
+    <li data-page-node-id="OEFM2QVMi8GV4rd9EDQYGi"><b data-page-node-id="L3VhK5dXkntH6hTtjWJr2T">TestSuite 范围</b>（§10）：只做表 + CRUD + 页面 + 编辑期展开；不做关联表与一切高级能力。</li>
+    <li data-page-node-id="HZp43u3P0uaz7gfCtN6HPb"><b data-page-node-id="wckmGCHYfVHQNpcdgPzZNz">兼容策略</b>（§9）：历史 Plan 不迁移；旧步骤 JSON 与指纹逐字节不变。</li>
+  </ul>
+  <p data-page-node-id="Hw5T0QpfTCi76T6ZGXyFCq"><b data-page-node-id="ZEQ9dEhUACECE3b2eDUy1T">编码前必须先解决的问题：</b></p>
+  <ol data-page-node-id="IkI2ZMLI69NEbsV9Dt8a1J">
+    <li data-page-node-id="C5mAAFrb3GCn7gYPhyLKYD"><b data-page-node-id="EfWzZrHUmO11XNq0VDPPxL">P0-2</b>：A.3 的 9 处透传点必须作为<b data-page-node-id="eEotN4jbz5VtSPudUSOQOK">一次原子改动</b>完成（含前端与 <code data-page-node-id="Rd0PKYz0jw0SP7pw1xtojI">db.create_plan</code>），并加"往返保真"验证 —— 否则功能会以"静默丢键"的形式假成功。</li>
+    <li data-page-node-id="xeFWnMRAXMAehlSozCdAPo"><b data-page-node-id="LkgIxznFUfzihE8Knrn4oD">P0-1</b>：<b data-page-node-id="xdzpyEpyWTXPk0PutFPxwH">内容指纹</b>必须与 TestCase 同批交付。它是本轮的起因，也是"用例"这个概念能否成立的前提：
+      没有它，平台只能证明"定义相同"，不能证明"跑的东西相同"。</li>
+    <li data-page-node-id="SeN8U2PJdHGUZumFNfCUIg"><b data-page-node-id="3JjKOsGbQh9hraoKQhEvyw">一个待你拍板的取舍</b>：<b data-page-node-id="vUxUIzwbNrAtSiwlpHmGHt">pytest 的内容指纹是否纳入 v0.2</b>。
+      本设计建议<b data-page-node-id="8fW2nQGoEj5X2VaCp6UfyQ">不纳入</b>（工作目录边界不可界定，属被测系统版本控制职责）——
+      但这意味着 pytest 用例仍然存在"来源可信度"缺口。若你希望覆盖它，需要先定义"哪些文件算受控测试内容"（例如只哈希 <code data-page-node-id="Dn3x1TyWfLDk7l1xqJVZRV">cwd_root</code> 下 <code data-page-node-id="AoPGX4Dfc763HjjFJyk6BZ">tests/**/*.py</code>），
+      这会让 v0.2 范围明显变大。</li>
+  </ol>
+</div>
+
+<div class="banner" data-page-node-id="0phwm6HdEZvYYiw3K5Kvo1">
+  <b data-page-node-id="T5X7fANg7KKmHgapSBI7W9">本轮只读声明</b>：未修改代码 / 数据库 / <code data-page-node-id="0Lph6UpulXkYfFDHjarUBT">frontend/index.html</code> / <code data-page-node-id="HGJx09qTWjM4rAHG1v9V1i">router.py</code> / <code data-page-node-id="dcLVmaGJCGNOfYXkjFLpYp">db.py</code> /
+  <code data-page-node-id="0bkuafCZ7Q03QG5XWSrjVD">config_center.py</code> / Runner / 真实测试资产 / Locust·pytest·MatchEval 测试代码；
+  未创建 TestCase·TestSuite 表；未新增 PlanRun·Job；未启动服务；未运行测试。
+  全部操作仅为读取文件与只读 SQLite 查询。
+</div>
+
+<p class="muted" style="margin-top:20px" data-page-node-id="migy2DaArkLgbekJWpyrmo">
+  报告：<code data-page-node-id="dbtIJPxivOdEk05WLsXzn1">platform\v0.2-TestCase数据模型冻结前只读设计评审.html</code> · 2026-10-01 · READ-ONLY<br data-page-node-id="EjnF2WildZ5odKQBv1QIj8">
+  上游依据：<code data-page-node-id="PDcmdlkpgYZskb8HsRR5Vx">第二阶段v0.2-TestCase-TestSuite架构审计报告.html</code> · <code data-page-node-id="OnMoKZ2kaZo2uBDnZwJrXq">第一阶段MVP收尾盘点.html</code> · <code data-page-node-id="3UvqKZ1hmjiUUvLySE7nya">Locust真实服务链路验收记录.html</code>
+</p>
+
+</div>
+</body>
+</html>

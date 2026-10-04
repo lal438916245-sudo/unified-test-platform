@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="NxbbFsNd6q6TxZtNj7qSOB">
+<head data-page-node-id="GcDVEaX3EeLgGRb6LcXE1g">
+<meta charset="UTF-8" data-page-node-id="GUvpN76EABXtVez1U0yzg6">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="Yzo83N9DP4S6pYDvT17A5h">
+<title>真实三引擎受控接入 · 第一阶段盘点与待录入清单（v3）</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#171c22; --panel2:#1d232b; --line:#2a323c;
+    --fg:#e6ebf1; --muted:#93a1b1; --accent:#4c8dff; --ok:#38b48b;
+    --warn:#e0a83a; --bad:#e0605e; --chip:#232c36;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:36px 24px 72px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:28px}
+  h1{font-size:26px;margin:0 0 8px}
+  h1 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+  h2{font-size:18px;margin:34px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:15px;margin:20px 0 8px;color:#cdd7e3}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#cdd7e3;font-weight:600;white-space:nowrap}
+  code{background:#11161c;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#9fd0ff}
+  pre{background:#11161c;border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+    overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#c7d3e0}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:1px 9px;font-size:12px;color:var(--muted);margin:2px 3px 2px 0}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  .pass{color:var(--ok);font-weight:600}
+  ul{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  ol{margin:8px 0;padding-left:22px} ol li{margin:6px 0}
+  .kv{display:grid;grid-template-columns:170px 1fr;gap:4px 14px}
+  .kv div:nth-child(odd){color:var(--muted)}
+  .note{border-left:3px solid var(--warn);background:#1c1a13;padding:10px 14px;border-radius:6px;margin:10px 0}
+  .note.ok{border-color:var(--ok);background:#111c18}
+  .note.bad{border-color:var(--bad);background:#1c1313}
+  .files li{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+  footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body data-page-node-id="N1IataXOGIBDPahHFIR7uC">
+<div class="wrap" data-page-node-id="6J3aQ1bmmHc3mJQsnRBrMS">
+
+<header data-page-node-id="3XDyp0QWGPZ7uKRQ79RyP8">
+  <h1 data-page-node-id="xQTAerOlzLMSmpTWV6jF31">真实三引擎受控接入 <span class="sub" data-page-node-id="UiyUxybxdsZRPOOeu3qahD">第一阶段 · 只读盘点与待录入清单（v3）</span></h1>
+  <p class="muted" data-page-node-id="iaYnxINGYwblgkiGVBx5BR">对照配置中心三类实体（Environment / Executor / AssetSource），只读盘点真实项目、解释器、Airtest 目录、Locust 场景与 match_eval 资产是否存在，输出待用户确认 / 录入的清单。项目：统一游戏测试平台 MVP（<code data-page-node-id="JOp7IaGwCun9DtPp7WoaqK">F:\测试平台\platform</code>）。</p>
+  <div data-page-node-id="xSyrZqTxu6ZKBMHWgRix1m">
+    <span class="chip" data-page-node-id="gwIkP97CCvYsWqGJn8KlZ3">会话日期 2026-09-28</span>
+    <span class="chip" data-page-node-id="NnneBkQrvyJ5VCCuBKmi8Q">未创建任何真实配置</span>
+    <span class="chip" data-page-node-id="2vELpW4njxc9wLrhWI65Af">未连接任何真实服务</span>
+    <span class="chip" data-page-node-id="3NjxDbpGQS5pvkU9ncQwjJ">未启动 Unity / Colyseus</span>
+    <span class="chip" data-page-node-id="sl1F6cWC8HX2jKRbscLqQ5">未发起任何压测</span>
+    <span class="chip" data-page-node-id="9IR55roFFZpGU31PLx3eli">未修改任何测试资产算法或业务脚本</span>
+  </div>
+</header>
+
+<div class="note bad" data-page-node-id="hsaRVG2yIwfl3kltdWXXfM">
+<b data-page-node-id="13WwRALf5LO3BFU86g6Xg7">v3 更正说明（效力优先于 v1 / v2）</b>
+<ol data-page-node-id="1Iyqu4kNUYvmawmTIrLedW">
+  <li data-page-node-id="FG8t7LFtJYInWkGRAd3dQA"><b data-page-node-id="r8gQED00pUTLaNquH4eBn3">v1 错误</b>：只扫了 <code data-page-node-id="pN8FEq1HmsnYEfP16fuAst">F:\测试平台</code>，漏了真实项目根 <code data-page-node-id="w8ENWfWiUy8k9qRvA7snE0">F:\Colyseus_SDET_Project</code>，误判「服务端 / 真实资产 / Airtest 源码」不存在。</li>
+  <li data-page-node-id="EXJArffHAslVRwAzGqzP9e"><b data-page-node-id="WK5caKStS4JfQfDjLD130T">v2 过度乐观</b>：发现 <code data-page-node-id="UQtAsrIO4p4BLdHpEzM45K">tpl\</code> 与 <code data-page-node-id="8v6sC9yMPhaUl9NKI38WXI">scenes\</code> 后判定「真实素材已就位」。<b data-page-node-id="MPfp3F2dWrYCTmtUICFb2o">经逐图查验，此结论错误</b>——那两张图是<b data-page-node-id="SkJQvRDwR6XCQiLiNcq7mL">非游戏界面、且自匹配的测试残留</b>，不能充当真实评估资产。</li>
+  <li data-page-node-id="cNWZQoybZVR2CUU1VmdphK"><b data-page-node-id="5ZajFKxCr6CMec39Giq0nH">v3 更正后的结论</b>：<b data-page-node-id="SubkCl36CFGIJVwCNbEK8o">真实 match_eval 游戏资产确实不存在</b>；真实 match_eval 链路<b data-page-node-id="uCxhUDmm8XOcGhsDFTW3t9">不可达</b>（详见 §5.6）。pytest 与 Locust 两项真实链路<b data-page-node-id="9YLmVM0g2eTtpApFAYQJoG">条件可达</b>（服务端工程齐备，仅未运行）。</li>
+</ol>
+</div>
+
+<h2 data-page-node-id="RObN7iA6KXtnEpI2EuQHcX">1. 阶段结论</h2>
+
+<div class="card" data-page-node-id="BOnSa3uSU7bGlkYAdGkjST">
+  <div class="kv" data-page-node-id="Yz6hjBZ8KnSxDff2U62ST4">
+    <div data-page-node-id="QIbFmred14qcPv73obyjxK">pytest 真实链路</div>
+    <div data-page-node-id="qh8vbZfrj0lyDo7oxqaWl7"><span class="ok" data-page-node-id="x4VUWSR0E45u5ZGrEyqFZr">条件可达</span> —— 选择器与解释器齐备，服务端工程存在；服务端<b data-page-node-id="nDBPJlJhMSpbsYZRPbBqvT">未运行</b>，预检 TCP 连通性会失败，拉起后可通过。</div>
+    <div data-page-node-id="A3nItIB7KI8HbhErIvYVgd">Locust 真实链路</div>
+    <div data-page-node-id="AcqO7c7sDJGXxlJecRXScc"><span class="ok" data-page-node-id="TSGfJv5CXDJTATFEsrxaTE">条件可达</span> —— <code data-page-node-id="yya5ugCRSyJ9BCKeUmtDaE">colyseus-bot</code> 已受控登记且脚本存在；服务端默认 <code data-page-node-id="1iDziFp9ikG4YbDClKROAp">localhost:2567</code> 与脚本内硬编码 WS 地址<b data-page-node-id="lcYnPrbKXHEFGBNnDyuhpD">一致</b>。</div>
+    <div data-page-node-id="NQkFe3dCDQTNQYjAvOrEy7">match_eval 真实链路</div>
+    <div data-page-node-id="7QCr1P8Wrt8T0eCk2t6aG3"><span class="bad" data-page-node-id="GA2jiUwTEPf8uGZpzhaVZW">不可达</span> —— 磁盘上<b data-page-node-id="jfo2nV29EY6Xb2DDJBSurI">不存在任何真实游戏模板 / 整屏截图</b>。现有 <code data-page-node-id="a0lq7IXfe4ZB3d7tYWHdRz">tpl\</code>+<code data-page-node-id="Kgrw3R7qP0PJvq5BCQqpmq">scenes\</code> 是网页界面的自匹配测试残留（§5.6）；平台侧亦无真实资产受控登记点。</div>
+    <div data-page-node-id="mzFzxnFifR1v3kh7Yz8Dt9">总体判定</div>
+    <div data-page-node-id="WDho3KCDj78AjCBl0xznoM"><span class="bad" data-page-node-id="hDT9VFU6ld5FhigNd5GuuR">部分阻塞</span> —— 建议<b data-page-node-id="neQnm0MEQZE9ThZIhGJAJ3">第二阶段先做 pytest + Locust 两项真实链路</b>；match_eval 待真实游戏画面资产产出后再接入，<b data-page-node-id="JDaBeEB5vjCFJTgm7JjN3u">不伪装为可运行</b>。</div>
+  </div>
+</div>
+
+<h2 data-page-node-id="hOBsCWAZWqKKUTRbHDf3u2">2. 真实项目盘点</h2>
+
+<table data-page-node-id="uWcBJ3GntGISV9udqDbHb1">
+  <thead data-page-node-id="DDzAFFT0HZrpGi1AFwxLoS"><tr data-page-node-id="tIk4pz3c6b7TY5ziyWLJXU"><th data-page-node-id="FL74Qa3cIWo11sDrHUyxIH">项目 / 目录</th><th data-page-node-id="XQJ8hTBmCAKEXaUZxyjwSZ">内容</th><th data-page-node-id="HW3t9DAPBy4sYz9TY9fkmi">状态</th><th data-page-node-id="bAERPZyg5EIvSmzyoavHIq">对配置中心的意义</th></tr></thead>
+  <tbody data-page-node-id="bA1bF7Dw8KIaDRlAtgNKl8">
+    <tr data-page-node-id="78q9GlOPrlyQx8pyN3Z9Ga">
+      <td data-page-node-id="HrWLAzszBVz6iqCieExNFU"><code data-page-node-id="Ag5iGyYASgTIa00yvkBoBz">F:\Colyseus_SDET_Project</code></td>
+      <td data-page-node-id="abmE15HgMc6XdT3Fx3Vthj"><b data-page-node-id="AJgAoOHAIJg39DeFNXc3Dd">真实项目根（v1 遗漏）</b>：<code data-page-node-id="pWMWoLeHMC9NedvWi1kzvp">colyseus-demo-server\</code>、<code data-page-node-id="9Gyo2BotoAycsvoOHbgryT">mongodb\</code>、<code data-page-node-id="EMz4Zp2DzmtQjvEIZx2qoL">Airtest-master\</code>、<code data-page-node-id="HtmzehUDTzQdSi9xAUgRMg">colyseus-unity-demo\</code>、<code data-page-node-id="Hk6NiWvYj6UzQXTkfNUEGq">PrivaHigh\</code>、<code data-page-node-id="e2TlA1IWzB1zveJ0jb0nFn">build\windows\</code>；以及多份<b data-page-node-id="SoLFDanGrRgkxhAuSi4drH">工具测试残留截图</b>（<code data-page-node-id="udnwj5LWPggGVkN2YvS9v2">tpl\</code>、<code data-page-node-id="JDYDYzsMKZvzPH5Rr2FpUE">scenes\</code>、<code data-page-node-id="RIzOU1w7RaG4jCZCSWaMRQ">env_check.png</code>、<code data-page-node-id="MLEyBQu2BGHyvo8yzGZIXz">tpl_btn.png</code>）</td>
+      <td data-page-node-id="RKtHGqudVYr0OZjHfU0DA9"><span class="ok" data-page-node-id="EunyiIOyPuObHqrXNAr0vw">存在</span></td>
+      <td data-page-node-id="WdK0EGmnsoY4EcjazVT59V">服务端 / Airtest / Unity 客户端与游戏构建的<b data-page-node-id="lC0rCsX5AP6whFjsBJMALw">真正来源</b>；<b data-page-node-id="vI1KGZSSXIQKx03wv306wC">但不含真实游戏评估素材</b></td>
+    </tr>
+    <tr data-page-node-id="hM2oH8DAcANu4gXNKlNlfV">
+      <td data-page-node-id="S6DLJqsncu1mwz5brFKKkJ"><code data-page-node-id="R9GxxlGBwDlCd7oO5XiTlX">测试平台\Colyseus-Storm\</code></td>
+      <td data-page-node-id="rM9NxfbYtMBMDfcVlkKNbq">Python 侧联机压测工程：<code data-page-node-id="fbLbfXosEr2hFKb3V8y0c3">locustfile.py</code>、<code data-page-node-id="4928NwVbFfVZKdkshrV9PU">bot_poc.py</code>、<code data-page-node-id="Io3Opoc97zzE5HNhBKuXn6">analyze_locust.py</code>、<code data-page-node-id="JdTZCL8ZDXpZT61Y1TpYvw">requirements.txt</code></td>
+      <td data-page-node-id="We7K5KmAYypctdONgITKzs"><span class="ok" data-page-node-id="H8Lej2EdfNhufen2fJhRAu">存在</span></td>
+      <td data-page-node-id="KZM6s2yZNiRkOS6EyB7umU">提供真实 Locust 场景脚本（此副本被 <code data-page-node-id="IJH44YxhnjyPd7IWtnwY5W">locust_runner</code> 受控引用）</td>
+    </tr>
+    <tr data-page-node-id="qDRjmZEDsg7ea8KX7gWFGV">
+      <td data-page-node-id="PkXU7x9gxPymF5dOT3tkb1"><code data-page-node-id="yofVtQlDxh50fE50HBZamC">测试平台\GameAutoTest-Pro\</code></td>
+      <td data-page-node-id="609DpcKHZjcBtR0CFZGbLv">pytest 自动化工程：<code data-page-node-id="QEBGgFQM8twHh3y6Wgy3dL">test_cases/</code>（API 冒烟 / 房间加入 / MMO 循环 / UI 全链路）、<code data-page-node-id="HqROIs89bAWw59WQWlysSK">api/</code>、<code data-page-node-id="8x0tkPGLY07R3YkQBfPIt3">config.py</code>、<code data-page-node-id="LC98CZpQj7Q7Qjq52CCEGs">conftest.py</code>、<code data-page-node-id="47nZwBjKmxsAcldwEoKeu8">pytest.ini</code>、<code data-page-node-id="fxxkZaMeteuVOxzbLcbISA">utils/</code>、<code data-page-node-id="Sbcz7PCfXhsQJPbiflXD9Z">pages/</code></td>
+      <td data-page-node-id="58RFohoxqI5peaHIv7RIrF"><span class="ok" data-page-node-id="W0PFO7H2tF9DTSI4Z0YAaL">存在</span></td>
+      <td data-page-node-id="YMlFcQAdgKALGIEpDlLqPO">提供真实 pytest 选择器；依赖服务端（<code data-page-node-id="8S3sahm4SCcgr1txh1gzmK">localhost:2567</code>）与 MongoDB</td>
+    </tr>
+    <tr data-page-node-id="XPtc8XfbL4UnBNPSAeh3MC">
+      <td data-page-node-id="KtPkqNADGFRm5Ep8OzOYLf"><code data-page-node-id="j6VcNV5DGdPN4sX5pzlVJO">测试平台\match_eval.py</code></td>
+      <td data-page-node-id="SGAmuMHG9jY4hSgQhDrop7">受控匹配评估脚本，11274 字节；CLI：<code data-page-node-id="AwRme5dgG8OtXeC1YhDcOW">--tpl-dir</code> <code data-page-node-id="D1FEeOosjBD4s2IoENhAsr">--scenes-dir</code> <code data-page-node-id="xJLFvMflGXWJOK7eDa69D4">--out</code> <code data-page-node-id="TbGc5jNS8Nd1q0wqP2IYqF">--thresholds</code> <code data-page-node-id="iuMRW2aSPvcMqb1bB9i7k9">--algorithms</code> <code data-page-node-id="a2EdxLB0RBKFBAtMM7sBsx">--png</code></td>
+      <td data-page-node-id="vQCp8HuvuaI3o98pOL9GtX"><span class="ok" data-page-node-id="8FGvtyCTVOPQLmLgpoAnSq">存在</span></td>
+      <td data-page-node-id="Xp2j0xgeiY6QdxgCHOa1RF">算法本体；第 29 行硬编码 Airtest 源码路径</td>
+    </tr>
+    <tr data-page-node-id="PZQLDZCrgEZfPUehSOFOnk">
+      <td data-page-node-id="F9hy5RpFjWS3XaprgOarQh">游戏服务端（Colyseus 线）</td>
+      <td data-page-node-id="AFvTWna5EkpJYqUBx9ys6t"><code data-page-node-id="gVGG0WCEfrB9SG6hHCYGk7">Colyseus_SDET_Project\colyseus-demo-server\</code>（<code data-page-node-id="Zx4tjdCcdonPZZMBcuCBKN">colyseus-examples</code>，colyseus ^0.17.0；<code data-page-node-id="pHFOpzu62SauyyOcRHeuG5">node_modules</code> 已装；<code data-page-node-id="2Oq0Nvv1mTbE4x9lSXULtq">npm start</code>=<code data-page-node-id="ljU4qNyXoB0JCEace9RbtC">tsx watch src/index.ts</code>，默认 <code data-page-node-id="e2W5pgrdcPL6wqdjgAShCM">:2567</code>）+ <code data-page-node-id="8pmArtS13my16w3G1FojGY">mongodb\</code> 数据目录</td>
+      <td data-page-node-id="N1l27QFpReyrHxMEDWF0kY"><span class="ok" data-page-node-id="wOHdfUHvRaFrXsv4zqqFuE">存在</span>（未运行）</td>
+      <td data-page-node-id="1OciPtLohemC5ycQrfxwhG">拉起后支撑 pytest / Locust 真实链路</td>
+    </tr>
+    <tr data-page-node-id="sOBzzKsoZyXHCEdE79DF8q">
+      <td data-page-node-id="ZFKEGLFbbou7hWj2OFOJSR">真实游戏客户端</td>
+      <td data-page-node-id="TDXChpvr2yzEhEc8tcI4It"><code data-page-node-id="CQZD1j4eubMwnJ1Jw9PeU2">build\windows\PrivaHigh.exe</code>（《私立高中校长》Unity 6 构建，配 <code data-page-node-id="yxdB0qcEwIwLfgExA9SOS7">UnityPlayer.dll</code>/<code data-page-node-id="X5ePLIkEvvnrUAExYlPc4s">PrivaHigh_Data</code>）与 <code data-page-node-id="Im6v6nRBtCWhIeoVKrJ5cE">priva_high_backend.exe</code>（PyInstaller 打包的 FastAPI 后端，<code data-page-node-id="IhJ7VcuBAklNQQmExPIDBI">127.0.0.1:8765</code>，<code data-page-node-id="Lq9T2T0OBbF2RsFDJJWHlH">X-Game-Token</code>）；源码在 <code data-page-node-id="AiHuD98K7ORSCqneIjf4hL">PrivaHigh\</code>（<code data-page-node-id="gKh1m3EtZZIK5fDdrhlBlK">Assets/</code>+<code data-page-node-id="WYj2iaqKcQogE4ql7KqAhg">unity/</code>+<code data-page-node-id="gNIPfv21BJzcG8pGmIDzxt">backend/</code>）</td>
+      <td data-page-node-id="brIMigxNAaSnFPpoZe1sWF"><span class="ok" data-page-node-id="azdGfxEggkVr88PxqUvj7o">存在</span>（未运行）</td>
+      <td data-page-node-id="lnIHfluYvE10cI0fD3IjJF"><b data-page-node-id="ZpDVkYggo04oujybVkLzcx">产出真实游戏画面的唯一来源</b>（UI Toolkit，Assets 内 0 张图片）</td>
+    </tr>
+    <tr data-page-node-id="AG5FvdBPxjQrdF2uHCA2wX">
+      <td data-page-node-id="2zUU9xbRifyYqch4BASQYT">Unity 客户端（Colyseus 线）</td>
+      <td data-page-node-id="2xJJAwHkskX8kgvCscCk0v"><code data-page-node-id="1N3QF2nBSKQzWWEifGI0Kr">colyseus-unity-demo\colyseus-game-client\ColyseusTechDemo-MMO</code>（Unity 工程，含 <code data-page-node-id="Ac3r9p55KRTmWYnG5ktbqH">PocoManager.cs</code>）、<code data-page-node-id="LzHABdkr3VwFLFXnbTFxqm">Unity3D\</code></td>
+      <td data-page-node-id="N1bfKYKgJ6W6WdZGEGuCOS"><span class="ok" data-page-node-id="DozxVpafGsCnvYRAGI5T1j">存在</span></td>
+      <td data-page-node-id="mDtRYcdiSaqrFZEzU5yTXi">UI 全链路用例的 Poco 宿主</td>
+    </tr>
+    <tr data-page-node-id="szHZLJvn60NkZYBRBSoOHa">
+      <td data-page-node-id="dEo2Zw9dNMGhtELUr0fJPg">Airtest 源码</td>
+      <td data-page-node-id="fYru3PuULBIKR4Hh1XaCag"><code data-page-node-id="CKmloTnuDR7h9HDWo87afj">Colyseus_SDET_Project\Airtest-master\</code> —— 正是 <code data-page-node-id="VDFofY8xZCNWhBFbqlNt4r">match_eval.py:29</code> 硬编码的 <code data-page-node-id="ME0LfrSAazlOGSfNEXw8ih">AIRTEST_SRC</code></td>
+      <td data-page-node-id="PqQ6ApcOHEZ73hqwwFCV5q"><span class="ok" data-page-node-id="qmwAvHX6kr1Kg01EoWC1Wg">存在</span></td>
+      <td data-page-node-id="BeBFIn3sAbt0D1AE4dcYVQ">算法导入兜底；Anaconda 亦已 pip 安装 airtest</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="gV8EFpquGtFu7yUxmR4FTe">2.1 端口与服务进程探测（只读）</h3>
+<pre data-page-node-id="9S1RiNh7XGOJ55oig2H4M7">探测 2567（Colyseus）/ 27017（MongoDB）/ 8765（PrivaHigh 后端）/ 5001（Poco·Unity）/ 8000（平台）/ 8089（Locust UI）：
+结果：均无进程监听，且无 node / mongod / PrivaHigh / Unity 进程。
+→ 是「未运行」，不是「不存在」——工程与构建产物都在 F:\Colyseus_SDET_Project。</pre>
+
+<h3 data-page-node-id="E21b7Wkx6z8GZpxJcyLASg">2.2 真实 Locust 场景的关键事实</h3>
+<div class="note ok" data-page-node-id="2aiyd6z34OU5uZ1svswm3r">
+<b data-page-node-id="ITnPXkUiXBYKublbgipWFu">结论：WS 地址硬编码与真实服务端恰好一致，不构成阻塞。</b><br data-page-node-id="RGShFoEA96BOSt3UKeIZXS">
+<code data-page-node-id="Qf6hj1BJp0V1SfggzVObjO">locustfile.py:25</code> <code data-page-node-id="uXP3z62jMWbd5anysdd6pc">host = "http://localhost:2567"</code>；<code data-page-node-id="gmcGylAzvpx1aERDeEKyHu">locustfile.py:84</code> 拼接
+<code data-page-node-id="dzlqGk9E9HMJZCuXWyCjZK">ws_url = f"ws://localhost:2567/{process_id}/{room_id}?sessionId={session_id}"</code>。<br data-page-node-id="lsnQDroGxA1nL05wRZt8YK">
+平台以 Environment 的 host/port 通过 <code data-page-node-id="tbN1VFNI4GFfsQtYv5xoAt">--host</code> 覆盖 HTTP，<b data-page-node-id="1ekihY04J304sEgPU7S8x4">覆盖不了写死的 WS 地址</b>；服务端默认端口正是 2567，故一致。
+<b data-page-node-id="cM2rQtaxXx99AmeYnj1yhY">约束保留</b>：若服务端迁到别的 host/port，必须改 <code data-page-node-id="LUqpLGLVfAmupmu0EdTZ2N">locustfile.py</code>（业务脚本，未获授权不改）。
+</div>
+
+<h3 data-page-node-id="3XLF7kTQKt2o0JlOoQFbUL">2.3 解释器与依赖（受控引用实测）</h3>
+<table data-page-node-id="38oyxbsI7pj64ZYWwfUP4X">
+  <thead data-page-node-id="esXtsKZjjNxdoCaT5G6wnl"><tr data-page-node-id="msAItRziEZPfPVpUckWXGK"><th data-page-node-id="rHt23cUkLenWgA6s6APwaq">受控引用</th><th data-page-node-id="GrQaH04DzkQU7fR7HjsIf7">解析路径</th><th data-page-node-id="pO7AoRVtqxbMlhiQv7nZio">存在</th><th data-page-node-id="BncSaJed9A5JJ4KEVdA5xI">版本</th><th data-page-node-id="tVAsQFqnKumkx8kSfSrwW3">pytest</th><th data-page-node-id="RdxFog2rkyjfmaTkwDofBq">locust</th><th data-page-node-id="vjlGlAsAYHBMfFzZiB0U8d">cv2 / numpy</th><th data-page-node-id="5kyebkZSQqhMzDzN2qvPPQ">websocket / msgpack</th><th data-page-node-id="fjvMSvQC3G4Y30P9iYAqJ1">pocoui / airtest</th><th data-page-node-id="x7ZpXRn9Zx4W0Moi8k4dyU">pymongo</th></tr></thead>
+  <tbody data-page-node-id="WnH6ImfGB23agjQeduklkF">
+    <tr data-page-node-id="xjz1absHxDTtLFf3d01VRH"><td data-page-node-id="DsmcgYGvFbIdyARqhVdEgy"><code data-page-node-id="vwbCOjeqoDB1SxCXtN0lu2">anaconda</code></td><td data-page-node-id="k78GeeXp9fLJtpR3zu6gPC"><code data-page-node-id="VCm2EsrPoGtWFEBTwIYcz1">F:\Anaconda3\python.exe</code></td><td data-page-node-id="ECTI2cYBYbeWaY5hxrHpON"><span class="ok" data-page-node-id="cGAVoCBjCT9Fmw8AGhB4AH">是</span></td><td data-page-node-id="Lg0ndgZ1Ji50oFNUhFU7f5">3.13.9</td><td data-page-node-id="JTUbr5EcfDVoTZ8CFsVr7J"><span class="ok" data-page-node-id="HNu1vJgdDfwrDroT1F4RDw">✓</span></td><td data-page-node-id="aqnrVl22wMZF0KyHPuBqU4"><span class="bad" data-page-node-id="TDqbHFyZ8QTZ0FVeG2XOj4">✗</span></td><td data-page-node-id="hdBIzjj3cBJeHjqaieyQVS"><span class="ok" data-page-node-id="yuAwopKI14PiUzA8VIe0mU">✓ / ✓</span></td><td data-page-node-id="yhMDhu09EdJzCG4eZa7qJa"><span class="ok" data-page-node-id="qqetu0uHNDmakfRc71dxDq">✓ / ✓</span></td><td data-page-node-id="QrYaXecqgVQmJMnN2v0GXZ"><span class="ok" data-page-node-id="RjiWJoPLiSCAuiuZdDZvaR">✓ / ✓</span></td><td data-page-node-id="q8sNGrf4FAdG7d138bMF8F"><span class="bad" data-page-node-id="5AOPlpsrorPaWf45m42yKH">✗</span></td></tr>
+    <tr data-page-node-id="m4neg0kqrz7iGYTo0TdP4g"><td data-page-node-id="BULlEz6TgrIlzYdOTPITuh"><code data-page-node-id="qv6v8yjgrAfpbE88BeCBVS">locust-venv</code></td><td data-page-node-id="NsN3T1LVhXNO6UdoZDSQXd"><code data-page-node-id="rx3NHuOjpJWUwprJAKgoK1">platform\.venv-locust\Scripts\python.exe</code></td><td data-page-node-id="TbSTbKV14E14EyJPqA12p9"><span class="ok" data-page-node-id="xrJg5aQd17YGEFaeJEdfAA">是</span></td><td data-page-node-id="0CKpE0BibQCO77YDcqbdNG">3.13.9，locust 2.46.6</td><td data-page-node-id="uOE3Cy5Uz5ZI2ziiqDjt3t"><span class="ok" data-page-node-id="vG91AJd8QKowYD3ikrhRE1">✓</span></td><td data-page-node-id="YuB63nk371IjGqB8VrQ0Mu"><span class="ok" data-page-node-id="tHU5YLDKZWngueJfbDqcL9">✓</span></td><td data-page-node-id="PUfrAeWpAPaJkGChvi6dle"><span class="ok" data-page-node-id="bdVnTtrOkUiUOLxCZmTbeG">✓ / ✓</span></td><td data-page-node-id="yMqsDw3hauKhbrBXdLOg12"><span class="ok" data-page-node-id="ZtRJ1hEInJWLWsZfScr5CC">✓ / ✓</span></td><td data-page-node-id="wNbbe2Fxo1PHD46lt9QfpH"><span class="bad" data-page-node-id="UgR6Gzgj1QraMlrXRE7JSE">✗ / ✗</span></td><td data-page-node-id="rGRGNnWY8XEe5XiTLbbh0Z"><span class="bad" data-page-node-id="gaaFEumj92YHOI82WapB3Z">✗</span></td></tr>
+    <tr data-page-node-id="4S4tiIqlO1Dmz787rT9X1U"><td data-page-node-id="CMKqunhVA45ZbdDDDAvKSK"><code data-page-node-id="0pkJkvT1IXp13WPFuRidId">matcheval</code></td><td data-page-node-id="R17QGDY09EuetTMVrlWpub">解析结果 = <code data-page-node-id="4cuciuawVf0psiEdud3MCR">F:\Anaconda3\python.exe</code></td><td data-page-node-id="IcEJ9oWgB0QBBCMY4g2kvT"><span class="ok" data-page-node-id="7HFSDD5APrxr3KqummriGl">是</span></td><td data-page-node-id="kpAc8DEoETnE4FJdboeRQ8">3.13.9</td><td data-page-node-id="wIqq01WuUT9nqb4fPFEoBN"><span class="ok" data-page-node-id="wJ39H5Y2m5syshu30Mduvk">✓</span></td><td data-page-node-id="MOTCUJqnwnzyCMa4QwITyl"><span class="bad" data-page-node-id="Q23PhFyrkR8ADaFhr89X5B">✗</span></td><td data-page-node-id="GuPBjQzwvjYNJCAg1ecdRl"><span class="ok" data-page-node-id="eyvAA4X1HQ0ggax7BWQyLQ">✓ / ✓</span></td><td data-page-node-id="LBUOnDvcFZ0NBAc3DD7OaC"><span class="ok" data-page-node-id="huY34b3Ebzsm86cCw8q2Yt">✓ / ✓</span></td><td data-page-node-id="OxPlrVDvYdNMNMzmwanD00"><span class="ok" data-page-node-id="bg6UImSQX31vZ3WQcG1mDI">✓ / ✓</span></td><td data-page-node-id="dWdbunNaGRRxPu9KIRc10Q"><span class="bad" data-page-node-id="zuz1sJQtVMb8HDIdkKopxH">✗</span></td></tr>
+    <tr data-page-node-id="sDJBDx0FYXUullv8AeBwkk"><td data-page-node-id="uR9J8FDvmoHLai2g7NG8za"><code data-page-node-id="y9FCnNnl6Ya9JV2EkgKeUl">trae-py</code></td><td data-page-node-id="eCigAHJ8x6rRaRWMBXJoPr"><code data-page-node-id="TKmJf499veykI73KacoqtA">%APPDATA%\TRAE SOLO CN\…\python.exe</code></td><td data-page-node-id="sk29MDJRihSYXxPK4ZyhL6"><span class="bad" data-page-node-id="RSEtAIlR1NAZOYtHTqWEsb">缺失</span></td><td data-page-node-id="qsmCgs4C4Nh7ZrNlNH4ngi">—</td><td data-page-node-id="JfNUG6kKTBFgdjU9mHOFGW">—</td><td data-page-node-id="WK1IWQhf1h6bXxRpY7fXCM">—</td><td data-page-node-id="7nYCmrRVfYVDcY0Q9fwmmc">—</td><td data-page-node-id="qgeF6gbQpS5EvpEBP5inaD">—</td><td data-page-node-id="6Uh7ho69UmvkAxSGPJBVpv">—</td><td data-page-node-id="ZqVGkOPy6EBZZlLjcRy9pt">—</td></tr>
+  </tbody>
+</table>
+
+<div class="note" data-page-node-id="ePTAI258fUoBxNBqnny2vI">
+<b data-page-node-id="Wu2TbiERNBmC7Nu81beEAG">依赖缺口</b>
+<ul data-page-node-id="JttJtZ55cci7bhmw5KVDR6">
+  <li data-page-node-id="ELCbMcdHLuEqDG8Afdk4g6"><code data-page-node-id="JYbTQN3AUECpw5HHImjSAb">pytest-html</code>：<b data-page-node-id="UeuFToFfOIYS8MEmfPaoLk">两个解释器都没有</b>。GameAutoTest-Pro 的 <code data-page-node-id="kbFsvLCaikxLu1edrjlIPT">pytest.ini</code> 默认 <code data-page-node-id="SEXtGzAEl9360ehqKAUs4G">addopts</code> 含 <code data-page-node-id="pnvPoeHfd1QSULrbU83HkZ">--html=… --self-contained-html</code>；跑该工程用例<b data-page-node-id="MBrZP4pGa9lo90vTIqOwL6">必须显式带 <code data-page-node-id="FBPaZxnQ3WaFUmCSk2oZSF">-o addopts=</code> 覆盖</b>，否则报「unrecognized arguments」。</li>
+  <li data-page-node-id="kxnl2BVzRqEBwbPbKiHqqN"><code data-page-node-id="IAtrnMJYfDJPBfF5AecIuj">pymongo</code>：<b data-page-node-id="7Jbo92ZFyKhBVJEemjfKDt">两个都没有</b>。GameAutoTest-Pro 的 <code data-page-node-id="rkno5Nqrj4a6ebVrBwPtnx">cleanup_test_users</code> 是 <code data-page-node-id="3YyeseS6tCLwSDRCpPbtcm">autouse</code> 夹具但只 <code data-page-node-id="iPE5QBCaVTnmHPPqFHk0LG">warning</code>，<b data-page-node-id="o738TAuni22sfpH1lUQEvD">不致命</b>（测试账号不会被清理）。</li>
+  <li data-page-node-id="jndc7gZbfMzFscHyb36C6s"><code data-page-node-id="m4uQ8qwnnXebR5Zty3uVi0">pocoui</code>/<code data-page-node-id="vDYIKpWPMydtxJYQ8CPwEH">airtest</code>：仅 Anaconda 具备；UI 全链路还需 Unity 处于 Play 模式监听 <code data-page-node-id="oEk2LTDAYzIFIECL1f2qrl">127.0.0.1:5001</code>（未运行）。</li>
+  <li data-page-node-id="2EwnfiLYorxZsZXKf46L8q"><code data-page-node-id="YDso8gcO9BqTFxADk2hFJK">locust</code>：仅 <code data-page-node-id="DkeSfFQvCWm7FqJbAzr5Aw">locust-venv</code> 具备。</li>
+</ul>
+</div>
+
+<h2 data-page-node-id="YbHw8nwU04gHQLucZxElku">3. 配置中心现状（隔离库实测）</h2>
+
+<p class="muted" data-page-node-id="XDlufEc16M3WTqOHAmwA8u">在不触碰运行库的前提下，于临时隔离目录执行 <code data-page-node-id="RvGz8MhRgfZqmWy8Zxf0Iw">db.init_db</code> + <code data-page-node-id="lPYF5y5JFH2LnBpprrlJkI">preset.seed_if_empty</code>，得到「平台首次启动后会生效」的配置实体。<b data-page-node-id="J46qE5Pb8UmZkvIHDEQzdB">均为隔离临时库结果，未写入 <code data-page-node-id="JccUMvjZTCqLwEyJEMlwVg">platform/data/db.sqlite</code>。</b></p>
+
+<div class="note bad" data-page-node-id="Ut6sc6PYZOK9M3WzsauMMX">
+<b data-page-node-id="174BA4Jae3rkS9DXvvqjVi">运行库 <code data-page-node-id="hB8QeBpzTt2Fuua6y5QXAd">platform/data/db.sqlite</code> 是 2026-09-21 的旧结构</b>——无 <code data-page-node-id="DqVCBgRU53uOaf4oO3LiLW">asset_sources</code> 表，<code data-page-node-id="vZSHHJfTD8AKVBwuaqsBKm">environments</code> 无 <code data-page-node-id="gQvZ2EcDikWvW6ZorLmXvm">kind/protocol</code>，<code data-page-node-id="s8HmEhhv09spFmYyLNAP04">executors</code> 无 <code data-page-node-id="9xwwa7Cr2RbAuNA92GhMjZ">python_ref/cwd_root/allowed_runners</code>，<code data-page-node-id="VBgbdPgmH3KbWFKaILDDAm">plans</code> 无 <code data-page-node-id="Ub1MiU8GfHYKDUcFv3jrhw">revision/asset_source_id</code>。
+平台下次启动时 <code data-page-node-id="xCBqnu2B83PR9tCPdwD1Sr">init_db</code> 按「只补列、不重建、不改写历史行」迁移，随后 <code data-page-node-id="KQVYgmgsOR9UZnf7g5PTqy">preset</code> 按名称幂等补齐，届时生效如下。
+</div>
+
+<h3 data-page-node-id="xacH6kEAmy8ctl3l5xMGL0">3.1 Environment（3 条）</h3>
+<table data-page-node-id="2eR0OrN4rBxktBJ72dEu9B">
+  <thead data-page-node-id="wHsPkXlxzvA9nAmz6Yusoh"><tr data-page-node-id="vSLarhdB3m2WRZBTAdeHhP"><th data-page-node-id="Xh1DZXAiaNbGHCQRnwQexY">ID</th><th data-page-node-id="lWZpkB3VxacG7nLYHcDoad">name</th><th data-page-node-id="VvlEySlWACzYt6Dz6GQo7o">kind</th><th data-page-node-id="ZTlcYB0sZjM9ji2TVOnXUG">protocol</th><th data-page-node-id="0MWmjGdAVQ5S05wUAi2UZ4">host</th><th data-page-node-id="i7TsstVrOzMZQgJnBCS1Yw">port</th><th data-page-node-id="J60M3ZLiJNF60Ghq2NS6T5">secret</th><th data-page-node-id="OurdXF7AUEPEnBnWga1oub">启用</th></tr></thead>
+  <tbody data-page-node-id="KG7m0p8iwE8qBAXvHeRbHv">
+    <tr data-page-node-id="gbSnyoDFLMxu4FCjKqYE1j"><td data-page-node-id="ISC6rGDUhscSUTVCCA2raI">1</td><td data-page-node-id="foQgNudXUDZbpgrtzQ5tYq"><code data-page-node-id="GEQKuYk5HMBSTFsvNzL84w">local</code></td><td data-page-node-id="FEvN0hvyBTks3Uzae56gCr">colyseus</td><td data-page-node-id="rwvX5mAbBkpS1HL6JVnsgy">http</td><td data-page-node-id="UCse1TVHyqgngMEVV2PgDT">localhost</td><td data-page-node-id="h9Kky9bpDlVM3LF4luEjZn">2567</td><td data-page-node-id="sGBuwE5NMHMcTUFgIHeSqf">无</td><td data-page-node-id="DIb0Ud6B1WuyHTGGgBC1Bg">是</td></tr>
+    <tr data-page-node-id="hBjV3XPAqpfBll0Q4cMCDP"><td data-page-node-id="2QyVAEbpZQ0ZhdVIaIsIfz">2</td><td data-page-node-id="PfERLrBwvHFaWDEERH09b8"><code data-page-node-id="vl7liFVVGUKHDqBzpiVruQ">offline-eval</code></td><td data-page-node-id="4uR1sZIcqdF8qzf5HCAsT5">offline</td><td data-page-node-id="aWD7rDwR8r5kuI3P9jzzHp">http</td><td data-page-node-id="eTPt9k9MmftLDksWqWGq8a">—</td><td data-page-node-id="nGg7qsMiiWznvNI6g4F0dZ">0</td><td data-page-node-id="fjN6WJ6RL2TCvoDHSpSFB7">无</td><td data-page-node-id="xrGAAiAVVEpEqRICS3aHXH">是</td></tr>
+    <tr data-page-node-id="LpWwiUwzDMPCBxrl2PHmMS"><td data-page-node-id="1LvVJ9xY99uta53WtfMAH7">3</td><td data-page-node-id="2MXkOjPQoqcpJ3Y2gd1z5l"><code data-page-node-id="I9ei321vc9BUnCLO86wWhY">locust-fixture</code></td><td data-page-node-id="CPnP7QhOQv6qpitALTwkX0">http</td><td data-page-node-id="d46RWzjEueLL5WvQiBnwy7">http</td><td data-page-node-id="24FAkAM3mkY6t10e1CAqjY">127.0.0.1</td><td data-page-node-id="PBfvOcEgMBruRqyEHbnHI2">平台实际绑定端口</td><td data-page-node-id="0jlhPVH7RGAnVoABzsqOEV">无</td><td data-page-node-id="L65BMBKy4Dl1oedugXj0ap">是</td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="kw6ZYBM6AjzGOrryFGBZXe">※ <code data-page-node-id="GFeU1nNtjGFfoEokn8uyYJ">local</code> 的 host/port 与真实服务端默认地址一致，承载真实计划无需改动。</p>
+
+<h3 data-page-node-id="a3SMk6N28PCu85LrynrvAV">3.2 Executor（5 条，全部只引用受控 key）</h3>
+<table data-page-node-id="DoC0Td4PUxz2MloAD1xgJ8">
+  <thead data-page-node-id="VYfUGcKA1RjdjLVLAZ3nj5"><tr data-page-node-id="qHfKpQqunugfMQ1mbXpbbb"><th data-page-node-id="2mPRjomUmskOFTDSxLfvWM">ID</th><th data-page-node-id="KMU1TGbS1G7I5ovENOrmFn">name</th><th data-page-node-id="UtHNGWUdM7Mte77LawnNnN">python_ref</th><th data-page-node-id="Ha6NHMWXauWCGXVAFELVW5">cwd_root</th><th data-page-node-id="jgfJCnzcJhd8UeG9Hypd1F">allowed_runners</th></tr></thead>
+  <tbody data-page-node-id="Go3Lq6lqak3F2THSLJZcnz">
+    <tr data-page-node-id="IHUH50TGMi28MCQLDW7Q5N"><td data-page-node-id="z6JQNEv4uXRJHcwrBACffD">1</td><td data-page-node-id="BQAKTtQ5IW7Dy4v9fYJaw8"><code data-page-node-id="owhutH0HdAaCX2V81S3V0p">anaconda-python</code></td><td data-page-node-id="XzwGrdrnjAAWoV1hOnsO8u">anaconda</td><td data-page-node-id="YA5zThkDSW6LUcZFMaprXf">backend-demo</td><td data-page-node-id="FGKtDecyNu0R6upfx7UTDG">pytest</td></tr>
+    <tr data-page-node-id="qk26DYKFxxbInB7YfVGwDU"><td data-page-node-id="766QC9IlPoFGBDFRtsYego">2</td><td data-page-node-id="xMt0sKq4gqIrkDqAfMv05a"><code data-page-node-id="bbvC1vRgqSrvHJ0LG6tojl">anaconda-python-ui</code></td><td data-page-node-id="9qdtBdrPYmGRIUN0HGkzsd">anaconda</td><td data-page-node-id="BQ3QTPTOd0MD3StQcEqOrH">backend-demo</td><td data-page-node-id="H7Ey7b8EfuSp6sEgWgeCHJ">pytest</td></tr>
+    <tr data-page-node-id="rr8ne9CukTW7micQLVOsjc"><td data-page-node-id="wGxbBHxqK6gbSa4CttuByr">3</td><td data-page-node-id="haTP7D6Hsrm5PHByw4SjcN"><code data-page-node-id="pnnccUdycjiCwl5an1emVe">anaconda-locust</code></td><td data-page-node-id="0z3ElBqhta6bXJDMVLtL77">locust-venv</td><td data-page-node-id="QELT3XkNjod9b460f8MW8E">backend-demo</td><td data-page-node-id="iSdNWSQErEAaaxIxcXCEoA">pytest, locust</td></tr>
+    <tr data-page-node-id="osj3ckSEDkbl8eYSmXrz9t"><td data-page-node-id="uN5yyw7S49bU7ZVxfezVPa">4</td><td data-page-node-id="Y9raWe5bbP94HNwMgIuRFy"><code data-page-node-id="R3Wmz8Y8we8XxqmL7mObFu">anaconda-matcheval</code></td><td data-page-node-id="IC3fURsQP3H0ovSzIuHULw">matcheval</td><td data-page-node-id="9Iraq1CcIBy0PZ7iu0QZIC">backend-demo</td><td data-page-node-id="dDiIQSDhwdeeETjcJWFTHb">pytest, matcheval</td></tr>
+    <tr data-page-node-id="wksBANCPZvM3mI461IGj5S"><td data-page-node-id="vR9LoMvSR0jTESKadETBWw">5</td><td data-page-node-id="onSLSXUPCJM8z9npu4i9es"><code data-page-node-id="YbfPkeYGd4MGEDZQinjYcb">three-engine-venv</code></td><td data-page-node-id="4JrDfXKXbhGDVdJm3ufAI5">locust-venv</td><td data-page-node-id="kF8RKWdgmlFIRpgGiHLAC2">backend-demo</td><td data-page-node-id="LD9rRxG58kO5FyIj1bLldL">pytest, locust, matcheval</td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="jDxiBr342mkzoH07Ft6hI0">受控工作目录根仅 3 个：<code data-page-node-id="pVIpqwHV6NKBm7AlF87CiT">backend-demo</code>、<code data-page-node-id="p4k2LZ6QqTDUBdHTbf1zXr">platform</code>、<code data-page-node-id="JpK5qmA9rmg3HyroQ1HIKW">gameautotest</code>（<code data-page-node-id="xtQ7kcejee0wGAn4FXP3wl">测试平台\GameAutoTest-Pro</code>，存在）。</p>
+
+<h3 data-page-node-id="51QNcfMr8uBCSkoV4WmycQ">3.3 AssetSource（4 条）</h3>
+<table data-page-node-id="uaNCIXnzRi7Tj1qVbAIXQd">
+  <thead data-page-node-id="CNGF95djtnREAE235Ee5PZ"><tr data-page-node-id="U2zYplm1H1S7j36BFWihBh"><th data-page-node-id="vB0Y8eHs6VIKmkZsWKr9Xv">ID</th><th data-page-node-id="AE6JnSRkoeGITMQAzyqYML">name</th><th data-page-node-id="fdEzokmt0F4ZsaPY0wH8cu">kind</th><th data-page-node-id="Z1FQj6WRsNpI5govmkZ12A">受控引用</th><th data-page-node-id="M3BWvzYKfUcSvecyTUes4x">指向</th><th data-page-node-id="HnFZsUPX3BDDboX0QUGETW">状态</th></tr></thead>
+  <tbody data-page-node-id="AUcMRbVO7ZuaiEvOUi3Vdr">
+    <tr data-page-node-id="F0N3nEi3UWatLuCJXPdenh"><td data-page-node-id="V2paFpDVEUa0iP7ETwWyko">1</td><td data-page-node-id="NpqlAGPcQPCKRUynMyuEnY"><code data-page-node-id="OIPlOUg8Ddf3XfjJciKDOo">matcheval-fixture-small</code></td><td data-page-node-id="J5rFU8NNxUTmBXJzBU9YzB">matcheval</td><td data-page-node-id="1vm4KCahLYH5Vg1kt0LXH5">dataset=fixture-small</td><td data-page-node-id="eY9u89hK4hg2sqIJy8Dpkh">隔离合成 fixture（4 模板 / 2 场景）</td><td data-page-node-id="eL2olHfpmnLk7SQDquvs9c"><span class="ok" data-page-node-id="XyWx5qHjLJruxVz00yLMRZ">存在</span></td></tr>
+    <tr data-page-node-id="Fo5qJwJp1Ae12BGC3NxBCt"><td data-page-node-id="2SzTAtfQZiVN5BH4fiwlkK">2</td><td data-page-node-id="xwglBdFnbFnRrrcqJ8pKdk"><code data-page-node-id="U9F09MyDVFQkamaRwnVjKF">matcheval-fixture-empty</code></td><td data-page-node-id="GZsxcP04Mwyto2Mm1vQyDS">matcheval</td><td data-page-node-id="BjsfqoI676cKcUUQ8cbCOI">dataset=fixture-empty</td><td data-page-node-id="IHEDXHhtJQvsVkZC3Ypnks">空素材（失败归档验证）</td><td data-page-node-id="mdI65ctRAx0HancTtkVieb"><span class="ok" data-page-node-id="DE885xRaEViZ7CvAPploH0">存在</span></td></tr>
+    <tr data-page-node-id="bbPhV40yoo5KrlgjPiIcL0"><td data-page-node-id="9ZTQnwmAb2HzhP1lXdxhWf">3</td><td data-page-node-id="1BDqtDaWwCdx4TLxRvtvtR"><code data-page-node-id="lfNXzfURiO2VJPZPB2gYzg">locust-http-fixture</code></td><td data-page-node-id="rnFGor33hjQXxUHHSywKAW">locust</td><td data-page-node-id="9MYo0OaUuUow4SapT1EyV2">scenario=http-fixture</td><td data-page-node-id="Mcxlm4ZFNVB6ovj6Ms21Gt">平台自身 API 探针</td><td data-page-node-id="R5mqa3jKAzkYUI8vJYRgET"><span class="ok" data-page-node-id="60ehdM5UiAQbAgFyDPfYRw">存在</span></td></tr>
+    <tr data-page-node-id="NSCoeiBauXX1MQJBcItk66"><td data-page-node-id="D0CLVbmfWhbSuUee5hZ4O1">4</td><td data-page-node-id="tspyyOSAd09n9EDZ5jTuN1"><code data-page-node-id="ApblZzb1kGsZ4mNRW7lGNq">locust-colyseus</code></td><td data-page-node-id="OFn5Wsan8uG4AGvvxCO70w">locust</td><td data-page-node-id="e3HwZZ132bw5keosfEDViK">scenario=colyseus-bot</td><td data-page-node-id="8yqOC8qRzRvkVhyKiwDYEv"><code data-page-node-id="eH5QVgyTqRjtHC3umhCgx2">测试平台\Colyseus-Storm\locustfile.py</code></td><td data-page-node-id="51Qmvc2EE9YANRvDM3AHGf"><span class="ok" data-page-node-id="rMFAWgtQoXHld9DcAWSIRS">存在</span></td></tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="OMGJKw38SvDcMXTz2vb0SL">3.4 引擎就绪度（只查依赖与资产目录，不发起任何执行）</h3>
+<pre data-page-node-id="JBAo8Pw46TTcBfB2bTOhdG">pytest    runnable=true   可用执行机：anaconda-python / anaconda-python-ui / anaconda-locust / anaconda-matcheval / three-engine-venv
+locust    runnable=true   可用执行机：anaconda-locust / three-engine-venv
+matcheval runnable=true   可用执行机：anaconda-matcheval / three-engine-venv</pre>
+<div class="note" data-page-node-id="FNOei8JLBYI4VSq3IKqx4O">
+<b data-page-node-id="QMAJflDoBLCXBoKWeVDVMJ">重要澄清：<code data-page-node-id="ouEMsTWCRwHyPxzuHCcvoM">runnable=true</code> 只代表「平台侧链路齐备」，不代表「真实业务可跑」。</b>
+就绪度只查解释器依赖与资产目录，<b data-page-node-id="ViZRrmHqBcWBMDqu7jDunH">不探测被测服务可达性与资产真实性</b>。
+</div>
+
+<h2 data-page-node-id="oeSA60GyiMNfJ4cvTGqqH9">4. 待用户确认 / 录入清单</h2>
+
+<h3 data-page-node-id="URh6z1sKGssLd2YBIka77U">4.1 Environment</h3>
+<table data-page-node-id="DrtKWolHFWTuGDM3kq2FvM">
+  <thead data-page-node-id="Tqh8EypAH67T7Dvj8qVyLP"><tr data-page-node-id="COCLMF1KX7PGWyklxCgcOU"><th data-page-node-id="uGSj9jtGjkqEL9J5muBFAZ">字段</th><th data-page-node-id="BQWXWGYM7aldTLOsCDmmZq">当前值</th><th data-page-node-id="HOwxCKL8ZH2tZJyxPybEKG">需要你确认 / 提供</th><th data-page-node-id="X0uM7AjBbLZEeaLiCeEkO3">状态</th></tr></thead>
+  <tbody data-page-node-id="XP2wv71C3RaiVWPh267Etb">
+    <tr data-page-node-id="CQCZq3FiWMqqvf1hiPCbvG"><td data-page-node-id="adAodH9fUwyAOzT2ktz8j4">name / kind / protocol / host / port</td><td data-page-node-id="OmujC8TcatWkbejfOK42XA"><code data-page-node-id="kY6vvyEvSQFD0xFFsEfJAs">local</code> / colyseus / http / localhost / 2567</td><td data-page-node-id="Y3i37j08TG7JhDSfpBDDc2">与 <code data-page-node-id="43uXAyqclq6Ewa4CRtX4Ez">colyseus-demo-server</code> 默认一致，确认沿用</td><td data-page-node-id="RmHGmSxIKlHnJgDyuyiC4A"><span class="ok" data-page-node-id="kOY6ESWxUyZ61mGQ5A81VM">可沿用</span></td></tr>
+    <tr data-page-node-id="ajNBXnG4TpP0kRQKsaOIbA"><td data-page-node-id="955rLiZ0RDcO0Ll5shuReN">secret 引用名</td><td data-page-node-id="WWqe7iulyGxuDRmuIxXqwB">（空）</td><td data-page-node-id="wmwLMCQ9vX6Lqb6kDavGC5">被测流程（signup/login/matchmake）由脚本自行处理，<b data-page-node-id="WBGZhmEI2319sdDKy3o73E">可不配</b>。服务端 dev 配置里确有 <code data-page-node-id="mDHeMqDCJSakoP8ZsxbQnI">JWT_SECRET</code>/<code data-page-node-id="6MQhEmtehU19F9U7iKILgA">AUTH_SALT</code>/<code data-page-node-id="Cw0vKi1DHKom16DB1CSyM8">SESSION_SECRET</code> 三个键，但平台<b data-page-node-id="x8CjnegABEGD71kjoChD4R">不读其值</b>；若要留痕只填<b data-page-node-id="857MDCnoEZHXgXkjyZ4ZYt">环境变量引用名</b></td><td data-page-node-id="pyJePT7rh2elmAiHRfwYiJ"><span class="ok" data-page-node-id="rP2ct81MMdBXZj28X8NCRM">可留空</span></td></tr>
+    <tr data-page-node-id="Dx4dDnCfy9SOHvUqS2CpCS"><td data-page-node-id="p1iUw9NYpBRWxXibCY1VH8">服务端可用性</td><td data-page-node-id="3fHE5TaYpm8OHXM50HiGbI">2567 无监听（工程位于 <code data-page-node-id="MFNU9DRVC3i7UbVvrzGqGc">Colyseus_SDET_Project\colyseus-demo-server</code>，未运行）</td><td data-page-node-id="3mKdpG9E62bOjsMoKRADih"><b data-page-node-id="WRLJLcIrRYOV4LGgrhmBW8">需要你把它跑起来</b>（<code data-page-node-id="iX82Fga6cyzGHWBGBPgOeF">npm start</code> 或既有方式），并明确是否<b data-page-node-id="H2vdJxp5O6zfAmUj6YU8z7">授权我代启</b></td><td data-page-node-id="miL1KqEJBN2n9KuHFib9Ey"><span class="bad" data-page-node-id="yDpVC1nUPuVQ4WO6WiYrvE">阻塞</span></td></tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="Mzm80WsrPDrlbnTNke4keG">4.2 Executor</h3>
+<table data-page-node-id="cAgM9Q7ZB2TIrQlXRIccyf">
+  <thead data-page-node-id="4AGFA8rVj2LYYXQuPAP6dA"><tr data-page-node-id="Qnzd7Btkuocy8eqKy6hd9f"><th data-page-node-id="mSVWC2xorYWo8Rx6mY8bI0">字段</th><th data-page-node-id="LkYoC9rCxF8xJBu5o8vsiG">候选 / 当前</th><th data-page-node-id="sJsMBNdpxuYNBDO6vDJ43E">需要你确认</th><th data-page-node-id="hYciIAerMxiYt5BwiaN6pc">状态</th></tr></thead>
+  <tbody data-page-node-id="KbEGNHDF6Rj0jDy1FnWh33">
+    <tr data-page-node-id="uHAiDxxpZhtZ495r85x3CC"><td data-page-node-id="1AsgL4e0a36gxDv1ab86Me">解释器引用</td><td data-page-node-id="DsygLzZEDPp2mhAEuh9UQb"><code data-page-node-id="YRACPRYvhlYTo9OAI8iYLH">anaconda</code> / <code data-page-node-id="ilfAQFZ4H0QjOahGPQtcMw">locust-venv</code> / <code data-page-node-id="aF1l4kfGDzBHY6DcCJi07Y">matcheval</code>（<code data-page-node-id="EzOEwxQSBblsYndX6GYpgC">trae-py</code> 缺失）</td><td data-page-node-id="zTIv4fHRcVIqDcJlAopHoc">三引擎组合建议 <code data-page-node-id="uofo61V0Ls7WMAkAem2SdF">three-engine-venv</code>（pytest+locust+cv2/numpy 齐备）</td><td data-page-node-id="6qjYCp323TBmAoRnYbQKjx"><span class="warn" data-page-node-id="O9pAx5vEGj5AY4pvEBXxzv">待确认</span></td></tr>
+    <tr data-page-node-id="EFMnDwoBu9RCSKtDRY0MrA"><td data-page-node-id="e82eP0art1E97GGEwDZOvZ">cwd_root</td><td data-page-node-id="bgeMYExHCxg5egPkdeC76U"><code data-page-node-id="am6hk5N4QYvzfuIHsk1jDr">backend-demo</code> / <code data-page-node-id="AsSOkQiGBuNa5ZVGhQR2yc">platform</code> / <code data-page-node-id="LUXopzDSXD2Zjl6LupQKT8">gameautotest</code></td><td data-page-node-id="2f6G6WKla2aAvPzMdGbfJN">pytest 步骤跑 <code data-page-node-id="TtzAP7m2GBadqF0dN6ejUf">GameAutoTest-Pro</code> 用例须为 <code data-page-node-id="quEYMkIO6yXcHh1vZHtkkH">gameautotest</code></td><td data-page-node-id="2IGMZqGaMlmcGZY35731qy"><span class="warn" data-page-node-id="hc58V00oZSka2qVJIJ2DI6">待确认</span></td></tr>
+    <tr data-page-node-id="BChQ7PUHlDDhB0a2viE0TA"><td data-page-node-id="o2JT1KZmDLvv2KlBj7Ghg7">allowed_runners</td><td data-page-node-id="Qmdjhn6JVERAFCR1jEf630">见 3.2</td><td data-page-node-id="viROPvpuACaggcizCGEvYM">是否允许该执行机跑全部三引擎</td><td data-page-node-id="MLc9CHsBocAfhyYVR6EKR5"><span class="warn" data-page-node-id="eKhDMm65g9DhcOA6sN3dHh">待确认</span></td></tr>
+    <tr data-page-node-id="q05MPFhDqZVD5dogz0OPHL"><td data-page-node-id="0ICCq33CiCHRme45QI8Y0M">依赖检查结果</td><td data-page-node-id="etRObjp57BhyAQFz11b5h6">locust-venv：pytest ✓ locust ✓ cv2 ✓ numpy ✓；缺 pymongo / pocoui / airtest</td><td data-page-node-id="GFMW6LDT2lXFKknzS2ptX4">是否补装 <code data-page-node-id="sSZFPvKNaRHuFA7NcdNslK">pymongo</code> 与 <code data-page-node-id="NDCHFvLDKHewgtAA20HrDE">pytest-html</code>（<b data-page-node-id="WDl0fiLsqwtGhLf6QUd2yc">需你授权</b>）</td><td data-page-node-id="nod1kYs6GSMFZk7bTE4cIg"><span class="warn" data-page-node-id="y35IMJqqYVH1cUuRWPtEFW">待确认</span></td></tr>
+    <tr data-page-node-id="Vyy4AAYQUNmMSt1jiwToDR"><td data-page-node-id="K1AnPhzXHWhOGotTaXO34t">max_concurrency</td><td data-page-node-id="LxIgy1KbGhheD7iUDxa31K">1</td><td data-page-node-id="Hem90sZf9Ggizb6SZ57Ted">是否需要提高（平台当前全局串行）</td><td data-page-node-id="jEnSJDvx1s3xov6nAg7zru"><span class="warn" data-page-node-id="6RId2tb8oYWMujWzinT2H7">待确认</span></td></tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="oAlNtZgHXc3foEaL9arReJ">4.3 AssetSource</h3>
+<table data-page-node-id="tl8tgyXaPj48fWjPRVGUPG">
+  <thead data-page-node-id="FGxkiClOSyNggTg3umTNNi"><tr data-page-node-id="UNScLKq4j7pT4ulrDlNdQu"><th data-page-node-id="fNfrmrnWdXXp3FS0qJdmdg">资产类型</th><th data-page-node-id="dzlLq2MlsOKBA3fDwbFqKo">受控 key 现状</th><th data-page-node-id="ieNcvf3oUTOqFdG0CKoWir">需要你提供 / 确认</th><th data-page-node-id="914gBPmDDiNDmM1NEdfhef">状态</th></tr></thead>
+  <tbody data-page-node-id="HzyVh5o7GHtXzZBdiJyZ9z">
+    <tr data-page-node-id="sa3umgMjnYwqLDlb88Rh72"><td data-page-node-id="1KnDnCgchCa83WnCzNAH4q">真实 locustfile</td><td data-page-node-id="7hTOJfxCGf765jHALkN4Am"><code data-page-node-id="v61oiYDZWqsFjBvQe3Dh9X">colyseus-bot</code> <span class="ok" data-page-node-id="MeQbfHrW7uSOfRDyBvOspr">已登记</span>（指向 <code data-page-node-id="VPwyIvyA4XAgKvC06GJXAF">Colyseus-Storm\locustfile.py</code>，文件存在）</td><td data-page-node-id="E33NqYdwTv6mXC2BEJhkCU">确认即用此场景</td><td data-page-node-id="iOZADDTgYwSDFCxVG8Jo2F"><span class="ok" data-page-node-id="wGFxv1xeGtoeAc2GhrZFxK">就绪</span></td></tr>
+    <tr data-page-node-id="dC95m6orITkX3NUegAEA57"><td data-page-node-id="uJgLAPjFjt1NNjxfofHQAd">dataset（match_eval）</td><td data-page-node-id="zBUSCHtwp1rj0GVx3IbQNW"><span class="bad" data-page-node-id="atlmjP5YlABoAOBDQGnySW">无真实资产可登记</span></td><td data-page-node-id="nyiM4ySeqnu48wH0o9qSJn"><b data-page-node-id="7Sv1RRsnOK5wLotNEs1czu">先产出真实游戏素材</b>（§5.6），再授权新增受控 key</td><td data-page-node-id="bN0E2op4e9dhCEFOkNO9Lz"><span class="bad" data-page-node-id="YC78NWTn0pWAunBJsFIEQd">阻塞</span></td></tr>
+    <tr data-page-node-id="QcInvOvjOMj1AFXAx1khbA"><td data-page-node-id="a9DfRyb21slyiqjMRbpUq6">模板目录 tpl</td><td data-page-node-id="d6oJw7JkGzk688URpJ4xtA"><span class="bad" data-page-node-id="y4NUwNqeKBb2UAx4FbEvOb">不存在真实模板</span>。现有 <code data-page-node-id="zUVzlU6s04KIspgGq0Gkif">Colyseus_SDET_Project\tpl\tpl_btn.png</code> 是<b data-page-node-id="Pbe7fwP5s1XC7UKjfClrDm">网页截图裁图</b>（50×48），非游戏 UI</td><td data-page-node-id="DpE9fMGzoeIWbYwcmViYO4">从真实游戏画面裁出目标 UI 小图</td><td data-page-node-id="QZIkLvrTnFJGvBEwLRDbfw"><span class="bad" data-page-node-id="TwuUw4e8EqaLNt6ArnQJAM">缺失</span></td></tr>
+    <tr data-page-node-id="dD8clzlVPSlnGPNrM9ZPNJ"><td data-page-node-id="O2Ku0GCJwF7dyqnC9EQHPz">场景目录 scenes</td><td data-page-node-id="8283nSSCYDlEc2BisQvpea"><span class="bad" data-page-node-id="znLZQZ34HqrKmetzGnyzem">不存在真实截图</span>。现有 <code data-page-node-id="cH9NWF8kLliwEvUWAgEhLF">…\scenes\screenshot_01.png</code> 是<b data-page-node-id="YVarJBpDxG8vBRUCeyr4te">AI 编码助手网页界面截图</b>，非游戏画面</td><td data-page-node-id="rHGUVS05rryjolcKPmSYAj">截取真实游戏整屏图</td><td data-page-node-id="hm2bdW11P0RshNeUnS0rPL"><span class="bad" data-page-node-id="cp98713nGYB1dNLmbkhHWn">缺失</span></td></tr>
+    <tr data-page-node-id="bVUyRn2JWdYf4tBv07ge78"><td data-page-node-id="dJkpqeoALHC9m95uSUlWny">ground-truth</td><td data-page-node-id="kz8Espe5OS5tU2PzoIXiX5">仅 <code data-page-node-id="EWFGj1KXBu0dMwA7DPODYD">fixture-filename</code>（<code data-page-node-id="wzglSK53JQVbOgVFxYUgjr">tpl_{id}_{scene}</code> 约定）/ <code data-page-node-id="MhD5XE4YItXIVLUD8szQ8B">none</code></td><td data-page-node-id="My9gHEFRVDwqxCeqjNH5E1">真实资产就位后给出<b data-page-node-id="0oLq6YilsMyNQ8GHvIfj1z">真值对应关系</b>（模板 ↔ 应出现的场景）</td><td data-page-node-id="RZHaU6f2DYqUB2IHgs02J0"><span class="bad" data-page-node-id="5tpSCaH7UySCyl1kDx3AI5">缺失</span></td></tr>
+    <tr data-page-node-id="cSQ3CaGqT18LFT2OPjix5o"><td data-page-node-id="f9ECghsLdKtKTLLJ7PWxgy">Airtest 目录</td><td data-page-node-id="mZ6ClDdKIcaUgFPwvy9HuQ">受控 key <code data-page-node-id="yapBDfGMk5psgaccSlSQ7m">airtest-master</code> 默认指向 <code data-page-node-id="grvVRTAebEgqFR3pN8P5X1">F:\测试平台\Airtest-master</code>（<span class="bad" data-page-node-id="T45zp03aqL4Lx5O9yGhsN0">不存在</span>）；源码实际在 <code data-page-node-id="yQKAmmGl80HXfvwMf6zNCV">Colyseus_SDET_Project\Airtest-master</code>（<span class="ok" data-page-node-id="IBEnjMq1EeAGbffJkVMYLa">存在</span>）</td><td data-page-node-id="44Jx9jueIunTJ7H6qhByXq">授权把该受控 key 默认路径改指向真实源码目录</td><td data-page-node-id="EnGxWsYMZuBB19zbCX2OWz"><span class="warn" data-page-node-id="iYfFad09RiN6zm0BxjFakR">待授权</span></td></tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="sCW678x1wnwSyCqqBDiMDC">4.4 为什么「真值标注」是硬需求（致命坑）</h3>
+<div class="note bad" data-page-node-id="RSJ47bbpF43flpFednEE6g">
+<b data-page-node-id="D5yMtmwGXTSTF1SK18wGFh">平台 <code data-page-node-id="v7TSVDAE907qpD2cGDx7OI">matcheval_runner</code> 用文件名约定判真值</b>：<code data-page-node-id="Nj2FDawSFZ1C5oEADqYyFI">tpl_{id}_{scene_key}.png</code> → 该模板只在 <code data-page-node-id="fSiERlXM4hdt0X399E99Hb">scene_{scene_key}.png</code> 中被视为「真存在」。<br data-page-node-id="xtX4IxtVIkFRVQRbL7ddXq">
+真实游戏资产的文件名一般不会长成这个样子。若直接接入，代入现约定：
+<pre data-page-node-id="zKN3SPEO8LkhErLCp1XQjq">例如 template="tpl_btn.png"  →  parts=["tpl","btn"]  →  期望场景 "scene_btn.png"
+实际场景 "screenshot_01.png"  →  真值判定 = False（不该出现）
+而算法恰好命中 → 记为 FP（假阳性）→ 1×1 样本 precision=recall=F1=0</pre>
+<b data-page-node-id="TjjsvgIcqxIZ9uJ66cHL3E">算法明明命中，报告却显示全错。</b> 因此接入真实资产前<b data-page-node-id="MdYdFxKQb7qAQmQ9gm1NPX">必须先确定真值约定</b>：或提供「模板 ↔ 应出现场景」对应关系，或授权按 <code data-page-node-id="lkkGpQKkrYKgSRZcM3pI8E">tpl_{id}_{scene}.png</code> 重命名资产。
+</div>
+
+<h2 data-page-node-id="QvaLjXApGqRpAzpUw9lyKP">5. 关于 <code data-page-node-id="aIbGtcRfWN9xScYEQbQpie">tpl\</code> 与 <code data-page-node-id="YCWKaY6Ih2BECrJodpu4Ch">scenes\</code> 的逐图查验（v3 核心更正）</h2>
+
+<h3 data-page-node-id="Bt8AjIDPJfibk77Qdx1fPu">5.1 实际看到的内容</h3>
+<table data-page-node-id="wwXmeVJUWkWX7LA9Mb7cpQ">
+  <thead data-page-node-id="2PTXwRVtXVmoD0Mj7bJgDH"><tr data-page-node-id="p0kjoJH8tjCei0gU96EdSk"><th data-page-node-id="zlAgBqq1vDHT6OiDGChA0h">文件</th><th data-page-node-id="KbW9EpZULVkdUuksd07qfE">实际内容（已逐图查看）</th><th data-page-node-id="wNuBT9kCJG8xh7I0LoQkZM">能否作为真实评估资产</th></tr></thead>
+  <tbody data-page-node-id="T9VHOVjrUkCbGyxJGe4El9">
+    <tr data-page-node-id="CkquydxLTk57sMpu9x1RbB">
+      <td data-page-node-id="O8PrO8cA5OlF1TdpoPYKwI"><code data-page-node-id="CcWqQWSQ9qQEYJMtrjgE1b">scenes\screenshot_01.png</code>（206 KB）</td>
+      <td data-page-node-id="R9NCKsNjw3Tpv7C7zCBeA6">一张 <b data-page-node-id="S1UO5lRoEiB8Lcf31tFxcE">AI 编码助手 Web 界面</b>的整屏截图（左侧「Work / Code / Design」导航、右侧一段对话，内容正是让助手写 PowerShell 去跑 <code data-page-node-id="f3ldg57GmwwEaC4NdnPnPn">match_eval.py</code>）</td>
+      <td data-page-node-id="otRrLUeX7XnGKOYMEoGs0K"><span class="bad" data-page-node-id="eTQbhRcni5N6TjbNdK39su">不能</span> —— 不是游戏画面</td>
+    </tr>
+    <tr data-page-node-id="Jm3ZVNfv7LNGUOG9DVEJZL">
+      <td data-page-node-id="2AQHfbC0ED8anX7TcA3Xuz"><code data-page-node-id="S46FEJWP6Wl85gHTgz9fKC">tpl\tpl_btn.png</code>（50×48）</td>
+      <td data-page-node-id="2kIjShm3892FBBmpl10WUQ">从<b data-page-node-id="I6pYUlkmnWbryIqYsDywlD">上面那张同一截图</b>里裁下来的左侧栏「新建任务」条目（含对话加号图标）</td>
+      <td data-page-node-id="RpbceiYvkm8zrp3BjnzrD8"><span class="bad" data-page-node-id="tBkF98s8AJwMFkSuy55ma0">不能</span> —— 非游戏 UI，且与被匹配对象同源</td>
+    </tr>
+    <tr data-page-node-id="Pl62X8p6hwvdQjMzQduIDF">
+      <td data-page-node-id="lWTE7ItjZ5G5R8L1zP3AKO"><code data-page-node-id="WZIhwiYyzY4NGMLivKX6sn">env_check.png</code>（450 KB）</td>
+      <td data-page-node-id="wzGA6BX0EPZ65HCaLvl23I">TRAE IDE + VS Code 的<b data-page-node-id="jWF6AsQuGQy0M0TFX2tiqD">桌面截图</b>，是 <code data-page-node-id="TNM0sqMRCQJghkQMbctFM2">check_env.py</code> 里 <code data-page-node-id="TF14pT782mKzKAj4GV5S0g">snapshot()</code> 的测试产物</td>
+      <td data-page-node-id="REZUhC6V5CHUXsgOM8yihE"><span class="bad" data-page-node-id="PTnqGbmNbXwS8TUHoODpLz">不能</span> —— 不是游戏画面</td>
+    </tr>
+    <tr data-page-node-id="lRiA4Mw4teJRFuhP9BcFrf">
+      <td data-page-node-id="yFWpGN4AbE0c6K9kxu9kuC"><code data-page-node-id="vv3bTvwV69lsfjWDDDbiBH">heatmap_tpl_btn.png</code></td>
+      <td data-page-node-id="9elVW6XZ20YEZDEroLjgev">上次 <code data-page-node-id="AeEldVoqQl75OLPhllfaSN">match_eval.py</code> 对该组合产出的热力图</td>
+      <td data-page-node-id="woOn7DIDvPCcuT9w3YJi0h"><span class="bad" data-page-node-id="jhRptcMByw4Ryg8266N8pA">不能</span> —— 仅是产物</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="44BGLAtCgaHozqGz8rozu8">5.2 这套素材有三个叠加缺陷，<b data-page-node-id="KF7Nl1JgOiPkNQxceoVMF3">任一都足以使其不可用</b></h3>
+<ol data-page-node-id="8oxzhI2bx2UzdHYe2P2q0W">
+  <li data-page-node-id="lD3AroFT78DB5fRuzgN0Gj"><b data-page-node-id="EJEinpCQ2J2HRvOiJMeqvv">非游戏资产</b>：评估的是「AI 助手网页界面上有没有某个按钮」，与游戏识别毫无关系，<b data-page-node-id="G1CYOOpGb0ap7d3KBzeq6m">无业务意义</b>。</li>
+  <li data-page-node-id="mgmnwGvmYYM5FCS29dMMoC"><b data-page-node-id="eeFM0leFBZtFvBy9g3EvEq">自匹配退化</b>：模板就是从被匹配的那张截图里裁出来的，<b data-page-node-id="39qGeu9x2bkBCTl6r0Iwp1">必然命中</b>，recall 恒为 100%，评估<b data-page-node-id="LJmFHxL3TyVQCn3cqMRVWW">零信息量</b>（无法体现漏检能力）。</li>
+  <li data-page-node-id="7k7H3PuPq5AD9cEso95FvM"><b data-page-node-id="0hRmtGMoTvrWlhRP9AW9dF">真值约定不匹配</b>：按平台现约定会被判为「不该出现」，命中反被记成 <b data-page-node-id="xwiOnpS8gjOOwzV21hRkSq">FP</b>，指标全 0（§4.4）。</li>
+</ol>
+<div class="note" data-page-node-id="TfGhzvGpjNCRHH2UsqEUTl">
+<b data-page-node-id="GxxUPYQ0omCruALBfoza6j">同时保留其正向价值</b>：这组数据可作为「算法本体在非合成真实图片上能跑通」的<b data-page-node-id="qWS6sANXJNdnc88YafVadl">链路自测证据</b>——上次 <code data-page-node-id="Cwcjzlw2kfr4WFpdN4TyAi">match_eval.csv</code> 确实产出了 36 行明细、6 种算法表现分化（<code data-page-node-id="b3HFypQitRETm0WR0bTSKN">tpl</code> 命中 0.8685、<code data-page-node-id="6AMhzfn9eo0Lbi2jj7ZZAY">kaze</code>/<code data-page-node-id="Rpso0h1qYJk4YZhw8sD3GZ">akaze</code>/<code data-page-node-id="d0vT14QVuelfrlXJAHqKGh">orb</code> 无命中）。可用作集成对照基线，但<b data-page-node-id="RHAvJraJ5mJaV4uS70YbkL">不得计入「真实业务验收」</b>。
+</div>
+
+<h2 data-page-node-id="6LB7Bdx8LE7nh1jigEGSe7">6. 要产出真实 match_eval 资产，需要做什么</h2>
+
+<div class="note bad" data-page-node-id="ziTGQ4f0O34gNtABpyvoRa">
+<b data-page-node-id="7AN6dFDQ0993jSsfquajII">真实游戏资产在磁盘上不存在，无法"找出来"——只能"产出来"。</b>
+</div>
+
+<h3 data-page-node-id="t85LibgBFi9FSyGE9Ced0T">6.1 可用的真实游戏</h3>
+<table data-page-node-id="OBwug1jwE3XtRsDiOIC0zH">
+  <thead data-page-node-id="eXnXzQkMfCwfnFbVa4EEv9"><tr data-page-node-id="yjdudgeu7TKlcobrHSwO5d"><th data-page-node-id="0u8il3MywuwsyYCMpd9h9z">游戏</th><th data-page-node-id="ICvJz7V6Q8xthru6An8mwX">客户端</th><th data-page-node-id="w34GJAsyRZaFNDHjpVCGUE">后端</th><th data-page-node-id="bCFm82vH6QbCSniuD70YTQ">备注</th></tr></thead>
+  <tbody data-page-node-id="VJv21jy8n9WZ1tq3D6RGQz">
+    <tr data-page-node-id="OFB21V9hZEvnO9YFxNjSFC">
+      <td data-page-node-id="g1V64Uf6GmBzvgA1CBCRYQ">《私立高中校长》PrivaHigh</td>
+      <td data-page-node-id="Z6FrcU9H1QsJHuRLrVUH6y"><code data-page-node-id="c0fZUJmMTA5yINMmSnGV7s">Colyseus_SDET_Project\build\windows\PrivaHigh.exe</code>（Unity 6 构建，随附 <code data-page-node-id="wrY6nx5OoATDVhu6TqhNfd">UnityPlayer.dll</code> / <code data-page-node-id="4dkbZOPi7JocrTRRxAyYdT">PrivaHigh_Data</code>）</td>
+      <td data-page-node-id="4rwHZv1LZTYoe5nmmqWVKO"><code data-page-node-id="ycLAU79JmJVpWpuZiAiWFX">priva_high_backend.exe</code>（FastAPI，<code data-page-node-id="qd8VONH78t7U1GbQVTeJX3">127.0.0.1:8765</code>，<code data-page-node-id="kmI2XOpUgUkDnx6oDDDGrn">X-Game-Token</code>；Unity 会以随机端口 + 一次性令牌自动拉起）</td>
+      <td data-page-node-id="YK2C8f3A1wGQVoAXlmqwYJ">UI 由 <b data-page-node-id="OBrMBLpLzErswiwFpCJ47I">UI Toolkit</b> 渲染；源码 <code data-page-node-id="oB83SJc3L5qtm8tYEuaA5C">PrivaHigh\Assets</code> 内 <b data-page-node-id="gcxxHioifxQAMFXJI2LJ7B">0 张图片</b> → <b data-page-node-id="akg1Ax9jDjCWqLsBayqRBA">模板只能从实机画面裁</b></td>
+    </tr>
+    <tr data-page-node-id="Z6kn0mebcWUcyUsmykgfrF">
+      <td data-page-node-id="9IjDG3Yh2CEFUkiP7CEQPS">ColyseusTechDemo-MMO</td>
+      <td data-page-node-id="Qo4EecVHnkEcTdCsAL4Wzi"><code data-page-node-id="pfDNtnyLm136SuVTyTrpId">colyseus-unity-demo\colyseus-game-client\ColyseusTechDemo-MMO</code>（Unity 工程，含 <code data-page-node-id="7gbGpXDbDOSqBae4rxFMqu">PocoManager.cs</code>）</td>
+      <td data-page-node-id="9EFWZRBNqgtGnaTQGRwoKg"><code data-page-node-id="X6UzHoDDH8raGJqUQYNrBs">colyseus-demo-server</code>（Node，:2567）+ MongoDB</td>
+      <td data-page-node-id="ENUbsonHNFDbavjKDDMmAc">GameAutoTest-Pro 的 UI 用例与 Poco 直接对接这个</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="s06qPk7CsIVt0edHHGhUeE">6.2 产出流水线（4 步）</h3>
+<ol data-page-node-id="j5GORNZIWsd1fVuKs90JoM">
+  <li data-page-node-id="eGhdgYlgZfbDW5TDS7jvmb"><b data-page-node-id="lgXGllnXcruuSNPNIAsdmN">启动游戏</b>：运行 <code data-page-node-id="Nr0mpDM4NnWqKvuRM7AW13">PrivaHigh.exe</code>（会自动拉起 backend），或按你既有方式启动 Colyseus 线（服务端 + Unity Play）。</li>
+  <li data-page-node-id="K0759JfcCd5iCimJIigGBU"><b data-page-node-id="EyBtNS6xMBNzVCv0HuzHt7">进入目标界面</b>：让游戏停在你想评估的界面（如主面板 / 某功能页）。</li>
+  <li data-page-node-id="0mQAlwIkhT8eeBuNdV0fIK"><b data-page-node-id="o9tmdLcYGhQvDYf4tdMYQp">截整屏</b>：用 Airtest <code data-page-node-id="YFqh3PyUW1KeAyWBlor04B">snapshot()</code> 存成 <code data-page-node-id="cTrKl90sG5FOREOFyyAAjq">scenes\*.png</code>（<code data-page-node-id="9qGdu3KV7HojGlrxPA5MTA">check_env.py</code> 已演示过这条链路）。</li>
+  <li data-page-node-id="1rlr5r0AcC1UFdwaTudWUR"><b data-page-node-id="PbLhVVs5XYXscNVIz9Vv8q">裁模板 + 标真值</b>：从这些整屏图里裁出目标 UI 元素存成 <code data-page-node-id="qjPgcaCtUJr8iMfUlLxO7e">tpl\*.png</code>，并给出「模板 ↔ 应出现场景」对应关系。</li>
+</ol>
+<p class="muted" data-page-node-id="zU8hqeGTvaDJpAetkoVjXZ">第 1、2 步涉及启动图形程序与操作游戏，属外部动作，<b data-page-node-id="HgBWF4hIThCmeDhh10oerq">需你操作或明确授权</b>。</p>
+
+<h3 data-page-node-id="L7njAZnrgsSuEhSQoZCraM">6.3 三条可选路线（请择一）</h3>
+<table data-page-node-id="0A6aNnxJ33thqfG9VfEtGb">
+  <thead data-page-node-id="iOruAhQhEuPsJ54Tf4gF3E"><tr data-page-node-id="T7WyK0nGWDsBKfusRFTYJn"><th data-page-node-id="aGAOlTse7ElDUCM5M9xrec">路线</th><th data-page-node-id="99X1mBwzStr77H8XAt865j">做法</th><th data-page-node-id="lvSmf2MLthXlbmKjDmb0wz">得到什么</th><th data-page-node-id="Gvi7HR65ISqM9RolK4M2or">代价</th></tr></thead>
+  <tbody data-page-node-id="iaCULmIQ4W7CDep4A0ZAyZ">
+    <tr data-page-node-id="SH4Rn6jrv77SGCNFe1aOea">
+      <td data-page-node-id="ao3kvFGHHJIfFyAQrnDbiw"><b data-page-node-id="Jip6v346Vec1wLchu2aCHp">A（推荐，正规）</b></td>
+      <td data-page-node-id="o3rfTM09mGQOI2wqbLaVfG">按 §6.2 启动真实游戏 → 截画面 → 裁模板 → 标真值，再登记受控 key</td>
+      <td data-page-node-id="oHitvBrugOPvUACdzFwwyv">真正的「真实三引擎验收」，match_eval 指标有业务意义</td>
+      <td data-page-node-id="RlQZu5NCEpuXGpEjGnzfkb">需要启动游戏并采集素材（你操作或授权我操作）</td>
+    </tr>
+    <tr data-page-node-id="Zjn6EalgdgsqHs6GcpFSIx">
+      <td data-page-node-id="fr3Z0aIBxVZGgyLHai5H1h">B（过渡）</td>
+      <td data-page-node-id="a6pzTOqFKQLEIwpWYOW6qs">把现有网页截图对登记为一个<b data-page-node-id="JNfdXpKAcDN0jMgBdy897c">明确标注「非游戏 / 自匹配 / 仅链路验证」</b>的受控 key</td>
+      <td data-page-node-id="T1x93K0H1v3YuvHnrDAiWY">能验证平台 matcheval 集成链路端到端跑通</td>
+      <td data-page-node-id="Cgy66xMdlfUn1USbUizMXA">指标无业务意义（recall 恒 100%）；<b data-page-node-id="aShAieRQUcU8RNkdnUh6Un">不得计入真实验收</b></td>
+    </tr>
+    <tr data-page-node-id="SUHMJbOGPxmDxZAJihfkbB">
+      <td data-page-node-id="p8200HUZaI9SeDbIXkF6I9">C（缩减范围）</td>
+      <td data-page-node-id="RxADiJgzKjnVSpFtQARNL1">第二阶段只做 <b data-page-node-id="TgBnwf0GrC0Ple0oyEnXcy">pytest + Locust</b> 两项真实链路；matcheval 继续用 fixture</td>
+      <td data-page-node-id="qJlloO3gYEp9mdcrcPsDny">可立刻推进首轮验收，两项为真实业务结果</td>
+      <td data-page-node-id="HEd7RgBnDVeyn7w1rcJbO5">验收报告须诚实标注「match_eval 未接入真实资产」</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="TmxDfXeNSTtJI7yvjHqkIw">7. 修订后的阻塞项与授权条件</h2>
+
+<div class="note bad" data-page-node-id="Xj7hOYT5CQDLncenRcTKwF">
+<b data-page-node-id="oNv7JHBF6WhqqdCjkN1ABV">阻塞项 A（阻断 pytest + Locust 真实链路）：服务端未启动。</b><br data-page-node-id="bCjebfv1QBumpzpiGLt3p7">
+工程在 <code data-page-node-id="HuNaqA6ZLBcMRJcOsQjkrK">Colyseus_SDET_Project\colyseus-demo-server</code>（<code data-page-node-id="icwjzzSwtt8G4ZrdPIxQCS">npm start</code> → <code data-page-node-id="atPCPekLUAMXS2xZEJ6H8r">tsx watch src/index.ts</code>，默认 :2567）+ 自带 <code data-page-node-id="tO03aBDhf51yQN0CLx9Scw">mongodb\</code>。
+当前无 <code data-page-node-id="rZKJvMqCb2ueujCUrgmHi6">node</code>/<code data-page-node-id="YeD9CTctxWVh1yCpR3i29K">mongod</code> 进程。→ 需你启动，或<b data-page-node-id="YIqjAdYnQvZAS8KYFDrErn">授权我代启</b>。
+</div>
+
+<div class="note bad" data-page-node-id="p6TBtYoPHMhHDqBErVVB3O">
+<b data-page-node-id="OL83cuQhK6NqWVw3cgxNgL">阻塞项 B（阻断 match_eval 真实链路）：真实游戏资产不存在（非"未登记"，而是"没有"）。</b><br data-page-node-id="xEFxPBa8ewwA3HrWhXuYwh">
+磁盘上所有 PNG 都是工具测试残留（网页截图 / 桌面截图 / 自匹配裁图）。<b data-page-node-id="NBx4cj6S4lFSZ8RXuwKGUv">必须按 §6.2 产出真实游戏画面素材</b>。
+产出后仍需你授权在 <code data-page-node-id="QkA2HzAUwfGUkHKCyEH1DK">config_center</code>（<code data-page-node-id="jGbs3JdTt6p1LTgMAm5yar">TPL_DIRS/SCENES_DIRS/GROUND_TRUTH_REFS/DATASET_REFS/AIRTEXT_DIRS</code>）与 <code data-page-node-id="dmALasJ5VMfxmHVFsdeski">matcheval_runner._DATASETS</code>
+新增受控 key（并可用 <code data-page-node-id="vYsGEw02HOAeQdMnIi5ZPj">real-privahigh</code> 之类命名）。<b data-page-node-id="IeIrOl58miBIYxmaKtpAzh">未获授权不动这两处。已确认不需要修改任何算法或业务脚本。</b>
+</div>
+
+<div class="note" data-page-node-id="wC1AtCmMMPHYjsF2Q8L6zg">
+<b data-page-node-id="IafC3t01hDwNl3ZvxvCqeg">待你决策（按重要性排序）</b>
+<ol data-page-node-id="7HVEzQ8co3HqUS1vnKZsdR">
+  <li data-page-node-id="h6YyZfCYYpj7poUsTc9Mos"><b data-page-node-id="Zt1MMcBK7wwC9FCnD0RqCU">选路线</b>：A（产真实素材）/ B（过渡，仅链路）/ C（本轮跳过 matcheval）？</li>
+  <li data-page-node-id="83QJzDzwpqFETm1y5njrFw"><b data-page-node-id="ybjxsxONe4iXhBptW4F5jh">若选 A</b>：由你启动游戏并采集素材，还是<b data-page-node-id="uvYjYLDxqeauL0MfM1vWyw">授权我启动 <code data-page-node-id="EhTqeRBXKyQ6x9V7OlHsdO">PrivaHigh.exe</code> 并执行 Airtest 截屏</b>？（涉及启动图形程序，需明确授权）</li>
+  <li data-page-node-id="QMGk7He1XcE8h77MTSDBLJ"><b data-page-node-id="8AsJ05adM9XZlwAsGbs7Gm">服务端</b>：由你拉起 <code data-page-node-id="yYTNKsJIHGeGj6rpmEObrZ">colyseus-demo-server</code> + MongoDB，还是<b data-page-node-id="5dxGv0ly82ED3OtHKSi3YA">授权我代启</b>？</li>
+  <li data-page-node-id="GS5fsDkFAY7F4MpkvQKVP7"><b data-page-node-id="7LHMpkcyzNKWm8Ge0FdZ1B">受控 key 登记授权</b>：是否允许我在配置中心白名单新增真实 dataset key，并把 <code data-page-node-id="65Y7SvfgsVY73QkkFPoYtZ">airtest-master</code> 默认路径改指向 <code data-page-node-id="x2VzrSoTbkuNufeu2MFyrS">Colyseus_SDET_Project\Airtest-master</code>？（只登记 key / 改默认路径，不碰算法）</li>
+  <li data-page-node-id="GtGw5GZfdUQ8ey2D30AtlM"><b data-page-node-id="EPcMc9kXUZ16PEIC1uLra5">压测边界</b>：Locust 目标即本机 <code data-page-node-id="VVMAH803HtGBl1XAjcDjr1">localhost:2567</code>，确认非生产 / 共享环境？</li>
+</ol>
+</div>
+
+<h2 data-page-node-id="cuL0orA5RDkdiBAYX9lIYZ">8. 第二阶段执行预案（待确认后执行）</h2>
+
+<p class="muted" data-page-node-id="AFND171yHi1dtU3stTs6XA">以下为草案。逐项确认前<b data-page-node-id="NJVlqpw3R7lEJrgajQ22bB">不创建配置、不预检、不执行</b>。</p>
+
+<h3 data-page-node-id="PeWugZ4tFvL3lKLix0FJc6">8.1 建议的第二阶段范围</h3>
+<p data-page-node-id="OUPV3KwDpSaDzxf4y3X1mx">按 §6.3 的路线选择，建议先以 <b data-page-node-id="Ds6BMjK515NyWQzFOa4BSy">pytest + Locust 两项真实链路</b>推进；match_eval 步骤视路线 A/B 决定是否纳入。</p>
+
+<h3 data-page-node-id="bJSFR0JlJ5D4FUjlA5aK9U">8.2 拟录入配置（草案）</h3>
+<table data-page-node-id="iz8M7Ebq2KatCMB7K5U5WY">
+  <thead data-page-node-id="EktEakjdkbU8U8GuMqAUf7"><tr data-page-node-id="iCrcAp3y4ApME7fD5rG9X4"><th data-page-node-id="9binexKt1sA2ZXLm9yDf7f">实体</th><th data-page-node-id="lq2LQ0j70SxnbcRIP8oidV">动作</th><th data-page-node-id="DbkBn7DE8h875b2x228tGh">草案值</th></tr></thead>
+  <tbody data-page-node-id="rMDvuRKAaBvGCTHmVpBEZJ">
+    <tr data-page-node-id="w9MEx60iRPC5KhxxAu3ylf"><td data-page-node-id="LyYdg4swoGOv6t0Ae13pTe">Environment</td><td data-page-node-id="fISizudU2F7Q2JxIK48rpk">沿用 <code data-page-node-id="iPEuBRHxVg6n6VhIBPMOey">local</code></td><td data-page-node-id="OY6mIzuBfeWPR95TFIXSvv">kind=colyseus，protocol=http，host=localhost，port=2567，secret 留空</td></tr>
+    <tr data-page-node-id="uWvPvc6xGvaRNqvIZGR8Xl"><td data-page-node-id="7beHOhNMhf0C3D502uqqAp">Executor</td><td data-page-node-id="sQ4SwW64fR3rKD2xc6XedD">沿用 <code data-page-node-id="fkxSES3ABBtgKIn9qPlI41">three-engine-venv</code></td><td data-page-node-id="UnpPClbO1jFI5KLDkcMnlD">python_ref=locust-venv，cwd_root=<b data-page-node-id="uLjNyLts5vGkJkFYqw7rNF">待确认</b>，allowed_runners=[pytest, locust, matcheval]</td></tr>
+    <tr data-page-node-id="z6R5rAvY8I7BGoMp598968"><td data-page-node-id="JCgtPGASGYgSA7l6JmcerT">AssetSource(Locust)</td><td data-page-node-id="pCyPQx065THxoF5gLPdTcc">沿用 <code data-page-node-id="iwyeZWsOVqv61yNQoN1MZs">locust-colyseus</code></td><td data-page-node-id="4U0WjGAu8TeXwpmYpz0IuT">kind=locust，scenario_ref=colyseus-bot</td></tr>
+    <tr data-page-node-id="p82NDoJBvtHNDCeADDBClL"><td data-page-node-id="FzmCr81QMIoDmQesqRI233">AssetSource(MatchEval)</td><td data-page-node-id="IKGVg0Fr66aJGi6MXxCfMR">视路线而定</td><td data-page-node-id="oymyQduL0TxCaexVnTLqCA">路线 A/B 才需要：新增 dataset 受控 key；路线 C 则沿用 <code data-page-node-id="A2vtUHgsIGHBzthvJoYMZJ">fixture-small</code></td></tr>
+  </tbody>
+</table>
+
+<h3 data-page-node-id="Z3NavNBuPZRl2csbp6CBeE">8.3 拟创建计划（草案，参数待逐项确认）</h3>
+<table data-page-node-id="32noMC0w4OJGq6v0aOeGoQ">
+  <thead data-page-node-id="ysCXAzIE0q7i4LWyFsSG5Z"><tr data-page-node-id="BP5DRBDtGMXq9pQS70zhPZ"><th data-page-node-id="TJVEdnDe4aEFlWb5TQu15x">顺序</th><th data-page-node-id="nCOTtRKVo9XGnCUY1Svcz9">引擎</th><th data-page-node-id="xU8EucmnmJD7zlW8m49xac">步骤名</th><th data-page-node-id="LJkRC2nHL773aRrBrr8Yrq">拟用参数</th><th data-page-node-id="h1miIj1fnU20eIQDDvvpCM">需你确认</th></tr></thead>
+  <tbody data-page-node-id="mDjDGDkSXm9C2fv9S42hCE">
+    <tr data-page-node-id="qbDlynMEyLGrjKKlGHSTQ1">
+      <td data-page-node-id="VrBJ1hIrJ2WanwZeCmEhKH">1</td><td data-page-node-id="G17XIvlJH5wNg6V7OeFgnD">pytest</td><td data-page-node-id="KQ3EIu43R7jCO8H3aEDGfu">api-smoke</td>
+      <td data-page-node-id="nUQJF45elXMkmtdauK9mVF"><code data-page-node-id="9g1sndbT5uOEqUuWQEVw0B">args=["test_cases/test_api_check.py", "-o", "addopts=", "--tb=short"]</code>，cwd_root=<code data-page-node-id="tGn6jdw1KiGgAcGXSSW2bv">gameautotest</code></td>
+      <td data-page-node-id="39qwgE06S56neiUEY7ycil">选择器是否用 <code data-page-node-id="NvE3A63IYIuJkHQi30ae9L">test_api_check.py</code>（纯 API 冒烟，不依赖 Unity）？是否加 <code data-page-node-id="RGjeUU5BLUJTJc6D6rxSJ3">-m smoke</code>？</td>
+    </tr>
+    <tr data-page-node-id="ej24CktvJ6qDeVdLvFhhLF">
+      <td data-page-node-id="fTj7ICJmFzte5oCV2mkpb1">2</td><td data-page-node-id="hFt4l9UBcPSnx58wZqj93n">locust</td><td data-page-node-id="a6rfvDAM4DymQFGc87mr0u">colyseus-bot</td>
+      <td data-page-node-id="aYulddfCo5VHQwpBQ8UO4b">locustfile=<code data-page-node-id="aEotXUMEGtHk8UfscdpzZR">colyseus-bot</code>，users/spawn_rate/run_time=<b data-page-node-id="8RH31jDiXFAAT2N1VTyHoe">待定</b>，csv_full_history=true</td>
+      <td data-page-node-id="s262mzJV6l71fHkQzr2iqM"><b data-page-node-id="FaDAlDi4jPicXwj5HJdClK">保守参数建议</b>：users=3、spawn_rate=1、run_time=30s（先验链路，不追压力）。是否同意？</td>
+    </tr>
+    <tr data-page-node-id="b9pt3fEXo5aPULE24CzeF8">
+      <td data-page-node-id="ElkWk4HjzBfFO5v30KN6RY">3</td><td data-page-node-id="TLmvCLinr7KKxBvLLMz5g0">matcheval</td><td data-page-node-id="PwUJ5xhdYZEtIOyspJEU0z">match-real</td>
+      <td data-page-node-id="UfHWEoKVclYs48SUQUBWcD">仅路线 A/B 纳入；dataset=<b data-page-node-id="V2izae4xYQvZdMH5NrUntt">待定</b>，algorithm 建议 <code data-page-node-id="2B50DfkqmM0HUuXhlzdKry">["tpl","mstpl"]</code>，threshold 建议 0.8，output_level=summary</td>
+      <td data-page-node-id="tw3PDV0ZLOUoRIMBiR3hy0">路线 C 则此步去掉，或保留 fixture 版本并如实标注</td>
+    </tr>
+    <tr data-page-node-id="THkRwBhKZ0iN6t9GQvX24r">
+      <td data-page-node-id="GdYaoPkcZxP5DNpONGvpkJ">—</td><td data-page-node-id="YTqSzACXMm0CcPT9ZCB29M">fail_fast</td><td data-page-node-id="OiIYdSfTagOssqKJ7tvXRE">—</td><td data-page-node-id="s9fFAxaurNDrEELs8N2mGt">建议 <code data-page-node-id="kDTpG8iEZgcsSnLZQRXFd6">true</code></td><td data-page-node-id="fBmAG4Fh8obiPzcKdVGbwB">是否同意？</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note" data-page-node-id="6WO98nfCarcAsYLZmna9ui">
+<b data-page-node-id="DKMmXkJ5UDO6ahnYVRv5W7">执行前确认门（第二阶段硬约束）</b>：正式执行前会逐项贴出并要求确认——pytest 选择器、Locust users / spawn_rate / run_time、
+match_eval 算法 / 阈值 / 数据集、Environment 与 Executor、fail_fast 行为。<b data-page-node-id="LeVGO5QGiJ9m8czPtwC6eM">未获确认不执行；尤其不对生产或共享环境发起压测。</b>
+</div>
+
+<h2 data-page-node-id="DA06CenibqjeG83zdGxs5m">9. 本轮未做的事（合规声明）</h2>
+<ul data-page-node-id="Ep8aRyGqsM1ZAfEQ87c1O3">
+  <li data-page-node-id="qwch5DW2s1GMPGyK4NrfeE">未创建、未修改任何 Environment / Executor / AssetSource / Plan 配置实体（运行库 <code data-page-node-id="eq8JKxL3YD1AmCljdB57NF">platform/data/db.sqlite</code> 未被写入）。</li>
+  <li data-page-node-id="AeesLSZCAFCzTy5qkpR5gC">未连接任何真实服务（无 TCP 业务连接、无 HTTP 业务请求、无 WebSocket 连接）。</li>
+  <li data-page-node-id="8lgIEXAn2SOYC8usmE3YDU">未启动 Unity / Colyseus / MongoDB / PrivaHigh，未拉起任何被测服务、未打开任何图形程序。</li>
+  <li data-page-node-id="JiGVuM85NCGHPVjxY5o1u0">未发起任何压测或完整测试执行，未创建任何 PlanRun / Job。</li>
+  <li data-page-node-id="XSSnQgG5SDHsoxzzzz39SL">未修改任何测试资产、算法逻辑或业务脚本（<code data-page-node-id="NMv1CKWi1auT6HFqSiWHIB">locustfile.py</code> / <code data-page-node-id="VE8UL4Sn0Gnb5ZlrMNa1kU">match_eval.py</code> / <code data-page-node-id="AoKwxaDN38yoRkI0DLMn1k">GameAutoTest-Pro</code> / <code data-page-node-id="cksmkLxFVdc2I5dhsAnL5z">colyseus-demo-server</code> / <code data-page-node-id="uuZLRLsew7JPQme6AQKSxe">PrivaHigh</code> 均保持原样）。</li>
+  <li data-page-node-id="NMEuEWVQbYO7dAqbYD3onS">未新增平台功能、未改平台代码。所有检查均为只读；唯一的临时库建在系统临时目录并已删除。</li>
+</ul>
+
+<footer data-page-node-id="hULJd2kHJ8bDB4B4WuArMt">
+真实三引擎受控接入 · 第一阶段只读盘点与待录入清单 <b data-page-node-id="2VxsKMxxDKacUd42lgBIoR">v3</b> · 生成于 2026-09-28 ·
+结论：pytest / Locust <b data-page-node-id="mR4vLq55yd7eBG7wlliEfj">条件可达</b>；match_eval <b data-page-node-id="5HFmiJuE0GsAHGks1ZkdeU">真实资产不存在，不可达</b> —— 需用户择路线并授权后方可进入第二阶段
+</footer>
+
+</div>
+</body>
+</html>

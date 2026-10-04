@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="sb7lOyrmuII99wCd1T0zeJ">
+<head data-page-node-id="aH4bHeKhvMiAVIdmwF5wDa">
+<meta charset="UTF-8" data-page-node-id="0mta0bREkXe6HO03r1HGkQ">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="7APXejTYFTIMvcQsCErdy2">
+<title>第一阶段 MVP 收尾执行报告 · 统一游戏测试平台</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#eef2f6; --line:#d7dee6;
+    --fg:#1b2229; --muted:#5d6b7a; --accent:#1f6feb; --ok:#15803d;
+    --warn:#b45309; --bad:#b91c1c; --chip:#e7edf4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:36px 24px 72px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px}
+  h1{font-size:24px;margin:0 0 8px}
+  h1 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+  h2{font-size:17px;margin:30px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:15px;margin:18px 0 8px;color:#2b3641}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;background:var(--panel)}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#2b3641;font-weight:600}
+  code{background:#eef2f6;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#0b4f9e}
+  pre{background:#0f1720;border:1px solid #24313d;border-radius:8px;padding:12px 14px;
+    overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#d7e3ef;line-height:1.6}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:2px 10px;font-size:12px;margin:0 6px 6px 0;color:#33414f}
+  .ok{color:var(--ok);font-weight:600}
+  .bad{color:var(--bad);font-weight:600}
+  .warn{color:var(--warn);font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+  .card.hl{border-left:4px solid var(--ok)}
+  .card.note{border-left:4px solid var(--accent)}
+  ul,ol{margin:8px 0 8px 22px;padding:0}
+  li{margin:4px 0}
+  footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body data-page-node-id="MBLR5PZJVThOFySfqPyuOj">
+<div class="wrap" data-page-node-id="EwFGX2nfCxZRk700HyJEyG">
+<header data-page-node-id="xQjEoXQ9z1Jf2165JlmHsJ">
+  <h1 data-page-node-id="g6ZHQa4MoQPCv8lW8AoiYx">第一阶段 MVP 收尾执行报告<span class="sub" data-page-node-id="eFN1M6fulBBCZZNMHEZCtz">统一游戏测试平台 · 2026-09-29</span></h1>
+  <p class="muted" data-page-node-id="0Gn2GnKRfB18FttXSPKu8q">按用户确认的「MVP 最小收尾范围 1～4」执行：文档 → 前端两处修复 → 历史分页/入口 → 可复现性整理。
+  每一项完成后做了对应静态与低风险验证。</p>
+  <p data-page-node-id="Cdvr0IBD8rlnCcqEfz1hBx">
+    <span class="chip" data-page-node-id="fsvhOBromnQ1s8gB7Cxxh1">改动文件 9 个（8 改 1 新增）</span>
+    <span class="chip" data-page-node-id="naOAQGbnBmuUbBepZHYKlA">单测 52 passed</span>
+    <span class="chip" data-page-node-id="W0eH8JHE7aDC91JB9quKCX">verify ALL PASS</span>
+    <span class="chip" data-page-node-id="OrYENh7XfyHcXhu5U3LTI1">真实库未被写入</span>
+  </p>
+</header>
+
+<div class="card hl" data-page-node-id="4JGov5SmdkXYAetZ7Nhgys">
+<h3 style="margin-top:0" data-page-node-id="sgp2xGrWB3uMnG6VbhliOq">结论</h3>
+<p data-page-node-id="3ljJe6IcZt4n9rppV9jmoE">四项全部完成，<b class="ok" data-page-node-id="gLoRXnAiV9yGPiGrFMyesX">验证通过</b>。生产逻辑**只有一处语义变化**（Locust 场景路径来源改为登记层，行为等价），
+其余均为文档、前端交互与常量收敛。真实运行库、真实资产、历史报告与既有 Plan/PlanRun/Job/Report <b data-page-node-id="CDdq8Jfw2OfMybkRQ9Lkrj">全部未被修改</b>。</p>
+</div>
+
+<h2 data-page-node-id="fjm2lYRuY3k2WoTPDX2Sjf">1. 修改文件清单</h2>
+<table data-page-node-id="P4OCXAQVC8iSC10rmtXApw">
+  <thead data-page-node-id="yLHfQZPcAuUbBXjXrOIeYH"><tr data-page-node-id="1jR2uHoiipmM02yE6n5nlg"><th data-page-node-id="2GfoxSwI7fEvCvneYRMA2q">#</th><th data-page-node-id="6GZz0Z9pgmWquHklMso2Eg">文件</th><th data-page-node-id="uFcL1PwHo3qwAC7hHhcxhy">修改原因</th><th data-page-node-id="HJVRyo2SRfED9P7yZxCEj7">修改内容</th><th data-page-node-id="65XamlMKyE5l3lz0fucRhQ">是否影响生产逻辑</th></tr></thead>
+  <tbody data-page-node-id="TTshoSL7Yv1ZnZYtmGRbYk">
+    <tr data-page-node-id="NBcmEC6sxeCZIXSeOioULK">
+      <td data-page-node-id="5DBany5AJP8eBcfiKLa9dn">1</td><td data-page-node-id="Syn0eQadFwjsF4rSH59DCc"><code data-page-node-id="dedLuXObhfyfbLX2YWfmZE">README.md</code></td>
+      <td data-page-node-id="VVczFsDN3PVVYAjAtkX0DN">原文与实际状态矛盾（仍写「只接入 pytest_runner」、只列 2 个预置计划），且缺操作说明与验收/限制清单</td>
+      <td data-page-node-id="QDZWiy9R1DJSnh4zvICVuO">整体重写：三引擎能力与配置中心说明 · 3 个被测系统（含两系统不得合并表述的口径约束）· <b data-page-node-id="WyOtLXarED3TfWeWrZK2qS">「从启动到完成一次测试」7 步操作说明</b> · 12 个预置计划与适用条件表 · 已验收能力（带证据编号）· 未完成真实验收 · 已知限制/技术债 · 环境变量表（含新增的 2 个覆盖变量）· 依赖安装 · 常用接口 · 验证脚本及其前置条件</td>
+      <td data-page-node-id="hP2lNPIgHwWNAbFmqgpWQL">否（纯文档）</td>
+    </tr>
+    <tr data-page-node-id="b3AC8dr7cYnIeRyoXU2Mgn">
+      <td data-page-node-id="uJPQCC3hnU3zbuCsrVC9WK">2</td><td data-page-node-id="LLfFit6av6Fv7t5X4uCBrA"><code data-page-node-id="ejcfyaVo07V4JSeGeNBPHC">PROJECT_MEMORY.md</code></td>
+      <td data-page-node-id="zS7xTFVs4PC1XXu1wAyc84">「用户尚未授权实际执行」等状态已失效；缺当前真实验收结果与 MVP 状态</td>
+      <td data-page-node-id="d5CdOKsYDsb7Zxpa3gxE0m">用「真实验收进展」（PlanRun#20/#21、49 passed、Job#26 指标、历史不变性）替换过时的「目前允许的下一步」；新增「当前被测系统（3 个）」「MVP 状态」两节；修正末尾「真实三引擎验收仍缺」一条的范围（改为只缺 Locust 相关授权）</td>
+      <td data-page-node-id="mTiqAKt0W3BBfxFe6lADKG">否（纯文档）</td>
+    </tr>
+    <tr data-page-node-id="TSfXwMCSJXExvUVVE2zbuD">
+      <td data-page-node-id="CfVJFoFW6VMDxNaHcuvAqn">3</td><td data-page-node-id="NKtvyOqoHAKydw9ORCSLOk"><code data-page-node-id="NUmHYFVJEeBVt5FeDs101F">frontend/index.html</code></td>
+      <td data-page-node-id="9SO6qi3la9iUlgVPFtwDxb">P0-2 日志被轮询清空；报告页 <code data-page-node-id="t0DgqfceBNpLckKT77Rubr">plan run N</code> 死链；历史仅 8 条；报告中心无 PlanRun 反链</td>
+      <td data-page-node-id="zdMLrMmMqldYNZ6TESHBxz">① <code data-page-node-id="aG0dxLwkJ15iqkX4dUCnzI">pollRun</code>：运行到达终态即 <code data-page-node-id="y0eW94jjeRYFK8XY2R4GVI">clearInterval(timer)</code>，不再无休止重绘；② <code data-page-node-id="98Y0CEuCOJrPSvkYa8BiKb">renderRun</code>：重绘前捕获、重绘后回填已打开的日志面板；③ 报告页 <code data-page-node-id="iRxX3J3s7W6vdiAEsoIKVh">plan run</code> 改为真实链接 <code data-page-node-id="dXVWjedNPbsuvXwdrbvMNB">#/run/{plan_run_id}</code>（无关联时显示「无关联执行」）；④「最近执行记录」改为可「加载更多」（8 → 每次 +16，并显示当前条数）；⑤ 报告中心每行新增「所属执行」反链</td>
+      <td data-page-node-id="nRTEMDqGZ6NVupcELQDQdC">否（前端展示层，未改状态逻辑与轮询间隔）</td>
+    </tr>
+    <tr data-page-node-id="tpDJLDJkQO6WFdE7tGKdwL">
+      <td data-page-node-id="yNNEJ05fZtXAethRo2sY4M">4</td><td data-page-node-id="NLJZddVWb6pfQKQc7vy0tF"><code data-page-node-id="e6cRrzw3LyVX7eANo4JwYE">backend/app/db.py</code></td>
+      <td data-page-node-id="dbsMBYTeDUsd6LGK3EdBfg">运行历史分页需要偏移量</td>
+      <td data-page-node-id="ZIKpyZZvGTpQPgzYcjuzNe"><code data-page-node-id="QHkITG4LsWvXFBkWxjIdFS">list_runs_meta(db_path, limit, offset=0)</code>：SQL 加 <code data-page-node-id="ZdX8dNYBJV0TuJ0wD2V9iS">OFFSET</code>（默认 0，向后兼容）；补文档串</td>
+      <td data-page-node-id="Ou48pY3DqA0UgCRcPnCJba">否（新增可选参数，原调用行为不变）</td>
+    </tr>
+    <tr data-page-node-id="aKSCbSCiAeKNpAaoNpFrtz">
+      <td data-page-node-id="dyBnUlN3qVyxVm9G7lnqH5">5</td><td data-page-node-id="Tpiao8NXb6EJf6K9zHI8tQ"><code data-page-node-id="mgGAp6AFoLqGA584QdNHUi">backend/app/api/router.py</code></td>
+      <td data-page-node-id="3q9QRlcS1vfb0IACVCPGSB">同上，接口层透出 offset</td>
+      <td data-page-node-id="Ddla5Qu1QWe1bzMOp6LDGb"><code data-page-node-id="JIRcQZUw1mySK05za9BSqG">GET /api/runs</code> 增加 <code data-page-node-id="ios9OXspBMgHZrF1aXdA4Z">offset: int = 0</code> 并透传给 db 层</td>
+      <td data-page-node-id="v4JHJPholRii7ArFryR18A">否（默认值保持原行为）</td>
+    </tr>
+    <tr data-page-node-id="HtcSjq5Gm6oZaQk4HeE11X">
+      <td data-page-node-id="fFTDHs7eJiv8FQ0dzbOYW5">6</td><td data-page-node-id="c8dqFBhBI41pnyQtp7zVci"><code data-page-node-id="J9Uo3M1OOC8LaeBNmErIVy">backend/app/config_center.py</code></td>
+      <td data-page-node-id="BLWRFaOu1CMyVRPkCSCtbh">环境相关常量散落且不可覆盖，影响可复现性</td>
+      <td data-page-node-id="X07kcDAgWVV9qaaykPCGrJ"><code data-page-node-id="UWrAav3OFpbfkor1AI2WSQ">DEFAULT_PYTHON</code> / <code data-page-node-id="ClAerBQjEb5ENIKlKrvrie">SDET_PROJ</code> 收敛为「环境变量优先 + 本机默认值」：新增 <code data-page-node-id="R2fQGckBo35qPgYFm1T2MX">PLATFORM_DEFAULT_PYTHON</code>、<code data-page-node-id="FTz9jt3vUqlFWAqpZk0phZ">PLATFORM_SDET_PROJ</code> 覆盖能力，并标注为集中管理点</td>
+      <td data-page-node-id="YBPwwsiivdb1wVakX70BOo">是（仅解析来源变化，取值不变；白名单与安全设计未动）</td>
+    </tr>
+    <tr data-page-node-id="yOi7IpyNGi5NwwwqaThsnG">
+      <td data-page-node-id="1qULebWD8qyfbch81ctnUk">7</td><td data-page-node-id="vvCNGZFyNcYvMNYgfcwGAX"><code data-page-node-id="MxU8ZjZY0T053sgaX5PZ6D">backend/app/executors/locust_runner.py</code></td>
+      <td data-page-node-id="i9FKn87TVL96QeFmbgmuSz"><b data-page-node-id="FNwJD6wCDHmGKUFZ7RV5rt">双来源</b>：本文件硬编码 <code data-page-node-id="RMNtynsj78E8N13ONGB3PH">colyseus-bot</code> 绝对路径，与 <code data-page-node-id="aNSyhUosqMvKfabVQUQ6zI">config_center.LOCUST_SCENARIOS</code> 重复</td>
+      <td data-page-node-id="dK407CYapscs0ohdQouNlZ">删除本地路径表，改为 <b data-page-node-id="QjMWk5mNROrLLnby06gcJt">唯一来源</b>：<code data-page-node-id="pCP9uleNsIS4kHcxl9Dy4n">_SCENARIO_KEYS = tuple(LOCUST_SCENARIOS)</code> + <code data-page-node-id="8H0wfoGFVht31X8dRfEdZh">_locustfile_path(key) → resolve_asset_ref("locust_scenario", key)</code>；白名单校验仍基于受控 key，任意路径依旧无法注入</td>
+      <td data-page-node-id="B6ONdN99g99BI6NhKaQ77s">是（语义等价，来源唯一化）</td>
+    </tr>
+    <tr data-page-node-id="35bmyFpYtTmuWiL2Fi98lh">
+      <td data-page-node-id="Ga3oNIBx18s0PVbKwlIxkx">8</td><td data-page-node-id="K2VDlP7P8bAqGPRJW2wwtd"><code data-page-node-id="qE0jB5S1r0Aclwyw0hJjIK">backend/preset.py</code></td>
+      <td data-page-node-id="n4ZS0AdYM2MO84aEkRjCfb"><code data-page-node-id="5m2AO4k4NXKxE3BCHShmYV">DEFAULT_PYTHON</code> 第二份定义</td>
+      <td data-page-node-id="1mWetCRPA1MRqQQtDlWUHc">删除本地定义，改为从 <code data-page-node-id="t6tZBlM2SMJb7u9SXWqnl2">app.config_center</code> 导入同一常量（单一来源）</td>
+      <td data-page-node-id="1f1klzrstdgVSkxotxgpaJ">否（取值相同）</td>
+    </tr>
+    <tr data-page-node-id="X1S5g7mQ3cyKuRZm2rQW9w">
+      <td data-page-node-id="3vBEekrZ1IFG248dW4fr1u">9</td><td data-page-node-id="llhfWxPFXbWt59HcHaSZ9f"><code data-page-node-id="myUIRzkCaIeEu1FRWzCPM6">requirements.txt</code> <span class="muted" data-page-node-id="f3TolBZH7J12REKEiQsUG4">（新增）</span></td>
+      <td data-page-node-id="F9eorUxMvCObJm1xthSGjb">平台自身无依赖声明，可复现性缺口</td>
+      <td data-page-node-id="UH6gYrGTBA0t52DD5X3hF0">按实际 import 与实测版本声明：核心 3 个（fastapi / uvicorn / pydantic）+ 测试 2 个（pytest / httpx）；Locust 与 opencv-python / numpy 作为<b data-page-node-id="Cx30FdGULndHF7ZU0EMe9O">按需 Runner 依赖以注释标注</b>，未强制安装；**未升级任何依赖**</td>
+      <td data-page-node-id="54j9tPyPIQcvbpWCmEWin7">否（新增文件，仅供安装参考）</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="Ocz7Ntlyr01lbCfLD8fyNz">2. MVP 四项完成情况</h2>
+<table data-page-node-id="nr2575y7G4HzigDZxdL4gk">
+  <thead data-page-node-id="HX0BPTs0T4jSrGRypCmOrH"><tr data-page-node-id="rKmg0vrSqF8Fz0CcF12sBu"><th data-page-node-id="y4DP5IJWAfiyJy8xsFe3HP">项目</th><th data-page-node-id="WkAkNu7A8gArSE0eoGu6W8">状态</th><th data-page-node-id="u2gKPJFZYzHQr2utPtuqmK">说明</th></tr></thead>
+  <tbody data-page-node-id="2wjQFFh9cTWx1PZykrvHUQ">
+    <tr data-page-node-id="PVZApBW1G04QX9X2diCLb9">
+      <td data-page-node-id="PNLdcGOvu00feMAckMt7JH"><b data-page-node-id="4jiKVuw5ZZDLkWWsNWaI2m">1 文档</b></td>
+      <td data-page-node-id="sC9ocU5F5FCZH0CqD8kQi6"><b class="ok" data-page-node-id="IRf9Gim8lxGFYvgz8oPQfY">完成</b></td>
+      <td data-page-node-id="Fb52R3VN8dK806oH1S3FHf">README 重写（含 7 步操作说明、12 个计划的适用条件、已验收/未验收/已知限制三张清单）；PROJECT_MEMORY 同步过时状态。<br data-page-node-id="H5CvzZS3H4oF8t1yPnzpmu">未隐藏任何限制：Locust 未验收、WS 硬编码、动态端口限制、pytest-html/pymongo 缺口、`run_in_progress` 误报、AssetSource 语义均如实写明。</td>
+    </tr>
+    <tr data-page-node-id="BF37Fn0KptzZ2sY9qwCyFa">
+      <td data-page-node-id="8QKExMWnipvrNaZDiAbkFg"><b data-page-node-id="6FpNVQbWBhtApgfCBlb5kl">2 日志修复 + Report→PlanRun</b></td>
+      <td data-page-node-id="RhVP5aEextz4qLAs6KCYP9"><b class="ok" data-page-node-id="cPfN8tjwKYAP2mgVdMjRFE">完成</b></td>
+      <td data-page-node-id="Dcjdj4dGLSbaWZFOoJCZfp">轮询在运行终态即停止（行为级验证：3 次轮询后 <code data-page-node-id="i2opEui6z4l2xmsYy4TfS1">clearInterval</code> 调用 1 次、终态后 <b data-page-node-id="QgcNNJYdNB0I2uM6vjEECt">零次重绘</b>），并额外保留已展开的日志面板；报告页改为 <code data-page-node-id="JGcU3hxP3LkavCMYDYBXeJ">#/run/{plan_run_id}</code> 真实跳转，报告中心补「所属执行」反链；死链 <code data-page-node-id="RSOPcXEghzGtMBFGaop8cJ">onclick="return false"</code> 已清除。</td>
+    </tr>
+    <tr data-page-node-id="jRAzDVgChyY0XmHoFhLKBH">
+      <td data-page-node-id="9WtB9iExZkSL8J8nH4o2du"><b data-page-node-id="0oCC9DzBTJkc6Lp9D1W4aZ">3 历史分页/入口</b></td>
+      <td data-page-node-id="oUEOoLkPypAMoyjF17cXeI"><b class="ok" data-page-node-id="o2QizV2Fo1xAfxTJCan3nV">完成</b></td>
+      <td data-page-node-id="vTApoiwLCA8mEbV6MQfbYV">最小方案：后端 <code data-page-node-id="QytksqQCksXVL3ar0v4DF6">/api/runs</code> 支持 <code data-page-node-id="ew0wvKIjITJM69Fj5zuPpe">offset</code>；前端默认 8 条 +「加载更多」每次 +16，并显示当前条数。<b data-page-node-id="THl8uWNiWvgPwiXtZJocLC">未引入搜索/高级筛选/分页框架</b>。</td>
+    </tr>
+    <tr data-page-node-id="86rBw0H1hy5nPZbEcaIe9H">
+      <td data-page-node-id="V2sWHOtN8EvxfXFtHqwBC0"><b data-page-node-id="jLiBDiVchCUoSuNJoBQpmh">4 可复现性整理</b></td>
+      <td data-page-node-id="f6jLVUUioaFdzctvVWLkjJ"><b class="ok" data-page-node-id="BExYyhFm6yruZeCU1Y0xNy">完成</b></td>
+      <td data-page-node-id="J16ZkaHj1TAHsXnAVncEju">新增 <code data-page-node-id="w51cwzQ72N4dB2RvVx0U6H">requirements.txt</code>；Locust 场景<b data-page-node-id="kh1lxGLW3GjZM8v2Co7lCg">单一来源</b>（登记层）；<code data-page-node-id="6TVFEgFguJ3DNDzgmNn7V8">DEFAULT_PYTHON</code>/<code data-page-node-id="ZRh0zGm7eCYgSajalZmDQv">SDET_PROJ</code> 集中且可被环境变量覆盖；<code data-page-node-id="PGEFDrUZruzDiKqE4LuOlf">preset.py</code> 重复常量消除。<b data-page-node-id="0fJ0QT26WWMCCKuAi98rWW">未做</b>配置系统重构。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="im8zXOKPmIUHe9rwcNC1Ba">3. 验证结果（实际执行，非推断）</h2>
+
+<h3 data-page-node-id="dsjAbz2PlwZy1JfTgcHNfM">3.1 静态检查</h3>
+<pre data-page-node-id="3mQY7PSCnaoxuqffd6aiAS">$ F:\Anaconda3\python.exe -m py_compile backend/app/config_center.py backend/app/db.py \
+      backend/app/api/router.py backend/app/executors/locust_runner.py backend/preset.py
+  OK：全部编译通过
+
+$ node --check &lt;提取的内联脚本 58809 字符&gt;
+  OK 语法通过
+
+$ 旧 README 表述残留（"只接入 pytest_runner"）
+  已无
+
+$ Locust 场景第二来源
+  backend 内已无硬编码场景路径；仅登记层 config_center.LOCUST_SCENARIOS 一处
+
+$ 业务代码残留本机绝对路径（r"F:\…" 等，排除测试夹具字符串）
+  无</pre>
+
+<h3 data-page-node-id="wb0XY7ovZCbnFx7GuhWhI7">3.2 导入与单一来源核验</h3>
+<pre data-page-node-id="6qLE29BkgJFsADTyUyVvat">已注册引擎      : ['locust', 'matcheval', 'pytest']
+受控场景 key    : ('http-fixture', 'colyseus-bot')
+场景解析 colyseus-bot -> F:\测试平台\Colyseus-Storm\locustfile.py
+场景解析 http-fixture -> F:\测试平台\platform\backend\demo\locust_http_probe.py
+单一来源校验    : True
+DEFAULT_PYTHON  = F:\Anaconda3\python.exe
+preset 复用同一常量 : True</pre>
+
+<h3 data-page-node-id="zf9u0M9RSn6gbcoOcBFq3Y">3.3 前端行为级验证（Node vm 加载真实脚本 + 真实定时器）</h3>
+<pre data-page-node-id="IOhhNoJN7FK1BRpCGuzGIn">用例1 日志不被轮询清空（轮询在终态停止）
+   轮询次数 = 3  重绘次数 = 3  clearInterval 调用 = 1
+   终态后是否仍在重绘 = false ✓ 已停止，日志稳定
+用例2 重绘保留已打开的日志面板
+   重绘前捕获日志 = true  重绘后回填 = true ✓
+用例3 报告可回到对应 PlanRun
+   报告页链接指向 #/run/{plan_run_id} = true
+   已无死链 onclick="return false" = true
+   报告中心「所属执行」反链 = true ；路由支持 #/run/ = true
+用例4 历史运行可超过 8 条
+   recentLimit 初值 = 8 ；请求使用 limit=${recentLimit} = true
+   「加载更多」按钮按需出现 = true</pre>
+
+<h3 data-page-node-id="q4wYrXk8PjYGAlXhYIGI0q">3.4 隔离实例端到端（临时数据目录 + 8123 端口，用完已删除）</h3>
+<pre data-page-node-id="WjEUcoeCS8LoaIbwt3xa9S">10 次「平台自检 (green demo)」执行：run#1..#10 全部 success（用时 17.0s）
+[分页] limit=8  -> 8 条（id 10..3）
+[分页] limit=20 -> 10 条（历史可完整浏览）
+[分页] offset=8 -> 2 条（id 2,1）；两页无重叠 = True
+[分页] 每行含 plan_name = True
+[报告中心] 行均含非空 plan_run_id = True
+[报告详情] /api/reports/10 → plan_run_id = 10</pre>
+
+<h3 data-page-node-id="5AryDBGG5gImoNrWQvJsEI">3.5 回归</h3>
+<table data-page-node-id="W7Jg8TZHxxdbFvfZ6cOSnc">
+  <thead data-page-node-id="z4ZF9BAHNZxUzw9K8xv61t"><tr data-page-node-id="YDnXJOEVcRmFfMS5fGRYOI"><th data-page-node-id="9DFAgab8uucBLZwoN54k2B">检查</th><th data-page-node-id="GbAiEfDEyUjXzuAT2ICzur">结果</th><th data-page-node-id="czNOAPzcoTjWFCLKw7DRMi">说明</th></tr></thead>
+  <tbody data-page-node-id="cg3K26BuGXWDjwYnfvNTVJ">
+    <tr data-page-node-id="DU0NtmsJ9ne8XeLtSAPnH7"><td data-page-node-id="Eglwui97wmPYFczmmhTzXS"><code data-page-node-id="5b9WWctzGgQZX3uif5l6pb">pytest backend/tests</code></td><td data-page-node-id="nqDyMVWAbRKuJkV4BeVPvT"><b class="ok" data-page-node-id="t1tk2jyycmkv13RRZbicnh">52 passed</b>（1.02s）</td><td data-page-node-id="PiiA7iGjxGkvjqg1xgmubR">隔离临时库</td></tr>
+    <tr data-page-node-id="chLWQqtCTrC9hjsrP9Q1aD"><td data-page-node-id="yODQDTcHoEUVCJknkC9aFJ"><code data-page-node-id="pXPZNq2BC0pQzEdNt20lYC">verify_config_center.py</code></td><td data-page-node-id="AHxitrLhIKUNxaUInvX8fW"><b class="ok" data-page-node-id="GRGG1eUCbHg52WUpFkApMo">ALL PASS</b></td><td data-page-node-id="imhgOux8AuGwWGWDeUHBAP">自包含隔离实例；含「无明文绝对路径 / 无密钥值」检查</td></tr>
+    <tr data-page-node-id="AkeXTUKUL9hu3GmZjng1nO"><td data-page-node-id="GsTAd3E06JLx2m2HcbJqNl"><code data-page-node-id="jOT3sFMzaPecxooypwHVGg">verify_plan_editor.py</code></td><td data-page-node-id="nTvY6zR5NNjhNvYt7mQu78"><b class="ok" data-page-node-id="bExpu0VbxQRr8CmBdFwyyB">ALL PASS</b></td><td data-page-node-id="WStylvNUuq8EnTvJ8GW2gB">自包含隔离实例；<b data-page-node-id="W0J1o1KQZ8Ematw2PVJ8gD">含三引擎组合计划 pytest→locust→matcheval 三 Job 全部 success</b> —— 同时验证了 Locust 场景单一来源改造端到端可用</td></tr>
+    <tr data-page-node-id="mBmU2x3FgwiVR3HotZ5iJG"><td data-page-node-id="IwCK5F259uF8Y1dSTNmE6R"><code data-page-node-id="eQ5xFVt85iDZ945JJ35P5w">verify_report_center.py</code></td><td data-page-node-id="tWtUdYvw3HyLeem9JzgV5G">未通过（预期）</td><td data-page-node-id="IMWNIWW9naGmHQeEgVIteS">该脚本<b data-page-node-id="SBN77C3Xnc6FcvONsCG3Wv">需要先以 <code data-page-node-id="PNZI8qVYN1dCuhfLiMo5gF">--preseed</code> 造数据并启动 8002 隔离服务端</b>；本次未启动 → <code data-page-node-id="3jwSx4KOyjkaXDSOyV7lqc">HTTP 502</code>。属脚本既有前置条件，本轮已在 README 中写明</td></tr>
+    <tr data-page-node-id="23rr8Kyx1u16N3Q9vJR4hJ"><td data-page-node-id="Rl8olhG6XC8owRYHJLGjhD"><code data-page-node-id="uFVCs4FgHDISji8dJ13iDx">requirements.txt</code> 一致性</td><td data-page-node-id="VHhtIqP5HRLKDhs19ByohO"><b class="ok" data-page-node-id="5cHKaGFJXyTm1PFKOB76u4">一致</b></td><td data-page-node-id="JfTJNu7ELwEHani7QkDfR3">fastapi 0.141.1 / uvicorn 0.52.1 / pydantic 2.12.4 / pytest 8.4.2 / httpx 0.28.1 均已安装；locust 属按需（在独立 venv），cv2+numpy 在 Anaconda 中</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="zgewAXJQqjIQYfnoG2r0UM">4. 数据安全确认</h2>
+<table data-page-node-id="z60bKzmOIt01S3Nppnt8Qd">
+  <thead data-page-node-id="Ile9TefCsdAUSxkrwy29U4"><tr data-page-node-id="yWXeKJr0NqLwevYjSPJiY7"><th data-page-node-id="CtrC4svHvlR1wxIs6jOiTQ">项</th><th data-page-node-id="8QWhFI2QJ431splk61K3JX">结论</th><th data-page-node-id="Z3lpVtFv4fs6UyhGYvg0RR">依据</th></tr></thead>
+  <tbody data-page-node-id="pAwavYoANU0DMclGqkqo2M">
+    <tr data-page-node-id="se4JVlsvfM7PskeU4GLsHG"><td data-page-node-id="xX2G3wMfnAhWZJ6ayKU1jc">是否修改数据库</td><td data-page-node-id="RlIlW1clkCLVu8nfRb7sRB"><b class="ok" data-page-node-id="gMM7TbqwiYsjZw1bCTijOp">否</b>（真实运行库未被写入）</td><td data-page-node-id="jK9ApeMykBDViyk4yg3G8o"><code data-page-node-id="dJBaCv2aFtFaWqxN77lfOL">data/db.sqlite</code> 修改时间仍为 <b data-page-node-id="KOrNvt8NwafDeYwg6lR6NV">2026-09-29 11:36:39</b>（本轮之前的最后一次执行），计数 <code data-page-node-id="Ja9QTJegzDuGgvXHX46M7u">plan_runs=21 / jobs=26 / plans=14 / reports=24</code>、<code data-page-node-id="dHGK68ufCW8uvWnaKUd6Lz">MAX(run_id)=21</code>、<code data-page-node-id="gRxjxpBZhuIEEPvHSPgfSd">MAX(job_id)=26</code> 与本轮开始前一致</td></tr>
+    <tr data-page-node-id="VQVDCCRyZDWFL4Fxaxo4x9"><td data-page-node-id="PLkFxpPWfJvh4qmMa5SjGJ">是否新增 PlanRun</td><td data-page-node-id="lu2QN5OIxUq7Phj45e7flo"><b class="ok" data-page-node-id="qJ5jq6TMXB9MoBf6rzsirC">否</b>（真实库）</td><td data-page-node-id="70CCdMgthpFS1VCcTe0tKf">10 条 PlanRun 全部产生于<b data-page-node-id="dgvEqBzLJGJxJoWJQlXbD0">隔离临时库</b>，该目录验证后已删除（确认不存在）</td></tr>
+    <tr data-page-node-id="6vU5GyoH6YSsZQOuoWMxmE"><td data-page-node-id="a4xYwh54HERUJPEaOuEEm7">是否新增 Job</td><td data-page-node-id="LsJQbxl7qqLqD4ecX3O2nZ"><b class="ok" data-page-node-id="97shVL64gDDGM56AMznRjf">否</b>（真实库）</td><td data-page-node-id="8BDGP3Kr9kB6JcB3taG4MF">同上</td></tr>
+    <tr data-page-node-id="JHLCrSYlhttaB3WMeUslm4"><td data-page-node-id="ggltawMt9ZsNMPfuVPcfyz">是否修改真实资产</td><td data-page-node-id="yrbfMiGwM3zSkkTLCT8r4F"><b class="ok" data-page-node-id="lOUhAoJjX5wnqj6wZu426l">否</b></td><td data-page-node-id="3Dxg8xbFLECLTdl00vTQUW"><code data-page-node-id="MUR92d5rQ7ZDHBHHXtV3UO">real_assets/privahigh/tpl</code> 23 张、<code data-page-node-id="TglIaZEs16kekNWwGCTrEN">scenes</code> 5 张；mtime 仍为 10:33:21 / 10:35:45</td></tr>
+    <tr data-page-node-id="IxbvDzz539v7C69IysrlPP"><td data-page-node-id="e0UuXZHeEFFNrCZV66FCHK">是否修改历史报告</td><td data-page-node-id="j4ajKCHLpk6UGPTKHatKHC"><b class="ok" data-page-node-id="4MO2J2ALMZd3ohFQGJyALz">否</b></td><td data-page-node-id="vyb68Runx7AANgdrb4ttAH">未触碰 <code data-page-node-id="bO14Uwp7rXBxWnqmxYjfXA">data/reports/**</code> 与 <code data-page-node-id="8m3ymw41BRQFeYgarkHM6Q">reports</code> / <code data-page-node-id="IG4d4Olnek0JW6thaINNN6">report_index</code> 表</td></tr>
+    <tr data-page-node-id="Sal4wm1g5iHmx2JfVqfTT1"><td data-page-node-id="sG615EESjxs1srzAp5IVWT">是否修改现有测试数据</td><td data-page-node-id="DJBZJAh7HaZaXE1OALGWiI"><b class="ok" data-page-node-id="DSEcSLHdZcJukFgiWupSoE">否</b></td><td data-page-node-id="OJOmVWICFzTN0AtLsHU2k8">未改 <code data-page-node-id="iBm6QffrfP7j8hfsycuT2B">backend/demo/**</code>、未改任何用例与夹具</td></tr>
+    <tr data-page-node-id="xQgENKl9vB4dzDYQTGlmSm"><td data-page-node-id="20kjJYEpiD4OzY5QCJzGnM">未触碰范围</td><td colspan="2" class="muted" data-page-node-id="fNmJiefsqGoHNX1QK9DDZk">未修改 <code data-page-node-id="C5rXFIQypJGBGqCs6DLzDz">match_eval.py</code>、<code data-page-node-id="RDAWaDcYNbgDNIdPQ9RbcB">Colyseus-Storm</code>、<code data-page-node-id="a5jA5mM9cQCI8OKMrmDXVQ">GameAutoTest-Pro</code>、PrivaHigh 任何代码；未改 <code data-page-node-id="bFhlPCuHwYTDoP1sA9LNCY">PrivaHigh/backend/tests</code>；未跑 Locust 真实验收；未做 WS 地址改造；未新增任何模块</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="C4N9fwh2bWoPMr4BFiAJqW">5. MVP 剩余事项（不阻塞第一阶段）</h2>
+<ol data-page-node-id="gZJcZtG5toHjkUC5tdZE4E">
+  <li data-page-node-id="aDNUy2iB6jCsYTG2eUJVCh"><b data-page-node-id="ftfOYFA4jb9jBDnI1p84Ht">Locust 真实压测</b>：需先把 <code data-page-node-id="Aelp9CAa8VvS15LpjHQ2nm">Colyseus-Storm/locustfile.py:84</code> 的 WS 地址改为读受控配置（需你单独授权）+ 拉起 <code data-page-node-id="sRFRDGUmaoiZ7esEDExhF8">:2567</code> + 保守并发授权。</li>
+  <li data-page-node-id="4YCwaYfxz7Jfl67b7WUXkQ"><b data-page-node-id="2011jzp5FCx3CepAmN6ttd">同一被测系统三引擎闭环</b>：推荐用 PrivaHigh 后端 12 个 REST 路由承担压测环节（需授权新增受控 locustfile 场景 + Environment）。</li>
+  <li data-page-node-id="Mj3q1R6xpoDNbE1QVy74JC"><b data-page-node-id="kQfRu1x8E6uL97STJdhLKr">真实数据 A/B 对比</b>：对比功能已具备，仅缺在两个真实运行之间做一次。</li>
+  <li data-page-node-id="VIhsxGho8mQeNCDnigjkg3"><b data-page-node-id="1LLEydLowV3tlWHDCQoiqC">修复后的「49 passed」经平台留档</b>：平台侧最新记录仍是 PlanRun #20 的 46/3 failed。</li>
+  <li data-page-node-id="c81CAhk5BSusKZYLDEgYcI"><b data-page-node-id="2rvJeVxWYV0F60fahx6MEG">verify 基线未全量复跑</b>：本轮跑了单测 52 条 + <code data-page-node-id="D7ED6D5FqUO5xFdnd3Y0rN">verify_config_center</code> + <code data-page-node-id="MfovZv5f3RZt4LvdF00dJt">verify_plan_editor</code>；<code data-page-node-id="4Yzdsz5pc3gSEEGDXqkaja">verify.py</code> / <code data-page-node-id="IxxBIVU1addtt9w8eRWVDG">verify_control.py</code> / <code data-page-node-id="foctoLEEG2i4MMSL3l07Va">verify_locust.py</code> / <code data-page-node-id="vXuOvsuUazGCPAVWisUDjq">verify_matcheval.py</code> / <code data-page-node-id="DBQX781AFVRTdAVRt5k4Ug">verify_report_center.py</code> 需先启动服务（前者需 8000，后四者需隔离实例），未跑。</li>
+  <li data-page-node-id="LwfQfzfAv6cjAQDAcDRK2g"><b data-page-node-id="TrYfbUgS4YrJJfDHshHyER">平台已知缺陷（未修）</b>：预检 <code data-page-node-id="O1VvyIoZX0u9bMd6IfUFiw">run_in_progress</code> 因历史 <code data-page-node-id="xBbczJEg8IYmS46KRZk5gv">timedout</code> 误报（仅显示层）；Job#24 约 69s 退出延迟根因未确证。</li>
+  <li data-page-node-id="v1KVbmACbnmXLFSofNqi54"><b data-page-node-id="5HMCz7BVkQ50xl9sx7OLHD">超 MVP 边界</b>：UI 交互自动化（Airtest poco 未被平台接管）、分布式 Worker、鉴权与多租户。</li>
+</ol>
+
+<footer data-page-node-id="Qg83rTI8FPqKaCuikFRuWZ">
+本轮严格限定在用户确认的 4 项收尾范围内：未新增 TestCase/TestSuite、CI/CD、RBAC、多租户、Worker/K8s、UI 自动化引擎或任何新引擎；未做 Locust 真实验收、未做 WS 动态地址改造、未做 PrivaHigh 三引擎闭环、未做 Job#24 根因分析、未做任何 P2 优化。
+<br data-page-node-id="JeiGB5SwftsquamXCpy667">报告内所有数字均来自本轮实际执行的命令输出；未执行的项目均已明确标注。
+</footer>
+</div>
+</body>
+</html>

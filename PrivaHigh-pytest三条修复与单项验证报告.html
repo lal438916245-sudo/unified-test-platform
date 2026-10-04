@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="JAy9sPrHxubSkWgh8Y2wwi">
+<head data-page-node-id="eVdu8ASViIzkPWUJ5qi2xH">
+<meta charset="UTF-8" data-page-node-id="LWgH2uERyobrcvxRP0y5CT">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="fbxgAlrypFrR5tG860LiCm">
+<title>PrivaHigh 三条 pytest 失败 · 最小范围修复与单项验证</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#eef2f6; --line:#d7dee6;
+    --fg:#1b2229; --muted:#5d6b7a; --accent:#1f6feb; --ok:#15803d;
+    --warn:#b45309; --bad:#b91c1c; --chip:#e7edf4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:36px 24px 72px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:26px}
+  h1{font-size:24px;margin:0 0 8px}
+  h1 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+  h2{font-size:17px;margin:30px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:15px;margin:18px 0 8px;color:#2b3641}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;background:var(--panel)}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#2b3641;font-weight:600;white-space:nowrap}
+  code{background:#eef2f6;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#0b4f9e}
+  pre{background:#0f1720;border:1px solid #24313d;border-radius:8px;padding:12px 14px;
+    overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#d7e3ef;line-height:1.6}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:2px 10px;font-size:12px;margin:0 6px 6px 0;color:#33414f}
+  .ok{color:var(--ok);font-weight:600}
+  .bad{color:var(--bad);font-weight:600}
+  .warn{color:var(--warn);font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+  .card.hl{border-left:4px solid var(--ok)}
+  .card.note{border-left:4px solid var(--accent)}
+  ul{margin:8px 0 8px 20px;padding:0}
+  li{margin:4px 0}
+  .kv{font-size:13px}
+  .kv b{display:inline-block;min-width:230px;color:#33414f}
+  footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body data-page-node-id="BZoVY3sgpeAYmbBnaE2QXM">
+<div class="wrap" data-page-node-id="ScGpApXcBMzNYkKLsoIJNQ">
+<header data-page-node-id="gu7yvdg3WX8qUeea2rnifk">
+  <h1 data-page-node-id="xsLt9AOdJm1hQCcxUMxsaC">三条 pytest 失败 · 最小范围修复与单项验证<span class="sub" data-page-node-id="IBFLx9rjoUWeOvjBOhSOMO">PrivaHigh《私立高中校长》· 2026-09-29</span></h1>
+  <p class="muted" data-page-node-id="EexFQ3ARINvTP3pHkCP2HH">依据上一轮只读归因结论（三条失败同源：测试把事件池取模除数写死为 3），本轮按用户授权
+  <b data-page-node-id="i27gikgT5X9gWJhBYX00jU">只修改测试文件</b>，把三条测试从「依赖事件池位置/长度」改为「按业务语义定位目标事件」，并只运行 <code data-page-node-id="Qf3XL50wjfBH7BmDPn4MCx">tests/</code> 验证。</p>
+  <p data-page-node-id="eI2hedkMVHCsRKsZHBfCty">
+    <span class="chip" data-page-node-id="DdxBPUGFEyCbtx7PAcNSJM">改动文件：1 个（测试）</span>
+    <span class="chip" data-page-node-id="hUU7YVZvtEpeS5mOSvQWUK">生产代码：未改</span>
+    <span class="chip" data-page-node-id="Iu2ftiMRRVDNtEbnCKzgqf">结果：49 passed</span>
+    <span class="chip" data-page-node-id="lkvwWNotFdAbZRjJRO7cgJ">事件池 10→12 免疫性：已验证</span>
+  </p>
+</header>
+
+<div class="card hl" data-page-node-id="PqaiGX4M5JXgIUovBxtQGB">
+<h3 style="margin-top:0" data-page-node-id="rFkNDeYVR6q5K9HDOwoMAr">一句话结论</h3>
+<p data-page-node-id="8By0HbiO9WkVjGGuxmGKbW"><b class="ok" data-page-node-id="kiUFJFIJfCs58BJLc4QmRU">49 passed / 0 failed / 0 errors / 0 skipped</b>（1.62s）。修复方式为<b data-page-node-id="eXKLABBvk8Do2iYFY3oxs2">语义定位</b>：
+沿真实结算路径推进学期，直到出现携带 <code data-page-node-id="lnZd7cLVwxlLsGwJnQuUjM">dismiss_teacher</code> 选项的事件并直接使用它 —— 不依赖事件 index、
+不依赖事件池长度、不靠特定 seed 凑 index、不再引用私有 <code data-page-node-id="3iDzSWFp97Kb3kYZ1Jp9yi">_event_for</code>。生产代码与事件池均未改动。</p>
+</div>
+
+<h2 data-page-node-id="H4Or1Dnt6UxTHVxcDWW8uD">1. 修改了哪个文件</h2>
+<table data-page-node-id="C3dYBMBbdM7shIiPskna6L">
+  <thead data-page-node-id="iJC0hyG9vq5aDPxmEoxkEq"><tr data-page-node-id="4Nvis45DWTjPYG4RXA6mxn"><th data-page-node-id="ZcBJsduKDLzVPFIOBFvXnY">文件</th><th data-page-node-id="it6Jl6ubFfiwh4g19zAxAs">类型</th><th data-page-node-id="23MaATNnVsK4Oz5kZYtCa3">改动</th></tr></thead>
+  <tbody data-page-node-id="w2sOVviM14Hjbi3HgGEHnp">
+    <tr data-page-node-id="tFFW5k6OP0W9u0CxoG07cN"><td data-page-node-id="KZD5PM5Z0jTqHwTPqXu6l5"><code data-page-node-id="VdzwqjLKkF044YlbXUHx1u">F:\Colyseus_SDET_Project\PrivaHigh\backend\tests\test_simulation.py</code></td>
+        <td data-page-node-id="6A1RyO1bLK488q6VkLCXKF">测试文件（<b data-page-node-id="iBIXxZoEv644UCGjrw1Y7h">唯一</b>被改文件）</td>
+        <td data-page-node-id="CVk0YRezlAZ8q2BLi3Vs7b">新增 2 个定位辅助函数；重写 3 个测试；删除 1 行写死除数的注释</td></tr>
+  </tbody>
+</table>
+<p class="kv" data-page-node-id="XYFJweEXmGV8f1EZyOIAI9"><b data-page-node-id="ELK1sFRsNhhQZqypybMhJA">未改动（已核验）</b>：<code data-page-node-id="jMly3a7BjHqX6onPU9FaFf">app/simulation.py</code>（mtime 仍为 2026-08-31 16:50）、平台 Runner / 数据库 / Plan / PlanRun / Job / AssetSource、
+真实资产、MatchEval、Locust、<code data-page-node-id="sHJ8VDt4oy54XLRz4b9WOV">pytest.ini</code> 与任何 pytest 配置。<br data-page-node-id="iT8EnbEc9s4tIeWnphkbfF">
+<b data-page-node-id="ihC1n8OYYOUcJMhLq2Uj1E">副作用记账</b>：运行 pytest 会由 pytest 自身写入 <code data-page-node-id="6xEYQoSf0mruJQCJt0ldcC">PrivaHigh\backend\.pytest_cache\</code>（缓存目录，非源码）。</p>
+
+<h2 data-page-node-id="EWCqOvtElnQWNCgX8mBKNn">2. 修改了哪几个测试</h2>
+<table data-page-node-id="xiMvRKSWQcktVKeJeKix3J">
+  <thead data-page-node-id="0xHhUr2vI0aLJqyBHSCRrJ"><tr data-page-node-id="XlcvHjen1qTk6xlf2LbHvh"><th data-page-node-id="3PCECcsTk0EqgmHUBo2Xs4">#</th><th data-page-node-id="67sKt4mnJIRhBoSWuT9GmL">测试</th><th data-page-node-id="Or3BFmaS9LOBHjTb5GgHx8">位置</th></tr></thead>
+  <tbody data-page-node-id="kuWaj21HjwDzTutxcNr9Dl">
+    <tr data-page-node-id="PrMkd0XW9tuBoyAXeaO2pn"><td data-page-node-id="6kd6OvNx9x6AFSGiyw3he2">1</td><td data-page-node-id="uwZPVQC0CZW2izTl3lXrjF"><code data-page-node-id="708MtJSdTiB8pSq77S16Er">test_transition_dismisses_a_senior_teacher</code></td><td data-page-node-id="lF3c4O83FlWiQ3VBPB6FLk"><code data-page-node-id="Mwj3nuOApVqk3C0eRHwp1O">tests/test_simulation.py</code></td></tr>
+    <tr data-page-node-id="R4eV9pBasP8B3cWdCN3gHl"><td data-page-node-id="27sg39LOp2eCWhgKiSnkzh">2</td><td data-page-node-id="CsaFRUDOrFoqPagC9ZDbQo"><code data-page-node-id="Ql0ipv2KiHjHH3gwLL6LLN">test_transition_without_senior_teacher_dismisses_regular</code></td><td data-page-node-id="FmfmHLIlld81Ehs3AFxmrw">同上</td></tr>
+    <tr data-page-node-id="IMWEUfFXZst9ZZmQmGyUSq"><td data-page-node-id="w7VhDHf4A6BOaHVz01oKIJ">3</td><td data-page-node-id="DeqmehvrI91JcP3c8dK1iv"><code data-page-node-id="w4AKwASIMbP7Q7CKQmiWTJ">test_transition_with_no_teachers_is_noop</code></td><td data-page-node-id="WPEevRrHU9ouGNdozqW4xI">同上</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="JVeE1NkqYNvnQqY3R0MfZB">3. 每个测试修改前的问题</h2>
+<table data-page-node-id="i85mrJG3CM9IVst7kdQDTg">
+  <thead data-page-node-id="S2uEjMNQyUgS066E8FuMFv"><tr data-page-node-id="H9yvdIGjALFfnCdJs680Yh"><th data-page-node-id="SdDoHDsXj1pwRFE238tZQ6">测试</th><th data-page-node-id="k6DdF6H55RzJD71e2HFIVY">修改前写法</th><th data-page-node-id="eyjCMerYT2wKScwsG3fGKA">问题</th></tr></thead>
+  <tbody data-page-node-id="vYNWHqU3BKZgYtN3ZrWM5N">
+    <tr data-page-node-id="0IBf2AOrXNjjp36BTSUxUR">
+      <td data-page-node-id="gPRJpjOqB6UhH6NGGIjABC">#1</td>
+      <td data-page-node-id="ExJyjaHl5L0kCA28QEAtoa"><code data-page-node-id="LyY1BD4hFUDvWHsc7doZWK">state["semester"]=2</code> + <code data-page-node-id="G7dRAgvGmlNtTsdf0T0ybh">_event_for(state)</code> + <code data-page-node-id="OLdGAUnvhGjk0Edt4NiuKq">assert title == "骨干教师去留"</code> + <code data-page-node-id="BgG7YguQFYfLnZQYSRuwvv">resolve_event(..., "transition")</code></td>
+      <td data-page-node-id="TLscQbBWgxV3DyZFqaczR1">注释 <code data-page-node-id="j1KmN8KDKk4UrWD1Y6QHH7"># (3+2)%3==2</code> 把取模除数写死为 3；事件池已扩到 10 条 → 实得 <code data-page-node-id="YoGCDciz4nsoZtMxaRADdW">(3+2)%10=5</code>「实验设备老化」→ 断言标题失败</td>
+    </tr>
+    <tr data-page-node-id="VgOH5FOEkWCMY8lRF1TTXG">
+      <td data-page-node-id="53vbC0xqrpS3O8D5n8Ca5Z">#2</td>
+      <td data-page-node-id="7e7mvqieRCiKQajDK7i5EV">同上（先剔除特级教师）</td>
+      <td data-page-node-id="OgOcyeHF0o5waVinLGWiiv">拿到的仍是「实验设备老化」，却去解析 option <code data-page-node-id="xdADTxLqAIaiTifkf27OZd">"transition"</code>（该事件只有 <code data-page-node-id="k8VHcRzwtSGLSZFAvVCmkd">buy</code>/<code data-page-node-id="7KFnHBCWeBP5Vcy8B59jtg">cut</code>）→ <code data-page-node-id="drfRA4syIWC2C8WEH9Z9o0">simulation.py:360 SimulationError: 未知事件选项。</code></td>
+    </tr>
+    <tr data-page-node-id="tUoW3Eh4hRp5VmoDkcmOax">
+      <td data-page-node-id="lDABa9R8Olc2sB0X9iF2gQ">#3</td>
+      <td data-page-node-id="cCwjqACV8ab14Xkd8oExXw">同上（清空教师）</td>
+      <td data-page-node-id="1DARBNFwy3uoBMIVdGdNed">与 #2 同一连锁后果</td>
+    </tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="nLEsPKSzRrrasgRKBnyWRm">共同问题：三条都<b data-page-node-id="GZQz6h63w9FuixZPgwFbcN">依赖事件池的「长度 × 位置」</b>，且把 option id 字面写死；事件池一旦扩充必然失效。</p>
+
+<h2 data-page-node-id="YppUWAzR5t6QFIpPKGBbqn">4. 修改后的定位逻辑</h2>
+<p data-page-node-id="XhfU3vhKivLiFg0JbU28mT">新增两个辅助函数（放在既有 <code data-page-node-id="P35yA7IDHFSPi3HWNA6BX8">_settle</code> 之后，复用现有结算辅助）：</p>
+<pre data-page-node-id="v6vG7R96Ru8yz9cYA4vNI9">def _handover_option(event):
+    """取事件的「内部交接」选项：按 dismiss_teacher 语义定位，不写死选项 id。"""
+    return next(option for option in event["options"] if option.get("dismiss_teacher"))
+
+
+def _teacher_departure_event():
+    """按业务语义定位「骨干教师去留」事件，而不是靠事件位置或事件池长度。
+
+    事件池由 (seed + semester) % len(事件池) 轮转选出，且条目会随版本继续追加；
+    学期逐 1 递增必然遍历事件池的全部条目，因此这里沿真实结算路径推进学期，
+    直到出现携带 dismiss_teacher 选项的事件 —— 该标记是「内部交接（解聘一位教师）」
+    的语义锚点，与事件排在第几位、池中共有多少条都无关。
+    """
+    state = create_game("致远高中", seed=3)
+    for _ in range(200):
+        state, _ = _settle(state)
+        event = state["pending_events"][0]
+        if any(option.get("dismiss_teacher") for option in event["options"]):
+            return event
+        zero_cost = next(option for option in event["options"] if option["cost"] == 0)
+        state = resolve_event(state, state["version"], event["id"], zero_cost["id"])
+    raise AssertionError("事件池中未找到携带 dismiss_teacher 选项的教师去留事件")</pre>
+<p data-page-node-id="YvcWpS4dtO3ZnA4WHV2bWE">三条测试的写法统一变为（业务断言<b data-page-node-id="gvUR8WseOlInxbWXlVxbQQ">逐条保留</b>）：</p>
+<pre data-page-node-id="ClwKXyhF9Bi2mmANerl1f6">def test_transition_dismisses_a_senior_teacher() -> None:
+    event = _teacher_departure_event()
+    state = create_game("致远高中", seed=3)
+    state["pending_events"] = [event]
+    senior_before = sum(1 for t in state["teachers"] if t["tier"] == "senior")
+    assert senior_before == 1
+    state = resolve_event(state, state["version"], event["id"], _handover_option(event)["id"])
+    # 内部交接应解聘一位特级教师
+    assert sum(1 for t in state["teachers"] if t["tier"] == "senior") == 0
+    assert len(state["teachers"]) == 3</pre>
+<table data-page-node-id="AWEOut7ZShSCEDpYcF8FEn">
+  <thead data-page-node-id="eIFItSjFvb5Yga6XYAjQs2"><tr data-page-node-id="6wZEhXCOZAEl3L4LJPlfG7"><th data-page-node-id="Mw5BcxfuEwrzAV4ayGRYx4">要素</th><th data-page-node-id="fzXaxLTJIHp3UOlAFT2HYZ">改前</th><th data-page-node-id="9lSA6D1fMJKWVWX0m5ZDwj">改后</th></tr></thead>
+  <tbody data-page-node-id="32r1Hb9NzRWzRgow1AIx8C">
+    <tr data-page-node-id="F9yEgzbWIkZnTn1RZJ8lo1"><td data-page-node-id="Y4ZWj0NRbkOcSFkAdiCPS9">事件定位</td><td data-page-node-id="1j8y9FeN41Q2q7K5ahsC15">靠 <code data-page-node-id="MwCwltK1OgK0eMUqn7gJE9">(seed+semester)%3</code> 推出 index 2</td><td data-page-node-id="Fa3Eae9Nc8FSRahOcoeG2t"><b data-page-node-id="BxwnZvZQ6YMTAcuWiBblPt">靠语义</b>：池中携带 <code data-page-node-id="YgqPsH3DGnFkVkaukIjqNT">dismiss_teacher</code> 选项的事件</td></tr>
+    <tr data-page-node-id="OOvggrMz4ldund5F4Co1MN"><td data-page-node-id="tX54hkTnDsMpcegqDHQ7p1">option 定位</td><td data-page-node-id="mk2uYyxBBeK8OwRtvMh2V8">字面写死 <code data-page-node-id="WbrLXhoTDv9TYEGzXKr2Hl">"transition"</code></td><td data-page-node-id="Fn5fnv7ZN0VGPFUDNaZyn4"><b data-page-node-id="tEFQnHp1jOigj2ejwoWjAj">靠语义</b>：<code data-page-node-id="SeZDnl4Mv3YG1GIeTDMrs8">_handover_option(event)["id"]</code></td></tr>
+    <tr data-page-node-id="w5B1T4d952djU6gCm8jEAo"><td data-page-node-id="eCW2TLAaM0DKVQLFKiAOD4">依赖私有函数</td><td data-page-node-id="EEYE2EeDXuk1d0rZf24Hkw"><code data-page-node-id="IlqHEBQqflkr3H3JDgLeCr">from app.simulation import _event_for</code></td><td data-page-node-id="AAFrcE0Qt1Hta4PLHwQ2eq"><b data-page-node-id="RCrcEdmla5WBEzsq8zKoIR">已移除</b>（只用 <code data-page-node-id="ppir1JA93XOwXfEfDn7pBx">create_game</code> / <code data-page-node-id="8usZ99BaW70rSv2Us0nAAF">advance_semester</code> / <code data-page-node-id="UXmKAq7DP520aHvNANU1E6">resolve_event</code> 公开 API）</td></tr>
+    <tr data-page-node-id="ChXdB7RaClYMqbJWlEphY1"><td data-page-node-id="Cf3NaSDiqcoBoG7JlCG4go">业务断言</td><td data-page-node-id="MDaujczYEBjzqIsAlEYH56">标题 + 教师人数 + pending_events</td><td data-page-node-id="B8zYenY1ZyE3wlran65ce1">教师人数 + pending_events（<b data-page-node-id="AELbyQHw1GWT9VXDO9l0HH">未放宽</b>；标题断言由更强的语义定位准则替代）</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="JcCazhGuvHRF0192HFG5lO">5. 是否修改生产代码</h2>
+<p data-page-node-id="7WVDQUqfyRDdK932EnUZQt"><b class="ok" data-page-node-id="RDawVcaDueASryYkFBJUYo">否。</b>方案 A 完全在测试内实现，<b data-page-node-id="26GcGTAXRAxkBzqbQMJIFi">没有</b>请求生产侧新增只读入口，因此未触及 <code data-page-node-id="7dWDbgKYdAkEV3i1fvABkM">app/simulation.py</code>、事件池、平台 Runner、数据库、Plan/PlanRun/Job、AssetSource、真实资产、MatchEval、Locust。</p>
+
+<h2 data-page-node-id="FH2F1uJGpwFibQ9Au9ILn2">6. 是否仍依赖 seed</h2>
+<p data-page-node-id="ct1n9YiKHZG7Ne0SZ5780D"><b data-page-node-id="ehzN9dZDzcqlaOFuH8NH32">不用于选择事件。</b><code data-page-node-id="msx2DrsvluCtH3sZI7f79G">create_game(seed=3)</code> 仅用于构造<b data-page-node-id="sp2eEk40BNTNjoXL5wMPde">确定性初始状态</b>（与本文件其它 30 余个用例的既有风格一致）；事件的命中<b data-page-node-id="DiFqVps7UNNWLPxT2SMRye">不再由 seed 决定</b>。判定 helpers 的做法是「学期递增直到目标事件出现」，对任意 seed 都成立。</p>
+
+<h2 data-page-node-id="2C0j9NXmYAw31YFMKHV5IZ">7. 是否仍依赖事件池长度 / index</h2>
+<p data-page-node-id="eqKISQfEq9ufVVblu7hlA3"><b class="ok" data-page-node-id="49uL7N1IVFseOb7OcfMP15">否。</b>双重证据：</p>
+<ol data-page-node-id="tniKE7tUoiLtBkct4OA4ht">
+  <li data-page-node-id="ESx9QhgqMEGXzVtlBcM7hX"><b data-page-node-id="lvwzjyCrZNBWDvc4KMMQar">代码自查</b>：修改后文件中 <code data-page-node-id="p3uIUO22OGZCa2lV8tDGg1">% 3</code> / <code data-page-node-id="RbyxEKjEBUj4MlWoIdSQAw">%3</code> / <code data-page-node-id="cNTCrW0l6Zob7EJcDu3m16">_event_for</code> / <code data-page-node-id="Jl1Jc26N69HXYXidgpALXe">seed=10</code> / <code data-page-node-id="QABrPoP0G8Vj0qMeJLtpoo">"transition"</code> / <code data-page-node-id="2tWOydvSWc3xVdPPG6YKzS">len(choices</code> 出现次数<b data-page-node-id="rUmDbCBGl4wz0gIedxpipw">全部为 0</b>。</li>
+  <li data-page-node-id="6Q1J3QRdMIR0rJb5lgrf58"><b data-page-node-id="HooT287U3cdwWRfnmo51g0">动态验证</b>（临时探针，仅在内存中把池补丁成 12 条，脚本用完即删、仓库零改动）：
+    <table style="margin-top:6px" data-page-node-id="EFQE6QBPVd6ElDtZH0NS0I">
+      <thead data-page-node-id="yrZevIfFX5M6jhBp5oXUF9"><tr data-page-node-id="6wZ7GHVcY9bgECvRda1dJk"><th data-page-node-id="qMsosZPJHIGll4SLqKdvpO">事件池规模</th><th data-page-node-id="aBp232nEZKSlRGFgCqDyzS">目标事件在池中 index</th><th data-page-node-id="GxKkcV8sQD9tVSAhOrr39K">helper 命中的事件 id</th><th data-page-node-id="YJqnPqFtBnM35UpjirW9pa">三条测试</th></tr></thead>
+      <tbody data-page-node-id="EA0PG7Q0TXJ1UAm2BLibCU">
+        <tr data-page-node-id="A1YxSWiTpuPlgiA4hl2vdm"><td data-page-node-id="AG8dlvnsCxu2yvjlqCBEpU">10 条（现状）</td><td data-page-node-id="PYYPKr8Au165EkCvkCDixD">2</td><td data-page-node-id="6bMoPbrkRhAjYJRxQXovIf"><code data-page-node-id="pVE6Hpsy1jFT3qP0u1qBqL">teacher-9</code></td><td data-page-node-id="jRnfDkpjSDf95QKCeru30H"><b class="ok" data-page-node-id="IznKjssdBANn3K31MF1Rhw">全部 PASS</b></td></tr>
+        <tr data-page-node-id="tFhJbjyskRlrnxQJt67YmS"><td data-page-node-id="4Tc4hM9J9GziYMD2mm8o5h">12 条（模拟扩充）</td><td data-page-node-id="rcp2RTcwCPD8LnvIhnVJSC">2</td><td data-page-node-id="aCYX6afcJwK3T62OtfaZyZ"><code data-page-node-id="jaJpvTeU8VGhyHCqh2jBJ8">teacher-2</code></td><td data-page-node-id="BEQnHfijRyQBuzoFkB9n0O"><b class="ok" data-page-node-id="V0XzAPq2ow5VVGBgvkYQh9">全部 PASS</b></td></tr>
+      </tbody>
+    </table>
+    两轮命中的 <code data-page-node-id="f1GVXPLw3uvI5fzovEHCbg">id</code> 不同（`teacher-9` vs `teacher-2`）却同样通过 → 证明与事件 id / index / 池长度均已解耦。</li>
+</ol>
+
+<h2 data-page-node-id="KHlgCUs9KyMIknFhvbijWf">8. pytest 完整结果</h2>
+<p data-page-node-id="CgEpFliKX7QMnEp0JmyRsU">命令与平台 Runner 一致（同解释器、同 cwd、同选择器）：</p>
+<pre data-page-node-id="1VCX5cW7aOEgV39oOZJbMK">$ cd F:\Colyseus_SDET_Project\PrivaHigh\backend
+$ F:\Anaconda3\python.exe -m pytest tests/ -o addopts= --tb=short -q</pre>
+<pre data-page-node-id="Y2jgVQDdjjvGFtWBbvW8a6">.................................................                        [100%]
+============================= warnings summary ==============================
+..\..\..\Anaconda3\Lib\site-packages\fastapi\testclient.py:1
+  ... StarletteDeprecationWarning: Using `httpx` with `starlette.testclient`
+      is deprecated; install `httpx2` instead.
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+49 passed, 1 warning in 1.62s</pre>
+<table data-page-node-id="njTbyaXHSINH2t4BbJw1yP">
+  <thead data-page-node-id="9nigfmKa5eaTyy91VQUSgY"><tr data-page-node-id="fYE2RxDZY7raTAj2EyJm0T"><th data-page-node-id="0edkfodN8bubLGv9cjkSOa">指标</th><th data-page-node-id="ZDG8WiTeCNMZzYA65f5alY">目标</th><th data-page-node-id="gxdHji2mLKDwAVk0TjxGhE">实测</th></tr></thead>
+  <tbody data-page-node-id="K3csxUaUxJoHtQmS4Uv1Xs">
+    <tr data-page-node-id="BNaBzn15zwNICQ3E9hj7Hg"><td data-page-node-id="QEHjdxbNcm4RMPEa6SxN3u">passed</td><td data-page-node-id="47y4LbE6lMDNiTBk8myEMQ">49</td><td data-page-node-id="O6pJAsIN4NIutq89vnPR3u"><b class="ok" data-page-node-id="jfiK2pgwNMXUAE23RuGaAV">49</b></td></tr>
+    <tr data-page-node-id="YrgUc4a5CKyV1VThESS9Tf"><td data-page-node-id="KeAYmOShqqwTccLQ673DoO">failed / errors</td><td data-page-node-id="CDVj9LqXxYy9DvZvWkmWAL">0 / 0</td><td data-page-node-id="xdaHpUS4w5XGPYzCWFnzLP"><b class="ok" data-page-node-id="pgbayUyYFixJa6GdDgxhCZ">0 / 0</b></td></tr>
+    <tr data-page-node-id="gynqNHFPPmk1UPzawrv3Ht"><td data-page-node-id="WCLH2oYyC7NVriG8khIyyg">skipped / xfail</td><td data-page-node-id="WAothppOUfHhf2BEBqNQCp">0 / 0</td><td data-page-node-id="Emu0UeqkEBFkKQF66IRrVP"><b class="ok" data-page-node-id="Ec9XUxN486aMIiTIJY6EGO">0 / 0</b></td></tr>
+    <tr data-page-node-id="Oe8mu7coI7lrKGrM23P333"><td data-page-node-id="ewnIeUUP02jbfHZAh1ZDjD">三条目标用例单独跑</td><td data-page-node-id="vNEizyUHcfoC9r53opvBAL">3 passed</td><td data-page-node-id="KS6bD65PK6FP2UH5EPNXeE"><b class="ok" data-page-node-id="1Fi1NajR5KDKGViGZO7VpV">3 passed</b>（0.10s）</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="Hd2nA3PQHcAjFfNcsFBcWU">9. 总耗时</h2>
+<p class="kv" data-page-node-id="cEj6EBYt5E3GNWJ2Q4g54o">
+<b data-page-node-id="cdMzGVRZDOiR2AXOIHHYc4">pytest 自报</b>：1.62s &nbsp;·&nbsp; <b data-page-node-id="xL1kWAaA85oK58HocL3CCd">含解释器启动的墙钟</b>：约 5s <br data-page-node-id="gP35fday1Y93BGheOLcRbj">
+<b data-page-node-id="VqF8ZIgAxRwLFbnTNxaNka">对照</b>：修改前同一套件（PlanRun#20 内）为「46 passed / 3 failed」，junit 自报 2.03s —— 规模与耗时同量级，修复未引入额外开销。
+</p>
+
+<h2 data-page-node-id="VvMfAdsdmPJujI6ghd4qdr">10. 明确未做的事</h2>
+<ul data-page-node-id="BULBgOlcEhqS8dtYLbK0AN">
+  <li data-page-node-id="89iRefWGQi0ZNxQswmX5AJ">未修改 <code data-page-node-id="SX7vFswq3l8hjogx8OL03e">app/simulation.py</code>、未修改事件池、未新增生产侧入口</li>
+  <li data-page-node-id="Et9Unt5hJgOyDoVGXP9fEu">未删除失败测试、未降低断言、未使用 <code data-page-node-id="5x7pNhIIqj26D3l7gesvjO">xfail</code> / <code data-page-node-id="AvLMzrBWNQmRNzM6ySAK1f">skip</code>、未吞异常、未改 pytest 配置</li>
+  <li data-page-node-id="nCtdaxm01DmKB6boVFKCRU">未重跑平台验收 Plan（按要求：49 passed 后即停止）</li>
+  <li data-page-node-id="QhplvshPbSKtB0AUflHQZc">未运行 Locust、未运行 MatchEval、未启动游戏或任何服务</li>
+  <li data-page-node-id="Xf0XWnc2oNBnTuExsmBSii">未改动真实资产、Plan / PlanRun / Job / 数据库</li>
+</ul>
+
+<div class="card note" data-page-node-id="l3NZamDnW715VnsUBHBsRN">
+<h3 style="margin-top:0" data-page-node-id="DaAWEtWMLBMDseVoZGgwxy">下一步（等你授权，本轮不执行）</h3>
+<ul data-page-node-id="9zFY2iwcytoByUrDS8M8S7">
+  <li data-page-node-id="pRuPNsSKolCUlf91R3NxXV">建议在平台上<b data-page-node-id="fznANavG3AttRp8SRQf80Q">重跑一次 pytest 步骤</b>，把「49 passed」经平台链路留档为新的业务基线（上一轮 46/3 failed 的记录保持不可变、不被覆盖）。</li>
+  <li data-page-node-id="zINC5juHXbpS4X8oT5v4E8">本轮结论可反馈 PrivaHigh 侧：属<b data-page-node-id="AwehDGDYW4YVfGIF01HJIM">测试与业务版本不一致</b>，业务代码无需修改。</li>
+  <li data-page-node-id="xG5IR6uVhznRE2WBifvH41">另有两项平台侧既存低风险项（预检 <code data-page-node-id="aLqjKOrjCfHCX1oGKIIDB7">run_in_progress</code> 误报、Job#24 的 69s 退出延迟待查）本轮同样未动。</li>
+  <li data-page-node-id="hCH7kieOokeBTmPOZOPzLp">平台服务 <code data-page-node-id="uVD13pId6EXCA4ZEKnC7AE">127.0.0.1:8000</code> 当前<b data-page-node-id="5rcMRfn6ecQL4qBqnfMrww">已停止</b>，需要重跑时请一并说明是否重新启动。</li>
+</ul>
+</div>
+
+<footer data-page-node-id="y0tOOCj26dgCvX2NTdlrsF">
+本轮为「最小范围修复 + 单项验证」：只改 1 个测试文件，只跑 <code data-page-node-id="a3BiXT4lIjYFjSPIW5QZXg">tests/</code>。生产代码、平台、资产、历史记录均未改动。
+</footer>
+</div>
+</body>
+</html>

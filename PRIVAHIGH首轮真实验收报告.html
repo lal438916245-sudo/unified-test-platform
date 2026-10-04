@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="HRemDWEN42o6KbbiokZwpk">
+<head data-page-node-id="s5VtcmVnkqzkPrIAwwvr2L">
+<meta charset="UTF-8" data-page-node-id="izC7QqNqYcqha5o6zCvXqE">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="caR6PiE2U36o34BTVcmDJ3">
+<title>PRIVAHIGH 首轮真实验收报告</title>
+<style>
+  :root{
+    --bg:#0f1216; --panel:#171c22; --panel2:#1d232b; --line:#2a323c;
+    --fg:#e6ebf1; --muted:#93a1b1; --accent:#4c8dff; --ok:#38b48b;
+    --warn:#e0a83a; --bad:#e0605e; --chip:#232c36;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1060px;margin:0 auto;padding:36px 24px 72px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:28px}
+  h1{font-size:25px;margin:0 0 8px}
+  h1 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+  h2{font-size:17px;margin:30px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:15px;margin:18px 0 8px;color:#cdd7e3}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#cdd7e3;font-weight:600;white-space:nowrap}
+  code{background:#11161c;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#9fd0ff}
+  pre{background:#11161c;border:1px solid var(--line);border-radius:8px;padding:12px 14px;
+    overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#c7d3e0}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:1px 9px;font-size:12px;color:var(--muted);margin:2px 3px 2px 0}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  .pass{color:var(--ok);font-weight:600}
+  ul{margin:8px 0;padding-left:22px} li{margin:4px 0}
+  ol{margin:8px 0;padding-left:22px} ol li{margin:5px 0}
+  .note{border-left:3px solid var(--warn);background:#1c1a13;padding:10px 14px;border-radius:6px;margin:10px 0}
+  .note.ok{border-color:var(--ok);background:#111c18}
+  .note.bad{border-color:var(--bad);background:#1c1313}
+  footer{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body data-page-node-id="w38CsxUJ1CZDFL7RynWGIS">
+<div class="wrap" data-page-node-id="upOSndkJbJqeW8jXY1hrwW">
+
+<header data-page-node-id="a16TOZdwLkDwFR8vBFHr45">
+  <h1 data-page-node-id="pGubOet9GeTtpFvbHnzsBu">PRIVAHIGH 首轮真实验收报告 <span class="sub" data-page-node-id="N0Sqwk78JRPUlAsCgchh0f">PlanRun #20 · pytest + match_eval</span></h1>
+  <p class="muted" data-page-node-id="D2ZdN70PeE79XpSef5r40I">经执行前快照核对后，按既有平台 Runner 机制串行执行两步计划（fail_fast=true）。不含 Locust。</p>
+  <div data-page-node-id="xGe1dQ7oNNbpnf02yjwk5g">
+    <span class="chip" data-page-node-id="AOogu4X07PN5zi1ZCyhtMN">2026-09-29 11:18:46 – 11:19:59</span>
+    <span class="chip" data-page-node-id="GeCxgMPsaXLQNf3ilaQ0EI">PlanRun #20 · Job #24 / #25</span>
+    <span class="chip" data-page-node-id="g1HB2GTmsyZ2T6O9GqqBfH">平台执行成功</span>
+    <span class="chip" data-page-node-id="T1k3nUX1aFnL3sNyZ6dSL1">业务指标未通过</span>
+  </div>
+</header>
+
+<div class="note bad" data-page-node-id="tZ26xpXcbnOcQFLNX9AmKz">
+<b data-page-node-id="ROUG0r7zgAkQ4A6Vdxbdkh">一句话结论</b>：<b data-page-node-id="kcgGED6ObJaEBC9gdUuHh0">平台执行链路完全成功</b>（Runner 按参数拉起、产物与报告正常归档、fail_fast 正确跳过后续步骤、历史记录零改动）；
+<b data-page-node-id="HkcXI8eVxPH8lhEvHmUxxE">但业务指标未通过</b> —— PrivaHigh 后端测试 49 条中 <b data-page-node-id="8hCvOz2vV5jwHXNgD36FLh">3 条真实断言失败</b>，故 PlanRun 判定 <code data-page-node-id="RDOvH8DkEQmN23nPt1SVsX">failed</code>，
+第二步 match_eval 按 <code data-page-node-id="xnykFPJjjFXJEyuqB2y0GV">fail_fast=true</code> 被置 <code data-page-node-id="Wfual17mjHYOy702ve8NBn">skipped</code>，<b data-page-node-id="5Tp7AS5pqAKd12reqJRCYK">本轮未产出任何 MatchEval 指标</b>。
+</div>
+
+<h2 data-page-node-id="GMgYQB7GoRiTZuDxvB1aDB">1. PlanRun ID</h2>
+<table data-page-node-id="ZNAxO7mAfhE1uKdyDQAGYf">
+  <thead data-page-node-id="hgsnbxEule1OidJU4Gopao"><tr data-page-node-id="oHoqu2u97CaKUnmZguUgSx"><th data-page-node-id="NCpXLcWIZMdyyS3oVudFSa">项</th><th data-page-node-id="V5DDht0TMc38gOPeAAF7Pd">值</th></tr></thead>
+  <tbody data-page-node-id="rjfcdKJzfOaecNGRqshUwP">
+    <tr data-page-node-id="raumfSACsgjfY5h1L5vyNa"><td data-page-node-id="2eAEdkJ6UNcyCZPPROl9SS">PlanRun ID</td><td data-page-node-id="WgGDao3bhNftVIC9ErvGjj"><b data-page-node-id="o04LMiI2RnOwIU0TmNPnkX">20</b></td></tr>
+    <tr data-page-node-id="NlaQuAzAGOUGixG2Op52m7"><td data-page-node-id="fwKYKFX4yZNO7H8u6MLivm">Plan</td><td data-page-node-id="KmG9y27Sh61XdvP6wnokbp"><code data-page-node-id="XFmC08AL84nqYeJ0WKFvyn">plan_id=13</code> · PRIVAHIGH 首轮真实验收（pytest + match_eval）</td></tr>
+    <tr data-page-node-id="tHHK5ZYHibkazg4sUMHTgm"><td data-page-node-id="MAtDhbK4GK5bkl9fk7uvGy">计划版本固化</td><td data-page-node-id="JCluU2f0c7YgSZ2mMO48AX"><code data-page-node-id="XDuBRHb66xmolE5iFEwYTx">plan_revision = 1</code></td></tr>
+    <tr data-page-node-id="KBTblQZUNBOsoME2XWCjVk"><td data-page-node-id="kZS2W76YcMc39EiqhveKEN">PlanRun 状态</td><td data-page-node-id="znPvMqTD6TmXBRcEd8j8wv"><span class="bad" data-page-node-id="Kwx84fRTB0UPfqGvBM1K09">failed</span></td></tr>
+    <tr data-page-node-id="cpRMxzwnfOWpKAMyGwNH2v"><td data-page-node-id="BzhDc2MmCNOFOHW5vXzdnJ">起止时间</td><td data-page-node-id="geGYMDwNtR0DYD3cznKBKt"><code data-page-node-id="iOmH6I3rHKsQFTrRiomrLL">2026-09-29T11:18:46</code> → <code data-page-node-id="G0fB4wZRhqcHgEHquMjOud">2026-09-29T11:19:59</code></td></tr>
+    <tr data-page-node-id="8BaxIrgNnFHAgGCeCum8jv"><td data-page-node-id="pBHQe540MEQACgSAh1WzoM">状态转换</td><td data-page-node-id="p92tagyjlFFwjKolcfP3WP"><code data-page-node-id="YKpFMQ6GiDxrX9Gur2MufQ">running</code> → <code data-page-node-id="ZBlH4W1gGlh8uouGs8poHm">failed</code>（Job 侧见 §2）</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="l3nSmMu9Gqu2JucFS12TS8">2. 每个 Job ID 与状态转换</h2>
+<table data-page-node-id="G5VIrQTvXEsDVolOiFa4wm">
+  <thead data-page-node-id="fF3JgUUuNCFxgQSZkSpgUy"><tr data-page-node-id="T3JgxRp12nCvk2HTHbzKDH"><th data-page-node-id="qftKXyQf82aFbSguvOHNnW">Job ID</th><th data-page-node-id="sE0ntP6DUzdSQKVraGTPy9">引擎</th><th data-page-node-id="ffdcEQ0oEKezpGFd2C9Hls">步骤名</th><th data-page-node-id="3MsJRoygt17xTIou7n9iDQ">状态转换</th><th data-page-node-id="XytVAFyZWtkeBDCyCXjzfC">exit</th><th data-page-node-id="xGXGVhZVBmxhuFHduEX4VV">起止</th></tr></thead>
+  <tbody data-page-node-id="rc6BWtCoiOZfa1HPOJ9ZV0">
+    <tr data-page-node-id="VpsYzaFirb1eWAnyWW0Qza">
+      <td data-page-node-id="GGZUzVIwNe5GHJU8WoD8Jc"><b data-page-node-id="BIG0Db0BCTEEffEBU0SA1O">#24</b></td><td data-page-node-id="uwoLd6LK5mfMpNOOysPPnV">pytest</td><td data-page-node-id="SwspgTtUfl7gs5pc9C1vdw">privahigh-functional</td>
+      <td data-page-node-id="jqwluY50UAOCvYFy3RYrID"><code data-page-node-id="yBZhaqD332p6sfTfOsdGPd">queued</code> → <code data-page-node-id="Mf4RsLZ0aDam7fPe8pXSv7">running</code> → <span class="bad" data-page-node-id="lRzBA5fmZZXCgU8evmam1T">failed</span></td>
+      <td data-page-node-id="T2mmPqkxHGzN0ZAr8yGINV">1</td>
+      <td data-page-node-id="6HW0durvNMG52279QQnzJK">11:18:47 → 11:19:59</td>
+    </tr>
+    <tr data-page-node-id="aIVjyey4uDES3yq7peG9bH">
+      <td data-page-node-id="jsxRVPi7B5DAFqanbW81C9"><b data-page-node-id="ftwBDHILbzppHnHZ7kVr0Z">#25</b></td><td data-page-node-id="r4Trg72vHTgrs4RIAlUDt0">matcheval</td><td data-page-node-id="Tr1scLtgEE70QTeNVL1w8h">privahigh-visual</td>
+      <td data-page-node-id="SFrDdXrKePspPINvkatRmN"><code data-page-node-id="CHBMwNFE7IhBAhruYXDwJc">queued</code> → <span class="warn" data-page-node-id="kgUV1gGVHbrC9i8TKTMbPw">skipped</span></td>
+      <td data-page-node-id="VE4zYAx1nDiwL0osRaxHKr">—</td>
+      <td data-page-node-id="y7BOkgJr7iQ0hcnzBSzAMo">未启动 → 11:19:59</td>
+    </tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="xUS8IkNmddk8axZ2iSzXO9">Job#25 的 <code data-page-node-id="KtbStzUawzVxbAeO6tQFKY">skipped</code> 由 <code data-page-node-id="9ppgiTCePTi7xscLVQw6vj">fail_fast=true</code> 正确触发：本 Job 失败后，其后尚未执行的步骤置 skipped，未启动子进程、无日志、无 report。</p>
+
+<h2 data-page-node-id="BuxPjXM6bc2cVB9XhfH2cv">3. pytest 实际 selector</h2>
+<pre data-page-node-id="UkO9HJd3kWpM2Tio44GRxq">args   : ["tests/", "-o", "addopts=", "--tb=short"]
+cwd_root: privahigh-backend  →  解析为  F:\Colyseus_SDET_Project\PrivaHigh\backend
+实际命令: F:\Anaconda3\python.exe -m pytest tests/ -o addopts= --tb=short --junitxml=…\run_20\job_24\junit.xml
+超时    : 300s（未触发）</pre>
+
+<h2 data-page-node-id="9HyiLMwOK8twLWBwh20ngG">4. pytest 状态 / 通过失败数 / 耗时</h2>
+<table data-page-node-id="LrtxfENtwHZwGhUhErruDI">
+  <thead data-page-node-id="MruPPwYUmhlRM9FsR5DzUL"><tr data-page-node-id="KdtdMrkEAh2SsIDpwnVHU1"><th data-page-node-id="rCzb4rZfpML6bS1ESDHULo">项</th><th data-page-node-id="VEXXzNqPEwXrjCGzziMFcZ">值</th></tr></thead>
+  <tbody data-page-node-id="iAEnOZ91tNffwrRXus4HVn">
+    <tr data-page-node-id="7pWtUXdICfFZH3PrR8rpef"><td data-page-node-id="eiFP2WPq6BU0N78ktmx3E8">收集用例</td><td data-page-node-id="xyF53FiHQBsbgGDMdbWYPl">49</td></tr>
+    <tr data-page-node-id="L4rGtQtEcKEWMDbGCaXTma"><td data-page-node-id="XqHsc0HHDSiD5BPhbCJpii">通过</td><td data-page-node-id="rTdpJ0a3C5V24iAidybWZv"><span class="ok" data-page-node-id="wfw6I7HURWr8lg0GIuHaAk">46</span></td></tr>
+    <tr data-page-node-id="MwBUMYOPMnmwQ0KUMV1G79"><td data-page-node-id="QRQfyugxNMNLwfsRChTnNV">失败</td><td data-page-node-id="lGLnguVqp1oYSW353O0DDQ"><span class="bad" data-page-node-id="Bwfl6K6h2oGCtR5jntY7ut">3</span></td></tr>
+    <tr data-page-node-id="9lSFInHdGR8vw22twaUpD0"><td data-page-node-id="ENVnsO5wZZ4JIe235Sp7HM">错误 / 跳过</td><td data-page-node-id="CemT1IGdPnbc990Ine5WFv">0 / 0</td></tr>
+    <tr data-page-node-id="UnjgLxb9m4fHSl2XO00qsf"><td data-page-node-id="9MsI5AxpzSS8A06e6QATR3">pytest 自报耗时</td><td data-page-node-id="VcPb8Qh4QGPfzVitdLyI1a"><b data-page-node-id="gc7vfcDeJDM85wcXs3zS2A">2.03 s</b>（junit <code data-page-node-id="hHOCYrcYrfSfkYtzF7fB94">time="2.030"</code>）／pytest 汇总 <code data-page-node-id="WIta726aKBCEbnldEEVxaS">in 2.24s</code></td></tr>
+    <tr data-page-node-id="aTxjiD6k68yCdrMwwZCgYJ"><td data-page-node-id="9zLI32rALASWHEVLlknaQf">Job 记录耗时</td><td data-page-node-id="cpZTjHQx9neEIipRQHajCU"><b data-page-node-id="hNtYhFeR9U5EzXhl1VQmDS">72 s</b>（11:18:47 → 11:19:59）</td></tr>
+    <tr data-page-node-id="vihmDdcjWToeLbcJl6fDYS"><td data-page-node-id="RqbaqzC3Jvo9cIEoDbWur1">退出码</td><td data-page-node-id="jexvQftGWLeHqjeYjci2ED">1</td></tr>
+  </tbody>
+</table>
+<div class="note" data-page-node-id="OQo0mEWWrVDFRbsxnFpFQN">
+<b data-page-node-id="RtIGsbWzuQUnKgA76E6E0n">观察：Job 墙钟耗时 72s，而 pytest 自报仅 2.03s，中间有 69s 无输出空档。</b>
+<p data-page-node-id="pEdvtJiplISCPFwMORY23g">日志文件 <code data-page-node-id="9LoRVGNEinBFKQyKVrwEpA">data/logs/job_24.log</code> 最后写入时间为 <code data-page-node-id="uZH97SavrkzZGzERMiECUi">11:18:50.53</code>，而 Job 在 <code data-page-node-id="YGGN9QDjY8YjJYpWbajJnU">11:19:59</code> 才落终态 —— 即 pytest 把结果全部打印完之后，<b data-page-node-id="lXzauau3RwOBp8xoFINC4S">进程又存活了约 69 秒</b>才退出。</p>
+<p data-page-node-id="Tq3Buq9WaK5palPbl9RHVq">已排除平台侧原因：看门狗超时为 300s 且状态是 <code data-page-node-id="yZZ2aZ2SiwOGi3E0KBPLAu">failed</code>（非 <code data-page-node-id="Bi4Bcg2LTG57LOvhZYxaI8">timedout</code>），退出码 1 由 pytest 正常返回；Runner 返回后的平台逻辑只有 DB 写入与报告落盘（毫秒级）。调度节拍 <code data-page-node-id="QcNgt6LnFuJtBDDPVKuq4m">SLEEP=POLL=0.4s</code>。</p>
+<p data-page-node-id="94f0R10ZAKHgB44RrzNhGn">因此该延迟位于 <b data-page-node-id="0pRaladKCPKrFteJmgWEHL">pytest 子进程自身的解释器退出阶段</b>。本轮<b data-page-node-id="umYir26mbHcCGlSB6ICTR5">未能确证根因</b>（不排除 PrivaHigh 测试依赖在退出时的资源回收行为）。作为待查项列出，未做任何修改。</p>
+</div>
+
+<h2 data-page-node-id="10AUp4VXekp5VEa7NfKw8I">5. MatchEval 状态 / 耗时</h2>
+<table data-page-node-id="ZOAmGx02B2Yd3u3jZT0KnN">
+  <thead data-page-node-id="e18J6SnUyj610GlzG3d0xF"><tr data-page-node-id="6TqnGC8lCHv6suGGRvS6zO"><th data-page-node-id="jT15FeSPhPEUkZDW6nzhi3">项</th><th data-page-node-id="b30MXiZwKl6DC49TQMkgRH">值</th></tr></thead>
+  <tbody data-page-node-id="xbKVQpBzjLLhHmyOJILaue">
+    <tr data-page-node-id="fZCeyiy0mEDDUvWk0ge2ok"><td data-page-node-id="BWZnMkVVi0GXB4wNpDdJCE">状态</td><td data-page-node-id="MnKgm8Kk351JaaxxozO2Yh"><span class="warn" data-page-node-id="7s8JKLi3IhH3GhHTAzPHdM">skipped</span>（被 fail_fast 跳过，<b data-page-node-id="uopAADRITEsjBynjCesN7r">未执行</b>）</td></tr>
+    <tr data-page-node-id="6pvXBq7giC36q6jpiRIHGv"><td data-page-node-id="Y5EDlOdy7Dyiy38ME5PiN7">耗时</td><td data-page-node-id="27d3OUPm97FdARjQ6h7NqT">无（未启动子进程，无日志、无 junit、无 report）</td></tr>
+    <tr data-page-node-id="dKo0CBjxw9pM734CIcV7mN"><td data-page-node-id="ptL7jfJ6j5OTu7HCr4YhgV">参数（已固化在计划快照中）</td><td data-page-node-id="gvrURlcV3cqMqddxEGbUs5">dataset=<code data-page-node-id="LjEvyzTPufDmOsKcCRUzIh">privahigh-real</code> · algorithm=<code data-page-node-id="j59N9S7nLtWsYrhD8Ga7zk">["tpl"]</code> · threshold=<code data-page-node-id="kBV1hVXsTb8PY4FamsjEga">0.8</code> · output_level=<code data-page-node-id="b7FLTEJQnoHuAsaq9EmhJU">full</code> · timeout=600s</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="bNXH19FcyE1lnIi4qfR4Lv">6. MatchEval 实际 TP / FP / FN / TN</h2>
+<div class="note bad" data-page-node-id="uHHztVGN2S0cr05ZMB39O4">
+<b data-page-node-id="fpbyHXJH2divF2B0Zc3ufo">不可用 —— 本轮无数据。</b> match_eval 步骤被 fail_fast 跳过，未执行、未产出 report.json，
+因此 <b data-page-node-id="W1DHtIvcUOB1jPKGgVF5Oe">TP / FP / FN / TN 均为「无」</b>，不是 0。
+</div>
+
+<h2 data-page-node-id="xlX7Gyg6wAoiNtT39Tft2A">7. Precision / Recall / F1</h2>
+<div class="note bad" data-page-node-id="XBa0PUBVGl4YTMvBh6BzAx">
+<b data-page-node-id="NbpgN0Jgmb0ew2cnFqGGTy">不可用 —— 本轮无数据。</b> 冻结基线为 <b data-page-node-id="UsWkkIVaMWXmXilOZvKCqS">P = R = F1 = 1.00</b>（采集后直接用未改动的 <code data-page-node-id="Bi093OJJymdIHyobS3HZSM">match_eval.py</code> 实测，
+690 行明细，TP=23 / FP=0 / FN=0 / TN=92），但那是**旁路验证**结果，<b data-page-node-id="4wV08mhfacWt9OcbhwTrLq">不是本轮平台执行产出的指标</b>，两者不可混同。
+</div>
+
+<h2 data-page-node-id="rt3F3QzM2TM6pLvqpuzCpO">8. 实际使用的 algorithm / threshold</h2>
+<table data-page-node-id="A3PGH7uD0zgE7CRGULuweu">
+  <thead data-page-node-id="htaTVt9DafrgDHnxrmNEPV"><tr data-page-node-id="iTO97CRDliM4hVwod1rbPU"><th data-page-node-id="xB3NYGIAPBU8b04ESdlcFp">项</th><th data-page-node-id="kbnAdPbBkWFaLx4juztWml">计划快照中固化值</th><th data-page-node-id="DxqNjyy5KbxW4x9Cuffw7U">是否执行</th></tr></thead>
+  <tbody data-page-node-id="DX5C6Sl2xUpK3fecb8RcUB">
+    <tr data-page-node-id="ECeIEm1JVaSMBPoq2GhknJ"><td data-page-node-id="RkuIlqmijgTBaKPsRHQfQX">algorithm</td><td data-page-node-id="TZyA6jQX3BqbFwL9Dd8BHq"><code data-page-node-id="WFDDQkfKstpBgjsAPLj3QK">["tpl"]</code></td><td data-page-node-id="kH67ljAEiDZNpHlYVuUfv5"><span class="warn" data-page-node-id="zMGj0PJ0DwZUoGFsi9cxld">未执行</span></td></tr>
+    <tr data-page-node-id="O695tMhcMV4fraholq6AxY"><td data-page-node-id="njCbnrzAnkoH8j7LbRjSZF">threshold</td><td data-page-node-id="F9bRyxyB29FapsYrgJPV7d"><code data-page-node-id="6X3o1RvXBDQraR6vwbMRgJ">0.8</code></td><td data-page-node-id="G7AyX2wSReYfvkEt7eseig"><span class="warn" data-page-node-id="nxZ0qicuhkweGpAKgzOjnD">未执行</span></td></tr>
+    <tr data-page-node-id="rxb5tBp5Qf7JVEUN5xKqAk"><td data-page-node-id="e9HhxxtUsil2mILiM4is4Y">output_level</td><td data-page-node-id="yklNmABwewCFIf5Cq7WlRO"><code data-page-node-id="yTbTkszbWYp2SnrHA4zUxX">full</code></td><td data-page-node-id="rLrXfVF1rlk4MqXRmfxGY1"><span class="warn" data-page-node-id="qYykXRT133H8pFo4IAZ6xV">未执行</span></td></tr>
+    <tr data-page-node-id="HjCDaq7D05aZYE31CSYCha"><td data-page-node-id="oKzHXao5WjtTJAmKKk8F1f">dataset</td><td data-page-node-id="S2GdvZgrCWU1vGw7dBXoJ9"><code data-page-node-id="1k9Cpv40BmxhlDhc2PSvFq">privahigh-real</code></td><td data-page-node-id="O53q5ROwG5KzbwHZhajwU0"><span class="warn" data-page-node-id="q6IYCkP9lqvpuibxjfaZbx">未执行</span></td></tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="SWee1yZm8wjmVepDGtiO6c">未加入 <code data-page-node-id="son0tPqVVF2FIyemwNGw7e">mstpl</code> 或其他算法；未启用 Locust。与授权参数一致。</p>
+
+<h2 data-page-node-id="empGzwapxsmr2fuSLFUJH8">9. 指纹</h2>
+<table data-page-node-id="c0ehtDe2ruI7EfYaDNUVKK">
+  <thead data-page-node-id="UiVSgNAptUIQw8EfNO1bDg"><tr data-page-node-id="oSaRcpOqtKM5A12kI2Z0G9"><th data-page-node-id="RfYkUXebsAjHjYmLAxOcSv">指纹</th><th data-page-node-id="ujzvjtU4FsZMIfvbXFxydT">本次执行值</th><th data-page-node-id="xIhLuw4qhAJrBlra0R275U">与冻结基线对比</th></tr></thead>
+  <tbody data-page-node-id="pP4tvbe0suiwBxGZwDHB08">
+    <tr data-page-node-id="oGgq9eBCiSVCqkOWIqEXyr"><td data-page-node-id="6Bae3VQkvPwaVNj5SsN77F">asset fingerprint</td><td data-page-node-id="Zi0dXc1NKHRGDNCmCrK6nL"><code data-page-node-id="gBYIIw1iIC9droMunX9RfF">fc40077399d1</code></td><td data-page-node-id="S4cRzxCOdFGEqbQXI1l3VI"><span class="ok" data-page-node-id="uO0cxRLLitDD0VrXpJruCy">一致，无变化</span></td></tr>
+    <tr data-page-node-id="F1BtDEBVe3s3SCJHAQVDst"><td data-page-node-id="4G5vreue2Y2Mr32FKHGfKG">dir fingerprint</td><td data-page-node-id="q5seD0kd7I3uC2FmrN2zSk"><code data-page-node-id="2srduZOAyOo2MuBDuq1drn">2815855d05cd</code></td><td data-page-node-id="T81zEpq6XpJ37PHm5eawjr"><span class="ok" data-page-node-id="OEwRPmrUCacXZxTUE0NR8U">一致，无变化</span></td></tr>
+    <tr data-page-node-id="LgLBSh7muHfrUKJdqu1IbD"><td data-page-node-id="EbBkH4fNDmd8aFSzDp13mb">plan snapshot fingerprint</td><td data-page-node-id="Xydh7CF6yoFm7M3CFcidLD"><code data-page-node-id="aGClAPU45jjopIz1Tx4iRL">58e2bb45cf93</code></td><td data-page-node-id="FEqCsjEp5vPCTyV13aGvdy"><span class="warn" data-page-node-id="Ft4Nub91QGZ7E0MLe7GhDQ">与草稿预检的 edb4439a8bd4 不同（见下）</span></td></tr>
+    <tr data-page-node-id="VGiZtHgIbCDsHvmuLw2vfZ"><td data-page-node-id="c1GZQUAAN4gHxBXGN54NxR">config snapshot fingerprint</td><td data-page-node-id="GGJaxAldPlsmEV5w0gZqtS"><code data-page-node-id="hRMe2zpLJ5cK6ySUSmvZsw">7e0ccc5e7200</code></td><td data-page-node-id="Rs3kcW5xjWS8M1lK5QxteR"><span class="ok" data-page-node-id="MGECpH2FFW3AbW37mQad9G">一致，无变化</span></td></tr>
+    <tr data-page-node-id="9vYDgaUW09FsQx07bENwPz"><td data-page-node-id="Rb4BLxOwhHokNIdLCZhyeV">子指纹</td><td data-page-node-id="jnGf7t33FVmG1BlI4MAtO3">模板 <code data-page-node-id="n2R59wBpHOpDkfDEyjxjLt">15659747e94c</code> · 场景 <code data-page-node-id="0FP24stVGixsaNqnmNYzmv">f78f6ca53c5d</code></td><td data-page-node-id="1F5GaCGTuzIOoZYURwPOC6"><span class="ok" data-page-node-id="HrHuDQCSiHCiyB5M1z4M83">一致</span></td></tr>
+  </tbody>
+</table>
+<div class="note" data-page-node-id="GHFNozLusoPCZOp9OpEOg5">
+<b data-page-node-id="LjfBDWlnbn7boE01MiftJT">计划指纹差异的成因（执行前即已查明并报告）</b>：<code data-page-node-id="CE9zOTCe06fAaHLKUPAtJm">build_plan_snapshot</code> 的哈希<b data-page-node-id="bYMU3sy4r7pEtBxrsKBVCe">包含 <code data-page-node-id="3VsqABAoWgUiTXgMAkvnJO">plan_id</code></b>。
+草稿预检时计划尚未保存（<code data-page-node-id="8RJ1d9q9ojCbE8cS4lW0Zq">plan_id=None</code>），其指纹 <code data-page-node-id="ACCsRgLvhCf0sWQ4iPYA5V">edb4439a8bd4</code> 属「未保存态」；
+计划保存为 <code data-page-node-id="oIIoR02t7v7DclM4tDrAEG">id=13</code> 后指纹必然变为 <code data-page-node-id="sb0XIhyVob1caJ376GMSes">58e2bb45cf93</code>。
+<p data-page-node-id="emnMCGXb6QA9Ik2yBzndQ3">已做决定性验证：把 <code data-page-node-id="5HQUooPW4XrebNXW39L8sh">plan_id</code> 换回 <code data-page-node-id="nGhhCUtNp7cbDFS43VLtIG">None</code>、其余输入完全不动，<b data-page-node-id="JbKgAejb07GgrxQSTjBICo">逐字节复现出 <code data-page-node-id="Ld2EMy9HGgj3csfDwECK83">edb4439a8bd4</code></b>；
+逐项比对显示 <code data-page-node-id="OGFhP0A42hQOf8zR76IKq8">revision / env / exec / asset_source / steps / fail_fast / name / description / owner</code> <b data-page-node-id="vP2SJhJ95HKPbf8h8eJxID">全部相同</b>。
+故这不是配置漂移，而是「草稿指纹 vs 已保存指纹」的比对口径差异。</p>
+<p data-page-node-id="ALoXWGEFG6GgXguoqR0DS1">计划自创建后未被编辑：<code data-page-node-id="nBkGYTN6X1U7f4MogCCedO">created_at == updated_at</code>、<code data-page-node-id="PPeVFZDB4R85aaOWfL3GVo">revision=1</code>。</p>
+</div>
+
+<h2 data-page-node-id="I6dSEyklWxMmDRfDCBqlOu">10. report.json 路径与报告产物</h2>
+<table data-page-node-id="Rmp8tssCYAcJD19N2JLHQU">
+  <thead data-page-node-id="xiDlwi9DwpwByvyE91CVGU"><tr data-page-node-id="USfBCB8o5gt1XPmNwXQANh"><th data-page-node-id="XZkF5YDZIEQ2pV1NvtveSV">Job</th><th data-page-node-id="XrJJ5AkrEaF8lIOquwjFrJ">产物</th><th data-page-node-id="163wDirELKNVFRgjXO2tud">路径</th><th data-page-node-id="4Cazd1lgIrWzIYVHBbFyAu">大小</th></tr></thead>
+  <tbody data-page-node-id="XqvNFpFx8YIDJTf5azKHqq">
+    <tr data-page-node-id="fI5uCHvFMqus0bYyRE7nQQ"><td data-page-node-id="Kdn16zJ7kAWFvANsqCIxcU">#24 pytest</td><td data-page-node-id="R2Af39uazWuyzDur5FhJjJ">report.json（平台统一报告）</td><td data-page-node-id="qPl1KvD3XzVOKn7XfMbvq0"><code data-page-node-id="UOLk4Tz2jc6qg7QAS20wmh">data\reports\run_20\job_24\report.json</code></td><td data-page-node-id="KJ6LBxf9QZiSZNC600zNiA">—</td></tr>
+    <tr data-page-node-id="KNTADEm6JzQJoXF7nUlYlN"><td data-page-node-id="M1Nrz9o7QaqxrVCDRWozam">#24 pytest</td><td data-page-node-id="rr8XwxsiFgsfYE5RQp0JCQ">junit.xml（结构化原始结果）</td><td data-page-node-id="SC2RiWSSzg2dSV6atER1rz"><code data-page-node-id="oVJM0aRfJ5BDyUD8tQBnn4">data\reports\run_20\job_24\junit.xml</code></td><td data-page-node-id="fAuky5cjskGK44HBdEnen6">6867 B</td></tr>
+    <tr data-page-node-id="asuJeWKpL4pmSUkFqqIsqr"><td data-page-node-id="qafFPK0Ckjt7Wuy4ua4qxH">#24 pytest</td><td data-page-node-id="3gklJaM2kMoX78Z7EYx9Cc">运行日志</td><td data-page-node-id="VOAcrHjT7kzSYEjpylXaGW"><code data-page-node-id="pZRGedNkHow1NQH5yKJPAE">data\logs\job_24.log</code></td><td data-page-node-id="COtbzkcFtVCMG35uK3pCpg">2930 B</td></tr>
+    <tr data-page-node-id="RCHBCnDD7Wk0OfWijAsSVw"><td data-page-node-id="9ToLOdhtxbs4NABx8xJYhy">#25 matcheval</td><td data-page-node-id="bLQHQwMaSt7bWNO7cATWO0">无产物（skipped，未启动）</td><td data-page-node-id="I0vgkFHI8vsBFoQkfbLJmt">—</td><td data-page-node-id="OtBBeLcQdvCBP5RXm9Pw41">—</td></tr>
+  </tbody>
+</table>
+<p data-page-node-id="VBSUI1joO4dogIhZ8qR2aV"><b data-page-node-id="gUFNEY5Q28ZGw6fpbOhZdX">报告中心索引</b>：Job#24 已派生索引行 —— <code data-page-node-id="GB0dFBfTev5NLSrisEBKVa">plan_name</code> 取自 PlanRun 计划快照、
+<code data-page-node-id="cMypb2Pfo8lP3eNBvRdm31">env_name=offline-eval</code>、<code data-page-node-id="UrFBThFJRixBCtDM8cIsxQ">metadata_incomplete=0</code>（元数据完整，未降级）。
+<b data-page-node-id="aKaCXrJqOyuJErpgtZv9L8">历史报告未被覆盖</b>：本轮写入新目录 <code data-page-node-id="F95joYD0pI1m6IANTVr7j7">run_20/</code>，既有 run_1…run_19 目录未触碰。</p>
+
+<h2 data-page-node-id="TbIyRVwUhgKKIfR4zhIA46">11. 是否发生 timeout / skipped / cancelled</h2>
+<table data-page-node-id="T56c798b8gZzfv9GvqwH8P">
+  <thead data-page-node-id="gPnuQKRPV7O1fg9tokmOe8"><tr data-page-node-id="7bXm0nALBHZNGX1FGTPFs3"><th data-page-node-id="2lKYhb7vj4F8VBu8MsCCIr">类型</th><th data-page-node-id="rcERmfpSalEkqutCO0lcxb">是否发生</th><th data-page-node-id="LP6U5KBUQB0Yx8Dv4T3Qu1">说明</th></tr></thead>
+  <tbody data-page-node-id="p86hg6hczZXVDyeqD8CGmb">
+    <tr data-page-node-id="XcDvZLSvaDoKT5MHnWXx5H"><td data-page-node-id="frcEAoe4qfVk2stuiMie4R">timeout</td><td data-page-node-id="KJbo8l5jiq8pcd76wA6yKm"><span class="ok" data-page-node-id="GvSZe3hVMdHOXBCiD7Xjdz">未发生</span></td><td data-page-node-id="IBcQcQNz5Q007VYDpCQDfu">pytest 超时上限 300s，实际未触发；状态为 <code data-page-node-id="EPeqs2N2oBysSvcG4O5Z9P">failed</code> 而非 <code data-page-node-id="AGl27NGDyAQfJqmInSCEw5">timedout</code></td></tr>
+    <tr data-page-node-id="vuIwmfUkCrgP8Vm0e55kKb"><td data-page-node-id="qaqUPVQjTkH26LhG0rch3X">skipped</td><td data-page-node-id="87kJALPX6I2j1EantFfcVL"><span class="warn" data-page-node-id="OmGEiER8KNlAjrOj01rknH">发生</span></td><td data-page-node-id="XDhOrca6aYtTSVaAGMJr4o">Job#25 matcheval 被 <code data-page-node-id="n5NANWBmbwQOH8iUSjWMxj">fail_fast=true</code> 置为 skipped（设计行为，符合授权）</td></tr>
+    <tr data-page-node-id="Bra2jqC2yqLOXL9yaklWQM"><td data-page-node-id="y28fMMSjyeCcbZEiVh6dHl">cancelled</td><td data-page-node-id="3AY1YXig8aDxtu2sbJHRRY"><span class="ok" data-page-node-id="E99l2nTMZp1cc5DKVuahgy">未发生</span></td><td data-page-node-id="kaIHlrYA0gg8yCoIEMQDfM">未发出任何取消请求</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="sAsuFEReBhwmbyL4HMBnpY">12. 失败项的完整原因</h2>
+<p data-page-node-id="pz5Gbq5ZN7a2hFxYfv0Usb">3 条失败全部集中在 <code data-page-node-id="Z4di6uAhzaXOfPtuKkIqJp">tests/test_simulation.py</code>，且互相关联：</p>
+<table data-page-node-id="Ey0Cgg3fceU61P3TtPnfnd">
+  <thead data-page-node-id="qqCtF79421WpbLfaDxGmcx"><tr data-page-node-id="3DNXujckzlkmkpY951a4ME"><th data-page-node-id="Himo7FMgyPL07BoqjJ2J99">#</th><th data-page-node-id="SuJgjDClE3EONcfMOFIK4y">用例</th><th data-page-node-id="o1r3222UtsmuhcIaA2Iypi">断言/异常</th></tr></thead>
+  <tbody data-page-node-id="sp0WahyGr2ygFKIqdrsPOk">
+    <tr data-page-node-id="h4QzvscQ0oXU9Pbjrh2s6f">
+      <td data-page-node-id="Wzea5oWxAM0KWEDpEdL6An">1</td>
+      <td data-page-node-id="TkiyqCvOJxbYNYYhJTha1u"><code data-page-node-id="FkoOwmGd7dADeOLwDfy4NN">test_transition_dismisses_a_senior_teacher</code>（:177）</td>
+      <td data-page-node-id="bEn9WOF0hDszFaFl7f0zzO"><code data-page-node-id="Wd2BF5crmQx0J3eF0PXgkj">AssertionError: assert '实验设备老化' == '骨干教师去留'</code><br data-page-node-id="c9TA7lqnTl6R1p7Bmzy4xA">
+          期望事件标题为「骨干教师去留」，实际抽到「实验设备老化」</td>
+    </tr>
+    <tr data-page-node-id="pTH1HnteYnI1BBGHwiM2Nb">
+      <td data-page-node-id="8hubQ5Hikymc88l9NESH7a">2</td>
+      <td data-page-node-id="knJLDQHjg4MAXGc1LtkzZX"><code data-page-node-id="yEGGpxFyQMTP9Lc9EOA9n5">test_transition_without_senior_teacher_dismisses_regular</code>（:195）</td>
+      <td data-page-node-id="juSq48z1LoswMlFy33RzQ7"><code data-page-node-id="0kof0ZzJyiTst52aGY6QzM">SimulationError: 未知事件选项。</code>（抛自 <code data-page-node-id="CPcOyJtziBTZxf7eNJ9sVA">app/simulation.py:360 resolve_event</code>）<br data-page-node-id="ksUPSkyclF7UgASUYq2dHp">
+          因事件不是预期那个，其选项里不存在 <code data-page-node-id="S0vDZF5Scs70Km9EorBvFA">"transition"</code>，故解析选项失败</td>
+    </tr>
+    <tr data-page-node-id="miWgQq7EC31Q7gkDdQlTOT">
+      <td data-page-node-id="QQdQcYG2zag9GjaVUILS3i">3</td>
+      <td data-page-node-id="eIxiKD7P7uXntpLMwDcruy"><code data-page-node-id="lB0sRD1ph0UISDbtCUPnxE">test_transition_with_no_teachers_is_noop</code>（:209）</td>
+      <td data-page-node-id="XFAy1n5MXCjTPQOOFnkD0L">同上，<code data-page-node-id="D2neJMDS5XGWPib1EH3L59">SimulationError: 未知事件选项。</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note bad" data-page-node-id="hntvhaCLgL4SWAY7TIDHEx">
+<b data-page-node-id="QvveOMQa0DoBtBvLJJf5LZ">定性：业务侧真实失败，不是平台 / Runner / 配置错误。</b>
+<p data-page-node-id="QqJBRKPMTwcutl89ieEmHz">证据：① Runner 以正确参数拉起、junit.xml 与 report.json 均正常生成并通过 <code data-page-node-id="TYn1EkS6f7s9X6Zz39GlN5">validate_report</code>；
+② 退出码 1 由 pytest 自身返回，非平台强杀；③ 其余 <b data-page-node-id="mURfgAaIveMNPnYjDuqjQz">46 条用例全部通过</b>，失败仅集中于这 3 条与「随机事件抽取」相关的用例；
+④ 失败信息是业务断言/业务异常（事件标题不匹配、事件选项不存在），不含任何路径、解释器或依赖类错误。</p>
+<p data-page-node-id="E2DQK2vGUY7iQfCsZ1Q3AP"><b data-page-node-id="FzX2htOCsxMeDRGM8BEp29">根因推断</b>：这 3 条用例假定某次行动必然触发「骨干教师去留」这一特定突发事件，而实际抽到的是「实验设备老化」。
+PrivaHigh 自身的待办清单里有「待办2：多增加一些突发事件」——若事件池被扩充/随机化，这些写死了事件标题的用例就会失效。
+<b data-page-node-id="DnYQrpIz4j77SoBvuDc2GX">这属于游戏侧业务代码/用例的假设问题</b>（推断，未修改任何代码去验证）。</p>
+</div>
+
+<h2 data-page-node-id="xvKEEStcn71y0oEYDh6ccS">13. 与此前冻结基线的差异</h2>
+<table data-page-node-id="JN1bgBZasivwRa1kItOxcV">
+  <thead data-page-node-id="cvvnkY369ycIrZpHuxBZFD"><tr data-page-node-id="wACo9N5VfGSKHWqul2JhM5"><th data-page-node-id="Bw9HmN7huqPwEWk8GHoZ6r">基线</th><th data-page-node-id="JmpHAEFFqkW2DkDed6OnFO">冻结值</th><th data-page-node-id="nRsa8emGVAGGFtKEdBGaAu">本轮</th><th data-page-node-id="bZcGV20kq5TKDJ1RcYXAuq">差异判定</th></tr></thead>
+  <tbody data-page-node-id="otGNzN433AmJgJoIcmJ8m4">
+    <tr data-page-node-id="krBIkrj4AKEiEYjVqJIMv2">
+      <td data-page-node-id="Uk42FEa9GSVQkKVuWdqxxx">资产指纹</td><td data-page-node-id="KnSaur4aw8JEM7E48sN0BT"><code data-page-node-id="3h8zxNLuWEacjrETRGKDZl">fc40077399d1</code></td><td data-page-node-id="e2HEqa5Q7JRVzo8wmjp5ZG"><code data-page-node-id="v82RYkQTvcDID9zQtFoxEj">fc40077399d1</code></td>
+      <td data-page-node-id="AbBq3EpF8Hq8LSPSmbrSZH"><span class="ok" data-page-node-id="pjxIeGudZiv92Y3Cn0BqGY">无差异</span></td>
+    </tr>
+    <tr data-page-node-id="iyUurv5gEcg6wi80syqk43">
+      <td data-page-node-id="9oOzAfmXAhvdbk8KncmkpZ">目录指纹</td><td data-page-node-id="hLJ0MYauBA6fCqPWWovooD"><code data-page-node-id="e0NYCyhp1cVVd6rJsVE6nI">2815855d05cd</code></td><td data-page-node-id="AyJJxYfw8P8GRXjga1mDZd"><code data-page-node-id="SY2sHcFQxm21ffl9HdwQ0g">2815855d05cd</code></td>
+      <td data-page-node-id="K7KnNRRfTZRSUyxFeivnWH"><span class="ok" data-page-node-id="gZxMI8W44KNAENmotwnNyu">无差异</span>（真实资产未被改动）</td>
+    </tr>
+    <tr data-page-node-id="0nED6RR7z1xtxjz6LGUYHh">
+      <td data-page-node-id="pxhG8FO4v4TxaMuC3GstqD">配置快照指纹</td><td data-page-node-id="Q1WTYgqgWhnCerqEQBTnRe"><code data-page-node-id="XJXI7YWSHevPfh3yUXPdJk">7e0ccc5e7200</code></td><td data-page-node-id="En6elYdvEnmrWIiTgWC9Qm"><code data-page-node-id="bG6Gcllx3hMTPDSyURTINY">7e0ccc5e7200</code></td>
+      <td data-page-node-id="eWgrgNPos37AzQoLqAHhCI"><span class="ok" data-page-node-id="jInRBIJCM46HDevgDHEEC8">无差异</span>（环境/执行机/资产三者均未变）</td>
+    </tr>
+    <tr data-page-node-id="On9csCBVWURASeunBfpLEY">
+      <td data-page-node-id="5ECaiPblb9eZ64yk1g5aC5">计划快照指纹</td><td data-page-node-id="N4ssSlAAumLko1p2Ry47RH"><code data-page-node-id="IyDrJRBqRq9Q47Ghe6laCH">edb4439a8bd4</code>（草稿态）</td><td data-page-node-id="cgwaXrd5VRHW8hISpAmNCD"><code data-page-node-id="yrCqeeu7DPNNPtFEHup3tx">58e2bb45cf93</code>（已保存态）</td>
+      <td data-page-node-id="h96KpptkklYJKFexF4OEzW"><span class="warn" data-page-node-id="Ye3XZ2NfzQ3jzQ7yUADuOX">口径差异，非漂移</span>（见 §9）</td>
+    </tr>
+    <tr data-page-node-id="hFCCQyAf343Oc4W6hTaRQf">
+      <td data-page-node-id="zPNyNFJUzsY20WKXXHlRml">MatchEval 指标</td><td data-page-node-id="4irlHAqFRqJbUTUqDvQVUp">P = R = F1 = 1.00（旁路实测，TP=23/FP=0/FN=0/TN=92）</td>
+      <td data-page-node-id="IB1vNUMaBul6fMTUK9NgXI"><b data-page-node-id="FBFJKHLVSOnDAYjdsjbUOX">无数据</b>（步骤被跳过）</td>
+      <td data-page-node-id="2tnC661FmyDcVKcayEiWew"><span class="bad" data-page-node-id="gecPbZ357Jaul6XF5TlD6O">无法比对</span> —— 该基线尚未经平台链路复现</td>
+    </tr>
+    <tr data-page-node-id="UMctfXnfqyDCMe71DeG0bm">
+      <td data-page-node-id="sf6VrOn2CTIdCJkQ6wOWl9">pytest 结果</td><td data-page-node-id="La3AssBa40BtBy9kptgWuW">无历史执行基线（此前仅 <code data-page-node-id="ICDkcHFUb5wCSypRnoRJgr">--collect-only</code> 收集 49 条）</td>
+      <td data-page-node-id="cOfFhZQWJH248h8GyT0qlD">46 passed / 3 failed</td>
+      <td data-page-node-id="AK7zfQsBA4Od9TZEQZa3uj"><span class="warn" data-page-node-id="TByMomPcNBadGl4vFuMCGu">新增基线</span>：首次执行即发现 3 条业务失败</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="sFyT2nRS8gxFAFMt1ElDKT">14. 「平台执行成功」与「业务指标通过」的区分</h2>
+<table data-page-node-id="foEJD2dvTelHDb9t5UPnGX">
+  <thead data-page-node-id="GthzBSuE6iA4rGCEJE7MWO"><tr data-page-node-id="7ukXt5zqyiEXGsLxxNCuQv"><th data-page-node-id="jXujrUPktiMGEk0fzoLdSO">维度</th><th data-page-node-id="wSigHvOTHPtAOb2E8cWEqy">结论</th><th data-page-node-id="9qH4qbDEaN0BBEFQfrT393">依据</th></tr></thead>
+  <tbody data-page-node-id="5BUfs4FrjHiEaGat004RxF">
+    <tr data-page-node-id="kz3L9xCax8BdzIw9hIa0Vh">
+      <td data-page-node-id="45xgdLJn7mH0c34ysiidux"><b data-page-node-id="Zjv8apeTqx808q4DBEOsBq">平台执行</b></td>
+      <td data-page-node-id="xFGH0cuGp8hWbNqY54qMPU"><span class="pass" data-page-node-id="ow3M5BsjJmkAj8tEc4CU17">成功</span></td>
+      <td data-page-node-id="41WffuI8BAtOj47sAuydW2">计划按授权参数执行；Runner 正确解析受控 cwd_root 并拉起子进程；junit + report.json 正常归档并通过校验；
+          fail_fast 正确跳过后继步骤；报告中心索引正确派生（计划名取执行时快照）；
+          PlanRun/Job 状态转换完整记录；历史 19 条运行与 23 个 Job <b data-page-node-id="zHhqWa41MdVL9nEjMXUBUI">零改动</b>；真实资产未被修改</td>
+    </tr>
+    <tr data-page-node-id="ha4csOezhOmDisKFjBX1Bt">
+      <td data-page-node-id="7nFQhMdZqR9bJHsedWOa1c"><b data-page-node-id="C3zK670WbFVPn8wnxmzEGf">业务指标</b></td>
+      <td data-page-node-id="aw7EPeCQZvelNxbp8pmH5C"><span class="bad" data-page-node-id="qGFtWDNiN1VxR6faCzIlFP">未通过</span></td>
+      <td data-page-node-id="wc3EjhWjxVZxCiwBwCb67V">PrivaHigh 后端 49 条用例中 <b data-page-node-id="mGnOePSV6xnAV92C8V5QCt">3 条真实断言失败</b>（业务侧问题）；
+          MatchEval 因 fail_fast 未执行，<b data-page-node-id="bXGtLP8hF7BA6yvbSA3deW">视觉评估指标本轮未取得</b></td>
+    </tr>
+  </tbody>
+</table>
+<div class="note ok" data-page-node-id="dY8NBrJL1GlPkES88n2nUg">
+<b data-page-node-id="GvOntduW39NPxRP9BBSD3U">这正是一次有价值的真实验收：</b>平台把「游戏自身业务缺陷」如实暴露了出来，而不是把失败掩盖成 Runner 错误。
+失败可归因、可复现、指向明确（<code data-page-node-id="MAayUdnfYNbInNheO4ArhL">tests/test_simulation.py</code> 3 条事件相关用例）。
+</div>
+
+<h2 data-page-node-id="LvHnEXHg338SSPc02AXDfZ">附：合规声明</h2>
+<ul data-page-node-id="oflveUEuEbFOy91P0BRLJJ">
+  <li data-page-node-id="IpfVIME8b1XIRpgtt9zbkL">未修改 <code data-page-node-id="WYgxmC9um3DxrSxFQRq3ml">pytest</code> / <code data-page-node-id="IDsl183WjhvBNDm3zFCs1A">MatchEval</code> / 游戏业务代码，未改平台代码。</li>
+  <li data-page-node-id="sYlGCYo9tLHvtQnG79eu5N">未执行 Locust；未加入 <code data-page-node-id="AZYs6kUgvYVuDouWStSYGa">mstpl</code> 或其他算法。</li>
+  <li data-page-node-id="2KgtfvA5DMs6ovpcp2jGZp">未覆盖历史报告：新写 <code data-page-node-id="dggug3ye5EEpdTXKESNQeg">run_20/</code>，run_1…run_19 未触碰。</li>
+  <li data-page-node-id="pGynj7Wu9H9ZGwdbHe2pAB">未修改已有历史 PlanRun / Job：历史 19 条运行、23 个 Job 数量与内容均未变。</li>
+  <li data-page-node-id="opDWsLXBIql3gxNV8GEl6m">未修改真实资产：<code data-page-node-id="wHzHVxx9nFTu6KE8pLaWlv">tpl</code> 23 张 / <code data-page-node-id="AExRq5vl1QY9XEqs6C966n">scenes</code> 5 张，目录指纹未变。</li>
+  <li data-page-node-id="d7GgLM9QiuojYFPY4jIpHB">已知的两个低风险问题（<code data-page-node-id="MX6zYhmlnrjLzhX4V8Clw9">run_in_progress</code> 误报、旧 <code data-page-node-id="CdIlZa2vnYSLvulJbm9wVK">local</code> 环境 kind 默认值）<b data-page-node-id="kivlm4E60HxlDlF8tBhKaa">本轮均未修复</b>，按要求保留。</li>
+</ul>
+
+<footer data-page-node-id="IOoWqFE5481EBQFlwSuzAM">
+PRIVAHIGH 首轮真实验收报告 · PlanRun #20 · 2026-09-29 ·
+结论：<b data-page-node-id="HDpxMhQidHo6CMh7yMTuAd">平台执行成功、业务指标未通过</b>（3/49 业务失败；MatchEval 被 fail_fast 跳过，本轮无指标）
+</footer>
+
+</div>
+</body>
+</html>

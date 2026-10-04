@@ -1,0 +1,289 @@
+﻿template,scene,algorithm,threshold,status,confidence,center_xy,time_ms,detail
+tpl_A_menu.png,scene_menu.png,tpl,0.5,hit,1.0,"(100, 82)",29.1,
+tpl_A_menu.png,scene_menu.png,tpl,0.6,hit,1.0,"(100, 82)",3.0,
+tpl_A_menu.png,scene_menu.png,tpl,0.7,hit,1.0,"(100, 82)",2.9,
+tpl_A_menu.png,scene_menu.png,tpl,0.8,hit,1.0,"(100, 82)",2.9,
+tpl_A_menu.png,scene_menu.png,tpl,0.9,hit,1.0,"(100, 82)",2.9,
+tpl_A_menu.png,scene_menu.png,tpl,0.95,hit,1.0,"(100, 82)",3.0,
+tpl_A_menu.png,scene_menu.png,mstpl,0.5,hit,0.9793,"(99, 82)",389.0,
+tpl_A_menu.png,scene_menu.png,mstpl,0.6,hit,0.9793,"(99, 82)",381.0,
+tpl_A_menu.png,scene_menu.png,mstpl,0.7,hit,0.9793,"(99, 82)",368.1,
+tpl_A_menu.png,scene_menu.png,mstpl,0.8,hit,0.9793,"(99, 82)",363.7,
+tpl_A_menu.png,scene_menu.png,mstpl,0.9,hit,0.9793,"(99, 82)",365.6,
+tpl_A_menu.png,scene_menu.png,mstpl,0.95,hit,0.9793,"(99, 82)",679.1,
+tpl_A_menu.png,scene_menu.png,kaze,0.5,exception,,,152.8,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,kaze,0.6,exception,,,131.4,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,kaze,0.7,exception,,,131.9,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,kaze,0.8,exception,,,148.6,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,kaze,0.9,exception,,,163.4,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,kaze,0.95,exception,,,138.1,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,brisk,0.5,exception,,,35.2,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,brisk,0.6,exception,,,26.3,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,brisk,0.7,exception,,,32.1,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,brisk,0.8,exception,,,31.4,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,brisk,0.9,exception,,,32.3,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,brisk,0.95,exception,,,26.7,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,akaze,0.5,exception,,,24.6,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,akaze,0.6,exception,,,20.9,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,akaze,0.7,exception,,,19.5,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,akaze,0.8,exception,,,20.1,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,akaze,0.9,exception,,,21.5,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,akaze,0.95,exception,,,21.2,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,orb,0.5,exception,,,2832.1,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,orb,0.6,exception,,,3.8,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,orb,0.7,exception,,,3.7,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,orb,0.8,exception,,,3.8,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,orb,0.9,exception,,,2.5,NoMatchPointError
+tpl_A_menu.png,scene_menu.png,orb,0.95,exception,,,2.2,NoMatchPointError
+tpl_A_menu.png,scene_store.png,tpl,0.5,hit,0.8367,"(310, 63)",5.8,
+tpl_A_menu.png,scene_store.png,tpl,0.6,hit,0.8367,"(310, 63)",7.6,
+tpl_A_menu.png,scene_store.png,tpl,0.7,hit,0.8367,"(310, 63)",7.8,
+tpl_A_menu.png,scene_store.png,tpl,0.8,hit,0.8367,"(310, 63)",7.6,
+tpl_A_menu.png,scene_store.png,tpl,0.9,miss,0.8367,"(310, 63)",7.7,
+tpl_A_menu.png,scene_store.png,tpl,0.95,miss,0.8367,"(310, 63)",8.7,
+tpl_A_menu.png,scene_store.png,mstpl,0.5,hit,0.7829,"(124, 263)",891.6,
+tpl_A_menu.png,scene_store.png,mstpl,0.6,hit,0.7829,"(124, 263)",911.8,
+tpl_A_menu.png,scene_store.png,mstpl,0.7,hit,0.7829,"(124, 263)",863.5,
+tpl_A_menu.png,scene_store.png,mstpl,0.8,miss,0.7829,"(124, 263)",890.7,
+tpl_A_menu.png,scene_store.png,mstpl,0.9,miss,0.7829,"(124, 263)",909.1,
+tpl_A_menu.png,scene_store.png,mstpl,0.95,miss,0.7829,"(124, 263)",896.6,
+tpl_A_menu.png,scene_store.png,kaze,0.5,exception,,,137.3,NoMatchPointError
+tpl_A_menu.png,scene_store.png,kaze,0.6,exception,,,130.7,NoMatchPointError
+tpl_A_menu.png,scene_store.png,kaze,0.7,exception,,,122.6,NoMatchPointError
+tpl_A_menu.png,scene_store.png,kaze,0.8,exception,,,142.1,NoMatchPointError
+tpl_A_menu.png,scene_store.png,kaze,0.9,exception,,,140.6,NoMatchPointError
+tpl_A_menu.png,scene_store.png,kaze,0.95,exception,,,124.1,NoMatchPointError
+tpl_A_menu.png,scene_store.png,brisk,0.5,exception,,,31.0,NoMatchPointError
+tpl_A_menu.png,scene_store.png,brisk,0.6,exception,,,28.0,NoMatchPointError
+tpl_A_menu.png,scene_store.png,brisk,0.7,exception,,,19.3,NoMatchPointError
+tpl_A_menu.png,scene_store.png,brisk,0.8,exception,,,25.2,NoMatchPointError
+tpl_A_menu.png,scene_store.png,brisk,0.9,exception,,,23.7,NoMatchPointError
+tpl_A_menu.png,scene_store.png,brisk,0.95,exception,,,22.2,NoMatchPointError
+tpl_A_menu.png,scene_store.png,akaze,0.5,exception,,,22.5,NoMatchPointError
+tpl_A_menu.png,scene_store.png,akaze,0.6,exception,,,15.9,NoMatchPointError
+tpl_A_menu.png,scene_store.png,akaze,0.7,exception,,,19.5,NoMatchPointError
+tpl_A_menu.png,scene_store.png,akaze,0.8,exception,,,19.3,NoMatchPointError
+tpl_A_menu.png,scene_store.png,akaze,0.9,exception,,,20.4,NoMatchPointError
+tpl_A_menu.png,scene_store.png,akaze,0.95,exception,,,20.2,NoMatchPointError
+tpl_A_menu.png,scene_store.png,orb,0.5,exception,,,3.3,NoMatchPointError
+tpl_A_menu.png,scene_store.png,orb,0.6,exception,,,3.7,NoMatchPointError
+tpl_A_menu.png,scene_store.png,orb,0.7,exception,,,3.5,NoMatchPointError
+tpl_A_menu.png,scene_store.png,orb,0.8,exception,,,3.5,NoMatchPointError
+tpl_A_menu.png,scene_store.png,orb,0.9,exception,,,3.4,NoMatchPointError
+tpl_A_menu.png,scene_store.png,orb,0.95,exception,,,2.9,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,tpl,0.5,miss,0.0276,"(100, 82)",7.0,
+tpl_B_menu.png,scene_menu.png,tpl,0.6,miss,0.0276,"(100, 82)",5.6,
+tpl_B_menu.png,scene_menu.png,tpl,0.7,miss,0.0276,"(100, 82)",8.0,
+tpl_B_menu.png,scene_menu.png,tpl,0.8,miss,0.0276,"(100, 82)",8.4,
+tpl_B_menu.png,scene_menu.png,tpl,0.9,miss,0.0276,"(100, 82)",8.3,
+tpl_B_menu.png,scene_menu.png,tpl,0.95,miss,0.0276,"(100, 82)",8.3,
+tpl_B_menu.png,scene_menu.png,mstpl,0.5,miss,0.0276,"(99, 82)",977.2,
+tpl_B_menu.png,scene_menu.png,mstpl,0.6,miss,0.0276,"(99, 82)",898.4,
+tpl_B_menu.png,scene_menu.png,mstpl,0.7,miss,0.0276,"(99, 82)",934.3,
+tpl_B_menu.png,scene_menu.png,mstpl,0.8,miss,0.0276,"(99, 82)",928.8,
+tpl_B_menu.png,scene_menu.png,mstpl,0.9,miss,0.0276,"(99, 82)",949.3,
+tpl_B_menu.png,scene_menu.png,mstpl,0.95,miss,0.0276,"(99, 82)",908.5,
+tpl_B_menu.png,scene_menu.png,kaze,0.5,exception,,,132.9,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,kaze,0.6,exception,,,123.9,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,kaze,0.7,exception,,,150.1,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,kaze,0.8,exception,,,136.8,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,kaze,0.9,exception,,,143.7,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,kaze,0.95,exception,,,135.1,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,brisk,0.5,exception,,,30.2,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,brisk,0.6,exception,,,29.9,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,brisk,0.7,exception,,,25.2,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,brisk,0.8,exception,,,26.3,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,brisk,0.9,exception,,,28.3,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,brisk,0.95,exception,,,31.4,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,akaze,0.5,exception,,,19.3,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,akaze,0.6,exception,,,12.3,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,akaze,0.7,exception,,,14.8,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,akaze,0.8,exception,,,19.9,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,akaze,0.9,exception,,,19.6,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,akaze,0.95,exception,,,16.5,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,orb,0.5,exception,,,3.7,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,orb,0.6,exception,,,3.8,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,orb,0.7,exception,,,3.8,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,orb,0.8,exception,,,2.5,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,orb,0.9,exception,,,2.2,NoMatchPointError
+tpl_B_menu.png,scene_menu.png,orb,0.95,exception,,,2.2,NoMatchPointError
+tpl_B_menu.png,scene_store.png,tpl,0.5,hit,0.8367,"(310, 63)",5.3,
+tpl_B_menu.png,scene_store.png,tpl,0.6,hit,0.8367,"(310, 63)",7.0,
+tpl_B_menu.png,scene_store.png,tpl,0.7,hit,0.8367,"(310, 63)",7.8,
+tpl_B_menu.png,scene_store.png,tpl,0.8,hit,0.8367,"(310, 63)",7.4,
+tpl_B_menu.png,scene_store.png,tpl,0.9,miss,0.8367,"(310, 63)",2.5,
+tpl_B_menu.png,scene_store.png,tpl,0.95,miss,0.8367,"(310, 63)",2.6,
+tpl_B_menu.png,scene_store.png,mstpl,0.5,miss,0.0276,"(124, 263)",900.0,
+tpl_B_menu.png,scene_store.png,mstpl,0.6,miss,0.0276,"(124, 263)",949.1,
+tpl_B_menu.png,scene_store.png,mstpl,0.7,miss,0.0276,"(124, 263)",898.5,
+tpl_B_menu.png,scene_store.png,mstpl,0.8,miss,0.0276,"(124, 263)",833.4,
+tpl_B_menu.png,scene_store.png,mstpl,0.9,miss,0.0276,"(124, 263)",914.9,
+tpl_B_menu.png,scene_store.png,mstpl,0.95,miss,0.0276,"(124, 263)",876.5,
+tpl_B_menu.png,scene_store.png,kaze,0.5,exception,,,143.5,NoMatchPointError
+tpl_B_menu.png,scene_store.png,kaze,0.6,exception,,,122.3,NoMatchPointError
+tpl_B_menu.png,scene_store.png,kaze,0.7,exception,,,119.5,NoMatchPointError
+tpl_B_menu.png,scene_store.png,kaze,0.8,exception,,,148.2,NoMatchPointError
+tpl_B_menu.png,scene_store.png,kaze,0.9,exception,,,137.1,NoMatchPointError
+tpl_B_menu.png,scene_store.png,kaze,0.95,exception,,,147.2,NoMatchPointError
+tpl_B_menu.png,scene_store.png,brisk,0.5,exception,,,26.7,NoMatchPointError
+tpl_B_menu.png,scene_store.png,brisk,0.6,exception,,,26.2,NoMatchPointError
+tpl_B_menu.png,scene_store.png,brisk,0.7,exception,,,19.1,NoMatchPointError
+tpl_B_menu.png,scene_store.png,brisk,0.8,exception,,,25.9,NoMatchPointError
+tpl_B_menu.png,scene_store.png,brisk,0.9,exception,,,22.0,NoMatchPointError
+tpl_B_menu.png,scene_store.png,brisk,0.95,exception,,,28.2,NoMatchPointError
+tpl_B_menu.png,scene_store.png,akaze,0.5,exception,,,17.6,NoMatchPointError
+tpl_B_menu.png,scene_store.png,akaze,0.6,exception,,,14.6,NoMatchPointError
+tpl_B_menu.png,scene_store.png,akaze,0.7,exception,,,13.4,NoMatchPointError
+tpl_B_menu.png,scene_store.png,akaze,0.8,exception,,,12.6,NoMatchPointError
+tpl_B_menu.png,scene_store.png,akaze,0.9,exception,,,16.3,NoMatchPointError
+tpl_B_menu.png,scene_store.png,akaze,0.95,exception,,,17.0,NoMatchPointError
+tpl_B_menu.png,scene_store.png,orb,0.5,exception,,,2.5,NoMatchPointError
+tpl_B_menu.png,scene_store.png,orb,0.6,exception,,,2.2,NoMatchPointError
+tpl_B_menu.png,scene_store.png,orb,0.7,exception,,,2.2,NoMatchPointError
+tpl_B_menu.png,scene_store.png,orb,0.8,exception,,,2.9,NoMatchPointError
+tpl_B_menu.png,scene_store.png,orb,0.9,exception,,,3.5,NoMatchPointError
+tpl_B_menu.png,scene_store.png,orb,0.95,exception,,,2.5,NoMatchPointError
+tpl_C_store.png,scene_menu.png,tpl,0.5,hit,0.7046,"(100, 82)",9.8,
+tpl_C_store.png,scene_menu.png,tpl,0.6,hit,0.7046,"(100, 82)",8.5,
+tpl_C_store.png,scene_menu.png,tpl,0.7,hit,0.7046,"(100, 82)",8.0,
+tpl_C_store.png,scene_menu.png,tpl,0.8,miss,0.7046,"(100, 82)",8.1,
+tpl_C_store.png,scene_menu.png,tpl,0.9,miss,0.7046,"(100, 82)",6.4,
+tpl_C_store.png,scene_menu.png,tpl,0.95,miss,0.7046,"(100, 82)",8.0,
+tpl_C_store.png,scene_menu.png,mstpl,0.5,hit,0.8367,"(97, 82)",823.5,
+tpl_C_store.png,scene_menu.png,mstpl,0.6,hit,0.8367,"(97, 82)",812.7,
+tpl_C_store.png,scene_menu.png,mstpl,0.7,hit,0.8367,"(97, 82)",840.4,
+tpl_C_store.png,scene_menu.png,mstpl,0.8,hit,0.8367,"(97, 82)",849.1,
+tpl_C_store.png,scene_menu.png,mstpl,0.9,miss,0.8367,"(97, 82)",831.7,
+tpl_C_store.png,scene_menu.png,mstpl,0.95,miss,0.8367,"(97, 82)",969.4,
+tpl_C_store.png,scene_menu.png,kaze,0.5,exception,,,126.6,NoMatchPointError
+tpl_C_store.png,scene_menu.png,kaze,0.6,exception,,,119.6,NoMatchPointError
+tpl_C_store.png,scene_menu.png,kaze,0.7,exception,,,163.6,NoMatchPointError
+tpl_C_store.png,scene_menu.png,kaze,0.8,exception,,,130.2,NoMatchPointError
+tpl_C_store.png,scene_menu.png,kaze,0.9,exception,,,107.9,NoMatchPointError
+tpl_C_store.png,scene_menu.png,kaze,0.95,exception,,,103.3,NoMatchPointError
+tpl_C_store.png,scene_menu.png,brisk,0.5,exception,,,23.1,NoMatchPointError
+tpl_C_store.png,scene_menu.png,brisk,0.6,exception,,,21.8,NoMatchPointError
+tpl_C_store.png,scene_menu.png,brisk,0.7,exception,,,22.5,NoMatchPointError
+tpl_C_store.png,scene_menu.png,brisk,0.8,exception,,,19.0,NoMatchPointError
+tpl_C_store.png,scene_menu.png,brisk,0.9,exception,,,23.1,NoMatchPointError
+tpl_C_store.png,scene_menu.png,brisk,0.95,exception,,,20.8,NoMatchPointError
+tpl_C_store.png,scene_menu.png,akaze,0.5,exception,,,11.4,NoMatchPointError
+tpl_C_store.png,scene_menu.png,akaze,0.6,exception,,,13.6,NoMatchPointError
+tpl_C_store.png,scene_menu.png,akaze,0.7,exception,,,20.1,NoMatchPointError
+tpl_C_store.png,scene_menu.png,akaze,0.8,exception,,,17.1,NoMatchPointError
+tpl_C_store.png,scene_menu.png,akaze,0.9,exception,,,13.2,NoMatchPointError
+tpl_C_store.png,scene_menu.png,akaze,0.95,exception,,,11.6,NoMatchPointError
+tpl_C_store.png,scene_menu.png,orb,0.5,exception,,,2.4,NoMatchPointError
+tpl_C_store.png,scene_menu.png,orb,0.6,exception,,,2.2,NoMatchPointError
+tpl_C_store.png,scene_menu.png,orb,0.7,exception,,,2.2,NoMatchPointError
+tpl_C_store.png,scene_menu.png,orb,0.8,exception,,,2.2,NoMatchPointError
+tpl_C_store.png,scene_menu.png,orb,0.9,exception,,,2.5,NoMatchPointError
+tpl_C_store.png,scene_menu.png,orb,0.95,exception,,,2.4,NoMatchPointError
+tpl_C_store.png,scene_store.png,tpl,0.5,hit,1.0,"(130, 263)",8.7,
+tpl_C_store.png,scene_store.png,tpl,0.6,hit,1.0,"(130, 263)",6.7,
+tpl_C_store.png,scene_store.png,tpl,0.7,hit,1.0,"(130, 263)",6.3,
+tpl_C_store.png,scene_store.png,tpl,0.8,hit,1.0,"(130, 263)",5.4,
+tpl_C_store.png,scene_store.png,tpl,0.9,hit,1.0,"(130, 263)",5.1,
+tpl_C_store.png,scene_store.png,tpl,0.95,hit,1.0,"(130, 263)",5.8,
+tpl_C_store.png,scene_store.png,mstpl,0.5,hit,1.0,"(320, 63)",810.3,
+tpl_C_store.png,scene_store.png,mstpl,0.6,hit,1.0,"(320, 63)",984.5,
+tpl_C_store.png,scene_store.png,mstpl,0.7,hit,1.0,"(320, 63)",986.2,
+tpl_C_store.png,scene_store.png,mstpl,0.8,hit,1.0,"(320, 63)",855.9,
+tpl_C_store.png,scene_store.png,mstpl,0.9,hit,1.0,"(320, 63)",816.8,
+tpl_C_store.png,scene_store.png,mstpl,0.95,hit,1.0,"(320, 63)",847.5,
+tpl_C_store.png,scene_store.png,kaze,0.5,exception,,,146.6,NoMatchPointError
+tpl_C_store.png,scene_store.png,kaze,0.6,exception,,,136.2,NoMatchPointError
+tpl_C_store.png,scene_store.png,kaze,0.7,exception,,,128.6,NoMatchPointError
+tpl_C_store.png,scene_store.png,kaze,0.8,exception,,,133.0,NoMatchPointError
+tpl_C_store.png,scene_store.png,kaze,0.9,exception,,,174.9,NoMatchPointError
+tpl_C_store.png,scene_store.png,kaze,0.95,exception,,,138.0,NoMatchPointError
+tpl_C_store.png,scene_store.png,brisk,0.5,exception,,,31.4,NoMatchPointError
+tpl_C_store.png,scene_store.png,brisk,0.6,exception,,,23.4,NoMatchPointError
+tpl_C_store.png,scene_store.png,brisk,0.7,exception,,,32.9,NoMatchPointError
+tpl_C_store.png,scene_store.png,brisk,0.8,exception,,,31.1,NoMatchPointError
+tpl_C_store.png,scene_store.png,brisk,0.9,exception,,,31.5,NoMatchPointError
+tpl_C_store.png,scene_store.png,brisk,0.95,exception,,,26.7,NoMatchPointError
+tpl_C_store.png,scene_store.png,akaze,0.5,exception,,,13.3,NoMatchPointError
+tpl_C_store.png,scene_store.png,akaze,0.6,exception,,,19.3,NoMatchPointError
+tpl_C_store.png,scene_store.png,akaze,0.7,exception,,,17.4,NoMatchPointError
+tpl_C_store.png,scene_store.png,akaze,0.8,exception,,,14.0,NoMatchPointError
+tpl_C_store.png,scene_store.png,akaze,0.9,exception,,,16.4,NoMatchPointError
+tpl_C_store.png,scene_store.png,akaze,0.95,exception,,,17.5,NoMatchPointError
+tpl_C_store.png,scene_store.png,orb,0.5,exception,,,3.7,NoMatchPointError
+tpl_C_store.png,scene_store.png,orb,0.6,exception,,,3.7,NoMatchPointError
+tpl_C_store.png,scene_store.png,orb,0.7,exception,,,3.7,NoMatchPointError
+tpl_C_store.png,scene_store.png,orb,0.8,exception,,,3.6,NoMatchPointError
+tpl_C_store.png,scene_store.png,orb,0.9,exception,,,3.5,NoMatchPointError
+tpl_C_store.png,scene_store.png,orb,0.95,exception,,,3.5,NoMatchPointError
+tpl_D_store.png,scene_menu.png,tpl,0.5,miss,0.0228,"(100, 82)",8.8,
+tpl_D_store.png,scene_menu.png,tpl,0.6,miss,0.0228,"(100, 82)",8.0,
+tpl_D_store.png,scene_menu.png,tpl,0.7,miss,0.0228,"(100, 82)",8.4,
+tpl_D_store.png,scene_menu.png,tpl,0.8,miss,0.0228,"(100, 82)",8.3,
+tpl_D_store.png,scene_menu.png,tpl,0.9,miss,0.0228,"(100, 82)",8.3,
+tpl_D_store.png,scene_menu.png,tpl,0.95,miss,0.0228,"(100, 82)",8.1,
+tpl_D_store.png,scene_menu.png,mstpl,0.5,miss,0.0304,"(97, 82)",1077.8,
+tpl_D_store.png,scene_menu.png,mstpl,0.6,miss,0.0304,"(97, 82)",780.5,
+tpl_D_store.png,scene_menu.png,mstpl,0.7,miss,0.0304,"(97, 82)",884.7,
+tpl_D_store.png,scene_menu.png,mstpl,0.8,miss,0.0304,"(97, 82)",853.3,
+tpl_D_store.png,scene_menu.png,mstpl,0.9,miss,0.0304,"(97, 82)",881.0,
+tpl_D_store.png,scene_menu.png,mstpl,0.95,miss,0.0304,"(97, 82)",874.2,
+tpl_D_store.png,scene_menu.png,kaze,0.5,exception,,,125.5,NoMatchPointError
+tpl_D_store.png,scene_menu.png,kaze,0.6,exception,,,122.0,NoMatchPointError
+tpl_D_store.png,scene_menu.png,kaze,0.7,exception,,,113.7,NoMatchPointError
+tpl_D_store.png,scene_menu.png,kaze,0.8,exception,,,121.6,NoMatchPointError
+tpl_D_store.png,scene_menu.png,kaze,0.9,exception,,,135.3,NoMatchPointError
+tpl_D_store.png,scene_menu.png,kaze,0.95,exception,,,150.0,NoMatchPointError
+tpl_D_store.png,scene_menu.png,brisk,0.5,exception,,,28.7,NoMatchPointError
+tpl_D_store.png,scene_menu.png,brisk,0.6,exception,,,27.5,NoMatchPointError
+tpl_D_store.png,scene_menu.png,brisk,0.7,exception,,,26.8,NoMatchPointError
+tpl_D_store.png,scene_menu.png,brisk,0.8,exception,,,25.3,NoMatchPointError
+tpl_D_store.png,scene_menu.png,brisk,0.9,exception,,,28.2,NoMatchPointError
+tpl_D_store.png,scene_menu.png,brisk,0.95,exception,,,28.7,NoMatchPointError
+tpl_D_store.png,scene_menu.png,akaze,0.5,exception,,,13.1,NoMatchPointError
+tpl_D_store.png,scene_menu.png,akaze,0.6,exception,,,18.0,NoMatchPointError
+tpl_D_store.png,scene_menu.png,akaze,0.7,exception,,,13.7,NoMatchPointError
+tpl_D_store.png,scene_menu.png,akaze,0.8,exception,,,14.1,NoMatchPointError
+tpl_D_store.png,scene_menu.png,akaze,0.9,exception,,,16.0,NoMatchPointError
+tpl_D_store.png,scene_menu.png,akaze,0.95,exception,,,16.6,NoMatchPointError
+tpl_D_store.png,scene_menu.png,orb,0.5,exception,,,3.9,NoMatchPointError
+tpl_D_store.png,scene_menu.png,orb,0.6,exception,,,3.7,NoMatchPointError
+tpl_D_store.png,scene_menu.png,orb,0.7,exception,,,3.6,NoMatchPointError
+tpl_D_store.png,scene_menu.png,orb,0.8,exception,,,3.6,NoMatchPointError
+tpl_D_store.png,scene_menu.png,orb,0.9,exception,,,3.6,NoMatchPointError
+tpl_D_store.png,scene_menu.png,orb,0.95,exception,,,3.6,NoMatchPointError
+tpl_D_store.png,scene_store.png,tpl,0.5,hit,0.9998,"(320, 63)",8.8,
+tpl_D_store.png,scene_store.png,tpl,0.6,hit,0.9998,"(320, 63)",6.2,
+tpl_D_store.png,scene_store.png,tpl,0.7,hit,0.9998,"(320, 63)",5.0,
+tpl_D_store.png,scene_store.png,tpl,0.8,hit,0.9998,"(320, 63)",5.4,
+tpl_D_store.png,scene_store.png,tpl,0.9,hit,0.9998,"(320, 63)",8.1,
+tpl_D_store.png,scene_store.png,tpl,0.95,hit,0.9998,"(320, 63)",8.1,
+tpl_D_store.png,scene_store.png,mstpl,0.5,hit,0.9998,"(320, 63)",814.1,
+tpl_D_store.png,scene_store.png,mstpl,0.6,hit,0.9998,"(320, 63)",868.0,
+tpl_D_store.png,scene_store.png,mstpl,0.7,hit,0.9998,"(320, 63)",1085.8,
+tpl_D_store.png,scene_store.png,mstpl,0.8,hit,0.9998,"(320, 63)",904.2,
+tpl_D_store.png,scene_store.png,mstpl,0.9,hit,0.9998,"(320, 63)",894.4,
+tpl_D_store.png,scene_store.png,mstpl,0.95,hit,0.9998,"(320, 63)",822.2,
+tpl_D_store.png,scene_store.png,kaze,0.5,exception,,,139.2,NoMatchPointError
+tpl_D_store.png,scene_store.png,kaze,0.6,exception,,,126.4,NoMatchPointError
+tpl_D_store.png,scene_store.png,kaze,0.7,exception,,,99.3,NoMatchPointError
+tpl_D_store.png,scene_store.png,kaze,0.8,exception,,,117.3,NoMatchPointError
+tpl_D_store.png,scene_store.png,kaze,0.9,exception,,,134.2,NoMatchPointError
+tpl_D_store.png,scene_store.png,kaze,0.95,exception,,,124.3,NoMatchPointError
+tpl_D_store.png,scene_store.png,brisk,0.5,exception,,,29.1,NoMatchPointError
+tpl_D_store.png,scene_store.png,brisk,0.6,exception,,,33.0,NoMatchPointError
+tpl_D_store.png,scene_store.png,brisk,0.7,exception,,,32.3,NoMatchPointError
+tpl_D_store.png,scene_store.png,brisk,0.8,exception,,,31.9,NoMatchPointError
+tpl_D_store.png,scene_store.png,brisk,0.9,exception,,,28.6,NoMatchPointError
+tpl_D_store.png,scene_store.png,brisk,0.95,exception,,,22.8,NoMatchPointError
+tpl_D_store.png,scene_store.png,akaze,0.5,exception,,,14.2,NoMatchPointError
+tpl_D_store.png,scene_store.png,akaze,0.6,exception,,,17.9,NoMatchPointError
+tpl_D_store.png,scene_store.png,akaze,0.7,exception,,,16.9,NoMatchPointError
+tpl_D_store.png,scene_store.png,akaze,0.8,exception,,,13.2,NoMatchPointError
+tpl_D_store.png,scene_store.png,akaze,0.9,exception,,,16.5,NoMatchPointError
+tpl_D_store.png,scene_store.png,akaze,0.95,exception,,,15.9,NoMatchPointError
+tpl_D_store.png,scene_store.png,orb,0.5,exception,,,2.5,NoMatchPointError
+tpl_D_store.png,scene_store.png,orb,0.6,exception,,,3.6,NoMatchPointError
+tpl_D_store.png,scene_store.png,orb,0.7,exception,,,3.8,NoMatchPointError
+tpl_D_store.png,scene_store.png,orb,0.8,exception,,,3.7,NoMatchPointError
+tpl_D_store.png,scene_store.png,orb,0.9,exception,,,2.9,NoMatchPointError
+tpl_D_store.png,scene_store.png,orb,0.95,exception,,,2.1,NoMatchPointError

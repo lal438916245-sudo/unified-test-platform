@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="76SrIRLZvjiUhUcSEPYtjJ">
+<head data-page-node-id="JWt43M51okWjz89kieI7Pq">
+<meta charset="UTF-8" data-page-node-id="kB6eSqo0rv9sRvl0SeIz2s">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="Tm60Hwhr47HYoOQciFB70i">
+<title>统一游戏测试平台 MVP</title>
+<style>
+  :root{
+    --brand:#12B886; --brand-d:#0b8c61; --bg:#ffffff; --bg2:#f6faf8; --rule:#d7e1dd;
+    --ink:#1b201e; --muted:#586561; --ok:#36b37e; --fail:#e5484d; --run:#2471e8;
+    --warn:#f0a500;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;color:var(--ink);background:#fbfcfb;font-size:14px}
+  header{background:#fff;border-bottom:1px solid var(--rule);padding:14px 28px;display:flex;align-items:center;gap:20px;position:sticky;top:0;z-index:5}
+  header .logo{font-weight:700;font-size:15px;color:var(--brand-d)}
+  header a{color:var(--muted);text-decoration:none;font-size:13px}
+  header a.on{color:var(--brand-d);font-weight:600}
+  main{max-width:1080px;margin:20px auto;padding:0 24px}
+  h1{font-size:18px;margin:4px 0 16px}
+  .card{background:#fff;border:1px solid var(--rule);border-radius:10px;padding:18px;margin-bottom:18px}
+  .card h2{font-size:15px;margin:0 0 12px;color:var(--ink)}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;background:var(--bg2)}
+  button{cursor:pointer;border:1px solid var(--rule);background:#fff;border-radius:6px;padding:5px 12px;font-size:13px}
+  button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  button:hover{filter:brightness(.97)}
+  .chip{display:inline-block;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:600}
+  .c-queued{background:#eef1f0;color:#5b6b66}.c-running{background:#e7f0fd;color:var(--run)}
+  .c-success{background:#e4f6ee;color:var(--ok)}.c-failed{background:#fcebec;color:var(--fail)}
+  .c-cancelling{background:#fdf3e3;color:#d9822b}
+  .c-cancelled,.c-timedout{background:#f4f2ea;color:#8a6d00}
+  .c-skipped{background:#eef1f0;color:#8a9791}
+  .c-partial{background:#e7f0fd;color:var(--run)}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .filters select,.filters input{border:1px solid var(--rule);border-radius:6px;padding:5px 8px;font-size:13px;background:#fff}
+  .pager{display:flex;gap:8px;align-items:center;margin-top:10px}
+  .diff{font-weight:700}
+  .diff.up{color:var(--ok)}.diff.down{color:var(--fail)}.diff.flat{color:var(--muted)}
+  .sel-base{background:#e7f0fd;border:1.5px solid var(--run)}
+  .sel-cand{background:#e4f6ee;border:1.5px solid var(--ok)}
+  pre.log{background:#10151f;color:#cdd7e2;padding:14px;border-radius:8px;overflow:auto;max-height:320px;font-size:12px;font-family:Consolas,monospace;display:none}
+  pre.raw{background:var(--bg2);border:1px solid var(--rule);color:var(--ink);padding:14px;border-radius:8px;overflow:auto;max-height:420px;font-size:12px;font-family:Consolas,monospace}
+  .metrics{display:flex;gap:24px;flex-wrap:wrap;margin:6px 0}
+  .metrics .k{font-size:12px;color:var(--muted)}.metrics .v{font-size:20px;font-weight:700}
+  .muted{color:var(--muted);font-size:12px}
+  a{color:var(--brand-d)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .err{border-left:3px solid var(--fail);background:#fdf0f0;padding:10px 12px;border-radius:6px}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+  .form-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+  .form-grid label.inline{flex-direction:row;align-items:center;gap:6px}
+  .form-grid input,.form-grid select{border:1px solid var(--rule);border-radius:6px;padding:6px 8px;font-size:13px;background:#fff;color:var(--ink)}
+  .pre{background:var(--bg2);border:1px solid var(--rule);border-radius:8px;padding:12px}
+  .pre .ok{color:var(--ok);font-weight:700}
+  .pre .bad{color:var(--fail);font-weight:700}
+  .pre ul{margin:6px 0 0 18px;padding:0}
+  .pre li{font-size:12px;margin:2px 0}
+</style>
+</head>
+<body data-page-node-id="v7LGSwjBXPg3XyLhtNFEFL">
+<header data-page-node-id="af2lsdAofOFljljeGq5Mbz">
+  <span class="logo" data-page-node-id="EW9JVFwMD164ROghz6IQ7J">统一游戏测试平台 MVP</span>
+  <nav data-page-node-id="ebdzNjuumiWOckswBCqLFc">
+    <a href="#/plans" data-page-node-id="mjqQC4XO4MFi6naEEUw7m6">测试计划</a>
+    <a href="#/cases" data-page-node-id="D0QhgK9rs1UioysP29oMSL">测试用例</a>
+    <a href="#/suites" data-page-node-id="tsSuitesNav0001">测试套件</a>
+    <a href="#/reports-center" data-page-node-id="o7FrPEAk2AKR4EXuQy5uM1">报告中心</a>
+    <a href="#/env" data-page-node-id="LgTQo0WGwKos9HB6aDB29m">资源与环境</a>
+  </nav>
+  <span class="muted" style="margin-left:auto" id="health" data-page-node-id="EEP2FUhAd8yU7jTHy1Bmgv"></span>
+</header>
+<main id="app" data-page-node-id="yGOAutfnPeVcrSu3BOA6Fl"></main>
+
+<script>
+const API='';
+const $=id=>document.getElementById(id);
+async function j(path,opt){const r=await fetch(API+path,opt);if(!r.ok)throw new Error(r.status+' '+await r.text());return r.json();}
+function chip(s){return `<span class="chip c-${s}">${s}</span>`;}
+function esc(s){s=String(s==null?'':s);return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function term(status){return ['success','failed','cancelled','timedout','skipped'].includes(status);}
+let timer=null;
+// ---------- 报告对比选择（基线/候选，存会话，跨页保持） ----------
+function pickBaseline(jobId){sessionStorage.setItem('rc_base',String(jobId));alert('已设为基线报告 #'+jobId);}
+function pickCandidate(jobId){sessionStorage.setItem('rc_cand',String(jobId));alert('已设为候选报告 #'+jobId);}
+function compareSel(){
+  const b=sessionStorage.getItem('rc_base'), c=sessionStorage.getItem('rc_cand');
+  if(!b||!c) return {b:null,c:null};
+  return {b,b,c:c};
+}
+
+function router(){
+  clearInterval(timer); timer=null;
+  const h=location.hash||'#/plans';
+  if(h.startsWith('#/run/')) renderRun(h.split('/')[2]);
+  else if(h.startsWith('#/report/')) renderReport(h.split('/')[2]);
+  else if(h.startsWith('#/compare/')){const parts=h.split('/').slice(2);renderCompare(parts[0],parts[1]);}
+  else if(h.startsWith('#/reports-center')) renderReportCenter();
+  else if(h.startsWith('#/cases')) renderCases();
+  else if(h.startsWith('#/suites')) renderSuites();
+  else if(h.startsWith('#/env')) renderEnv();
+  else if(h.startsWith('#/plan-editor/')) renderPlanEditor(h.split('/')[2]);
+  else renderPlans();
+  navHighlight(h);
+}
+function navHighlight(h){
+  document.querySelectorAll('nav a').forEach(a=>{
+    const key=a.getAttribute('href').slice(1);
+    const onReal = h.startsWith('#'+key) || (key==='plans' && (h==='#/plans'||h===''));
+    a.classList.toggle('on', onReal);
+  });
+}
+window.addEventListener('hashchange',router);
+window.addEventListener('load',()=>{heartbeat();router();});
+async function heartbeat(){try{const[e,x]=await Promise.all([j('/api/environments'),j('/api/executors')]);$('health').textContent=`环境 ${e.length} · 执行机 ${x.length}`}catch(e){$('health').textContent='后端未连接'}}
+
+// ---------- 计划列表 ----------
+async function renderPlans(){
+  const app=$('app'); app.innerHTML='<h1>测试计划</h1><div class="card"><p class="muted">加载中…</p></div>';
+  try{
+    const plans=await j('/api/plans');
+    const rows=plans.map(p=>`
+      <tr>
+        <td><strong>${esc(p.name)}</strong><div class="muted">${esc(p.description||'')}</div></td>
+        <td class="muted">${esc((p.steps||[]).map(s=>s.engine).join(' → '))||'无'}</td>
+        <td class="muted">rev ${p.revision??1}<div class="muted">${esc(p.updated_at||'-')}</div></td>
+        <td class="row">
+          <button class="primary" onclick="trigger(${p.id})">一键执行</button>
+          <button onclick="plPrecheckSaved(${p.id})">预检</button>
+          <button onclick="location.hash='#/plan-editor/${p.id}'">编辑</button>
+          <button onclick="plCopy(${p.id})">复制</button>
+        </td>
+      </tr>`).join('');
+    app.innerHTML=`<h1>测试计划</h1>
+      <div class="card">
+        <div class="row"><h2 style="margin:0">计划列表</h2>
+          <button class="primary" style="margin-left:auto" onclick="location.hash='#/plan-editor/new'">新建计划</button></div>
+        <table style="margin-top:10px"><thead><tr><th>名称</th><th>执行单元</th><th>版本</th><th>操作</th></tr></thead>
+          <tbody>${rows||'<tr><td colspan=4 class=muted>暂无计划</td></tr>'}</tbody></table></div>
+      <div id="pl-precheck-host"></div>
+      <div class="card"><h2>最近执行记录</h2><div id="recent"></div></div>`;
+    loadRecent();
+  }catch(e){app.innerHTML=`<div class="card err">加载计划失败：${esc(e.message)}</div>`;}
+}
+let recentLimit=8;   // 最近执行记录的显示条数（「加载更多」每次 +16）
+async function loadRecent(){
+  try{
+    const runs=await j(`/api/runs?limit=${recentLimit}`);
+    const body=runs.map(r=>`<tr><td>${r.id}</td><td>${esc(r.plan_name||r.plan_id)}</td><td>${chip(r.status)}</td>
+        <td class=muted>${esc(r.started_at||'-')}</td><td><a href="#/run/${r.id}">查看</a></td></tr>`).join('')||
+        '<tr><td colspan=5 class=muted>暂无执行记录</td></tr>';
+    $('recent').innerHTML=`<table><thead><tr><th>#</th><th>计划</th><th>状态</th><th>开始</th><th></th></tr></thead>
+      <tbody>${body}</tbody></table>
+      <div class="row" style="margin-top:10px"><span class="muted">显示最近 ${runs.length} 条</span>
+        ${runs.length>=recentLimit?`<button style="margin-left:auto" onclick="recentLimit+=16;loadRecent()">加载更多</button>`:''}</div>`;
+  }catch(e){$('recent').innerHTML='<span class="muted">加载执行记录失败</span>';}
+}
+async function trigger(id){
+  if(!confirm('确认触发该计划？'))return;
+  try{const out=await j(`/api/plans/${id}/run`,{method:'POST'});location.hash='#/run/'+out.run_id;}
+  catch(e){alert('触发失败：'+e.message);}
+}
+
+// ---------- 执行详情 ----------
+async function renderRun(runId){
+  const app=$('app');
+  const keepLogs=$('logsl')?$('logsl').innerHTML:'';   // 轮询重绘时保留已打开的日志面板
+  app.innerHTML='<h1>执行详情</h1><div class="card"><p class="muted">加载中…</p></div>';
+  try{
+    const {run,jobs}=await j(`/api/runs/${runId}`);
+    ready(jobs);
+    const snap=run.plan_snapshot||null;
+    const planName=(snap&&snap.name)||('plan#'+run.plan_id);
+    const rev=run.plan_revision!=null?run.plan_revision:(snap?snap.revision:null);
+    app.innerHTML=`<h1>执行详情 <span class="muted">#${runId}</span></h1>
+      <div class="card">
+        <div class="row"><span class="muted">计划</span><strong>${esc(planName)}</strong>
+          <span class="muted">版本</span>${rev!=null?`<span class="chip c-queued">rev ${rev}</span>`:'<span class="muted">-</span>'}
+          <span class="muted">状态</span>${chip(run.status)} <span class="muted">${esc(run.started_at||'')}</span></div>
+        <p class="muted" style="margin-top:8px">计划名与版本取自执行时的不可变快照；后续编辑原计划不会改变本次执行与报告。</p>
+      </div>
+      ${planSnapshotCard(snap)}
+      <div class="card"><h2>执行单元</h2><table><thead><tr><th>#</th><th>Job</th><th>引擎</th><th>状态</th><th>尝试</th><th>退出码</th><th>操作</th></tr></thead>
+        <tbody>${jobs.map(jb=>`
+          <tr>
+            <td>${jb.id}</td>
+            <td>${esc(jb.name)}${jb.retry_of?`<div class="muted">重试自 #${jb.retry_of}</div>`:''}</td>
+            <td>${esc(jb.engine)}</td>
+            <td>${chip(jb.status)}${jb.status==='cancelling'?'<div class="muted" style="color:var(--warn)">正在取消…</div>':''}</td>
+            <td>#${jb.attempt??1}</td><td>${jb.exit_code??'-'}</td>
+            <td class="row">
+              <a href="javascript:void 0" onclick="showLogs(${jb.id})">日志</a>
+              ${!term(jb.status)?`<button ${jb.status==='cancelling'?'disabled':''} onclick="cancel(${jb.id})">${jb.status==='cancelling'?'取消中…':'取消'}</button>`:''}
+              ${term(jb.status)?`<button onclick="retry(${jb.id})">重试</button>`:''}
+              ${jb.report_path?`<a href="#/report/${jb.id}">报告</a>`:''}
+            </td>
+          </tr>`).join('')}</tbody></table>
+        <div id="logsl">${keepLogs}</div>
+      </div>`;
+    pollRun(runId,jobs);
+  }catch(e){app.innerHTML=`<div class="card err">加载执行失败：${esc(e.message)}</div>`;}
+}
+async function showLogs(jobId){
+  const host=$('logsl');const data=await j(`/api/jobs/${jobId}/logs`);
+  host.innerHTML=`<pre class="log" style="display:block">${esc(data.logs.join(''))||'（暂无日志）'}</pre>`;
+}
+async function cancel(jobId){await j(`/api/jobs/${jobId}/cancel`,{method:'POST'});router();}
+async function retry(jobId){const out=await j(`/api/jobs/${jobId}/retry`,{method:'POST'});alert('已创建重试 Job #'+out.new_job_id);router();}
+function pollRun(runId,jobs){
+  if(jobs.every(x=>term(x.status)))return;
+  timer=setInterval(async()=>{
+    try{
+      const{run,jobs:js}=await j(`/api/runs/${runId}`);
+      // 运行到达终态后立刻停止轮询：否则整页会被反复整体重绘，日志面板会被周期性清空
+      if(term(run.status)){clearInterval(timer);timer=null;}
+      renderRun(runId);
+    }catch(e){}
+  },1200);
+}
+function ready(jobs){return jobs;}
+
+// ---------- 报告详情 ----------
+async function renderReport(jobId){
+  const app=$('app'); app.innerHTML='<h1>报告详情</h1><div class="card"><p class="muted">加载中…</p></div>';
+  try{
+    const rep=await j(`/api/reports/${jobId}`);
+    const data=JSON.parse(rep.report_json);
+    const s=data.summary||{},m=data.metrics||{};
+    const art=(data.artifacts||[]).map(a=>`<a href="/api/artifacts/${jobId}/${esc(a.path)}" target="_blank">${esc(a.name)}</a><span class="muted"> · ${(a.size/1024).toFixed(1)}KB</span>`).join(' · ')||'无';
+    const engPanel = data.engine==='locust' ? locustPanel(data) : (data.engine==='matcheval' ? matchevalPanel(data, jobId) : '');
+    app.innerHTML=`<h1>报告详情 <span class="muted">${esc(data.job_id)}</span></h1>
+      <div class="card">
+        <div class="row"><span class="muted">引擎</span><strong>${esc(data.engine)}</strong>
+          <span class="muted">状态</span>${chip(data.status)} <span class="muted">schema</span>${esc(data.schema_version)}
+          ${data.plan_run_id?`<a href="#/run/${data.plan_run_id}" style="margin-left:auto">执行 #${esc(data.plan_run_id)}</a>`:'<span class="muted" style="margin-left:auto">无关联执行</span>'}</div>
+        <div class="metrics" style="margin-top:12px">
+          <div><div class="k">Tests</div><div class="v">${s.tests??'-'}</div></div>
+          <div><div class="k">Passed</div><div class="v" style="color:var(--ok)">${s.passed??s.requests??'-'}</div></div>
+          <div><div class="k">Failed</div><div class="v" style="color:var(--fail)">${s.failed??s.failures??'-'}</div></div>
+          <div><div class="k">Duration</div><div class="v">${((s.duration_ms??0)/1000).toFixed(1)}s</div></div>
+        </div>
+        <p class="muted">产物: ${art||'无'}</p>
+      </div>
+      ${engPanel}
+      <div class="card"><h2>Metrics</h2><pre class="raw">${esc(JSON.stringify(m,null,2))}</pre></div>
+      <div class="card"><h2>原始 report.json</h2><pre class="raw">${esc(JSON.stringify(data,null,2))}</pre></div>`;
+  }catch(e){app.innerHTML=`<div class="card err">加载报告失败：${esc(e.message)}</div>`;}
+}
+
+// ---------- 压测专项（仅 engine==locust，并入报告详情，不新增页面） ----------
+function locustPanel(data){
+  const m=data.metrics||{},ed=(data.engine_data||{});
+  const key=(v,d)=>(v==null||isNaN(v)?d:v);
+  const cells=[
+    ['Requests',key(m.requests,'-')],['Failures',key(m.failures,'-')],
+    ['Failure Rate',(m.failure_rate*100).toFixed(2)+'%'],
+    ['RPS',key(m.rps,'-')],['Avg',key(m.avg_ms,'-')+'ms'],
+    ['P50',key(m.p50_ms,'-')+'ms'],['P95',key(m.p95_ms,'-')+'ms'],['P99',key(m.p99_ms,'-')+'ms'],
+  ];
+  const sumHi = cells.map(c=>`<div><div class="k">${c[0]}</div><div class="v" style="font-size:16px">${c[1]}</div></div>`).join('');
+  const trend = spark(ed.timeseries||[],'压测时序 (RPS / 错误率 / P95)');
+  const rows=(ed.request_stats||[]).map(r=>`<tr><td class="muted">${esc(r.name)}</td><td>${r.requests}</td><td>${r.failures}</td><td>${(r.failures/Math.max(r.requests,1)*100).toFixed(2)}%</td><td>${r.rps}</td><td>${r.avg_ms}</td><td>${r.p95_ms}</td><td>${r.p99_ms}</td></tr>`).join('');
+  return `<div class="card">
+    <h2>压测专项 <span class="chip c-${data.status}">${esc(data.status)}</span> <span class="muted">engine_data_schema=${esc(data.engine_data_schema||'')}</span></h2>
+    <div class="metrics" style="margin-top:6px">${sumHi}</div>
+    ${trend}
+    <h3 style="margin-top:14px">请求统计 (engine_data.request_stats)</h3>
+    <table><thead><tr><th>接口</th><th>请求</th><th>失败</th><th>错误率</th><th>RPS</th><th>Avg ms</th><th>P95 ms</th><th>P99 ms</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan=8 class="muted">无采样</td></tr>'}</tbody></table>
+  </div>`;
+}
+// ---------- 识别评估专项（仅 engine==matcheval，并入报告详情，不新增页面） ----------
+function matchevalPanel(data, jobId){
+  const m=data.metrics||{},ed=(data.engine_data||{});
+  const img=(path)=>`<a href="/api/artifacts/${jobId}/${esc(path)}" target="_blank"><img src="/api/artifacts/${jobId}/${esc(path)}" style="max-width:330px;border:1px solid #333;border-radius:6px;margin:4px" loading="lazy"></a>`;
+  const ad=data.artifacts||[];
+  const heatmaps=ad.filter(a=>/^heatmap_/i.test(a.name));
+  const errs=ad.filter(a=>/^error_/i.test(a.name));
+  const pc=(v,d)=>(v==null||isNaN(v)?(d??'-'):(Number(v)*100).toFixed(1)+'%');
+  const cells=[
+    ['Sample',m.sample_total??'-'],['TP',m.tp??'-'],['FP',m.fp??'-'],['FN',m.fn??'-'],
+    ['Precision',pc(m.precision)],['Recall',pc(m.recall)],['F1',pc(m.f1)],
+    ['耗时',m.duration_ms!=null?m.duration_ms+'ms':'-'],
+  ];
+  const sumHi=cells.map(c=>`<div><div class="k">${c[0]}</div><div class="v" style="font-size:16px">${c[1]}</div></div>`).join('');
+  const tables=(ed.group_metrics||[]).map(g=>`<h3 style="margin-top:12px">算法: ${esc(g.algorithm)}</h3>
+    <table><thead><tr><th>threshold</th><th>TP</th><th>FP</th><th>FN</th><th>Precision</th><th>Recall</th><th>F1</th><th>样本</th></tr></thead>
+    <tbody>${(g.cells||[]).map(c=>`<tr><td>${c.threshold}</td><td>${c.tp}</td><td>${c.fp}</td><td>${c.fn}</td><td>${pc(c.precision)}</td><td>${pc(c.recall)}</td><td>${pc(c.f1)}</td><td>${c.samples}</td></tr>`).join('')}</tbody></table>`).join('');
+  const errRows=(ed.error_samples||[]).map(r=>`<tr><td>${esc(r.template)}</td><td>${esc(r.scene)}</td><td>${esc(r.algorithm)}</td><td>${r.threshold}</td><td>${esc(r.status)}</td><td>${r.confidence??'-'}</td></tr>`).join('');
+  return `<div class="card">
+    <h2>识别评估专项 <span class="chip c-${data.status}">${esc(data.status)}</span> <span class="muted">engine_data_schema=${esc(data.engine_data_schema||'')}</span></h2>
+    <div class="row" style="gap:16px;flex-wrap:wrap">
+      <span class="muted">算法</span><strong>${esc((ed.algorithm||[]).join(', '))}</strong>
+      <span class="muted">焦点阈值</span><strong>${ed.focus_threshold??'-'}</strong>
+      <span class="muted">样本集</span><strong>${esc(ed.dataset||'-')}</strong>
+    </div>
+    <p class="muted">${esc(ed.dataset_note||'')} · 真值约定: ${esc(ed.ground_truth||'-')}</p>
+    <div class="metrics" style="margin-top:6px">${sumHi}</div>
+    ${tables}
+    ${heatmaps.length?`<h3 style="margin-top:14px">热力图</h3><div>${heatmaps.map(a=>img(a.path)).join('')}</div>`:''}
+    ${errs.length?`<h3 style="margin-top:6px">错误样本图</h3><div>${errs.map(a=>img(a.path)).join('')}</div>`:''}
+    ${errRows?`<h3 style="margin-top:6px">错误样本明细</h3><table><thead><tr><th>模板</th><th>场景</th><th>算法</th><th>阈值</th><th>状态</th><th>置信度</th></tr></thead><tbody>${errRows}</tbody></table>`:''}
+  </div>`;
+}
+
+function spark(series,title){
+  if(!series||!series.length) return `<p class="muted">（无时序数据）</p>`;
+  const W=720,H=120,pad=8;
+  const maxv=Math.max(...series.map(p=>Math.max(p.rps||0,p.p95_ms||0,p.failure_rate||0)));
+  const t=series.map(p=>({...p}));
+  function pts(k){return t.map((p,i)=>[pad+i*(W-2*pad)/Math.max(t.length-1,1), H-pad-(p[k]||0)/Math.max(maxv,1e-9)*(H-2*pad)]).map(p=>p.join(',')).join(' ');}
+  const lines=[['rps','#2471e8'],['p95_ms','#f0a500'],['failure_rate','#e5484d']];
+  const polys=lines.map(([k,c])=>`<polyline points="${pts(k)}" fill="none" stroke="${c}" stroke-width="1.6"/>`).join('');
+  const legend=lines.map(([k,c],i)=>`<text x="${W-140}" y="${12+i*14}" font-size="11" fill="${c}">● ${k}</text>`).join('');
+  const svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;margin-top:8px">${polys}${legend}</svg>`;
+  return `<div><h3 style="margin-top:14px">${esc(title)}</h3>${svg}<p class="muted">共 ${series.length} 个采样点</p></div>`;
+}
+
+// ---------- 资源与环境（配置中心：CRUD / 启停 / 预检 / 就绪度；不显示密钥、不提供任意路径浏览器） ----------
+let cfgCatalog=null, cfgData={envs:[],execs:[],assets:[]}, cfgForm=null, cfgPrecheck=null;
+const CFG_TYPE_LABEL={environment:'Environment',executor:'Executor',asset:'AssetSource'};
+const CFG_BASE={environment:'/api/config/environments',executor:'/api/config/executors',asset:'/api/config/asset-sources'};
+
+async function renderEnv(){
+  const app=$('app');
+  app.innerHTML='<h1>资源与环境</h1><div class="card"><p class="muted">加载中…</p></div>';
+  try{
+    const[envs,execs,assets,cat,ready]=await Promise.all([
+      j('/api/environments'),j('/api/executors'),j('/api/asset-sources'),
+      j('/api/config/catalog'),j('/api/config/readiness')]);
+    cfgCatalog=cat;
+    cfgData={envs,execs,assets};
+    app.innerHTML=`<h1>资源与环境 <span class="muted">配置中心</span></h1>
+      ${cfgReadinessCard(ready.engines)}
+      <div id="cfg-precheck">${cfgPrecheck?cfgPrecheckHtml(cfgPrecheck):''}</div>
+      ${cfgEnvCard(envs)}
+      ${cfgExecCard(execs)}
+      ${cfgAssetCard(assets)}
+      <div id="cfg-form-host"></div>
+      ${cfgDeprecatedCard(cat.deprecated_env)}
+      <div class="card muted">约束：前端只提交受控 ID/key（下拉选择），不接受任意命令、路径、Python 可执行文件或素材目录；密钥只保存引用名（环境变量名 / 外部 secret 引用），平台不保存明文；所有对外视图一律脱敏。预检只做低风险探测，不发起压测或完整测试。</div>`;
+    cfgRenderForm();
+  }catch(e){app.innerHTML=`<div class="card err">加载配置失败：${esc(e.message)}</div>`;}
+}
+
+// ---------- 引擎就绪度：可运行 / 缺少什么配置（下一步指引） ----------
+function cfgReadinessCard(engines){
+  const rows=(engines||[]).map(e=>`<tr>
+    <td><strong>${esc(e.engine)}</strong></td>
+    <td>${e.runnable?'<span class="chip c-success">可运行</span>':'<span class="chip c-failed">缺少配置</span>'}</td>
+    <td class="muted">${esc((e.usable_executors||[]).join('、')||'—')}</td>
+    <td class="muted">${esc((e.missing||[]).join('；')||'—')}</td>
+    <td class="muted">${(e.next_steps||[]).map(esc).join('<br>')||'—'}</td>
+  </tr>`).join('')||'<tr><td colspan=5 class="muted">无</td></tr>';
+  return `<div class="card"><h2>引擎就绪度 <span class="muted">（仅预检，不发起压测/完整测试）</span></h2>
+    <table><thead><tr><th>引擎</th><th>状态</th><th>可用执行机</th><th>缺失项</th><th>下一步</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// ---------- 旧环境变量兼容层（过渡，已弃用） ----------
+function cfgDeprecatedCard(dep){
+  if(!dep) return '';
+  const seen=dep.seen||[];
+  return `<div class="card"><h2>旧环境变量兼容层 <span class="chip c-timedout">已弃用</span></h2>
+    <p class="muted">${esc(dep.note||'')}</p>
+    <p class="muted">登记名：${(dep.names||[]).map(esc).join('、')||'—'}<br>
+      本次进程命中：${seen.length?seen.map(esc).join('、'):'（未命中，配置实体解析优先）'}</p></div>`;
+}
+
+// ---------- Environment ----------
+function cfgEnvCard(envs){
+  const rows=envs.map(e=>{
+    const target=e.kind==='offline'?'<span class="muted">离线评估</span>':esc(e.host+':'+e.port);
+    const cred=e.secret_ref?`${esc(e.secret_ref)} · ${cfgSecretBadge(e)}`:'<span class="muted">未配置</span>';
+    return `<tr>
+      <td><strong>${esc(e.name)}</strong><div class="muted">${esc(e.kind)} · ${esc(e.protocol)}${(e.labels||[]).length?' · '+esc((e.labels||[]).join(',')):''}</div></td>
+      <td>${target}</td>
+      <td class="muted">${cred}</td>
+      <td>${e.enabled?'<span class="chip c-success">启用</span>':'<span class="chip c-skipped">停用</span>'}</td>
+      <td class="row">
+        <a href="javascript:void 0" onclick="cfgEdit('environment',${e.id})">编辑</a>
+        <a href="javascript:void 0" onclick="cfgToggle('environment',${e.id})">${e.enabled?'停用':'启用'}</a>
+        <a href="javascript:void 0" onclick="cfgPrecheckNow('environment',${e.id})">预检</a>
+      </td></tr>`;
+  }).join('');
+  return `<div class="card">
+    <div class="row"><h2 style="margin:0">Environment（被测环境）</h2>
+      <button class="primary" style="margin-left:auto" onclick="cfgNew('environment')">新增</button></div>
+    <table style="margin-top:10px"><thead><tr><th>名称</th><th>目标</th><th>凭据引用</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan=5 class="muted">暂无环境</td></tr>'}</tbody></table></div>`;
+}
+function cfgSecretBadge(e){
+  if(e.secret_available===true) return '<span class="chip c-success">可用</span>';
+  if(e.secret_available===false) return '<span class="chip c-failed">不可用</span>';
+  return '<span class="chip c-queued">由部署侧解析</span>';
+}
+
+// ---------- Executor ----------
+function cfgExecCard(execs){
+  const rows=execs.map(x=>`<tr>
+    <td><strong>${esc(x.name)}</strong></td>
+    <td class="muted">${esc(x.python_ref||'(legacy)')} · ${esc(x.python_masked||'—')} ${x.python_available?'':'<span class="chip c-failed">不可用</span>'}</td>
+    <td class="muted">${esc(x.cwd_root||'(legacy)')} · ${esc(x.cwd_masked||'—')}</td>
+    <td class="muted">${esc((x.allowed_runners||[]).join('、')||'—')}</td>
+    <td>${x.enabled?'<span class="chip c-success">启用</span>':'<span class="chip c-skipped">停用</span>'}</td>
+    <td class="row">
+      <a href="javascript:void 0" onclick="cfgEdit('executor',${x.id})">编辑</a>
+      <a href="javascript:void 0" onclick="cfgToggle('executor',${x.id})">${x.enabled?'停用':'启用'}</a>
+      <a href="javascript:void 0" onclick="cfgPrecheckNow('executor',${x.id})">预检</a>
+    </td></tr>`).join('');
+  return `<div class="card">
+    <div class="row"><h2 style="margin:0">Executor（执行机）</h2>
+      <button class="primary" style="margin-left:auto" onclick="cfgNew('executor')">新增</button></div>
+    <table style="margin-top:10px"><thead><tr><th>名称</th><th>解释器（受控引用 · 脱敏）</th><th>工作目录根</th><th>允许 Runner</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan=6 class="muted">暂无执行机</td></tr>'}</tbody></table></div>`;
+}
+
+// ---------- AssetSource ----------
+function cfgAssetCard(assets){
+  const rows=assets.map(a=>{
+    const refs=a.kind==='locust'?[['场景',a.scenario_ref,a.scenario_ref_masked]]
+      :[['dataset',a.dataset_ref,a.dataset_masked],['模板',a.tpl_ref,a.tpl_ref_masked],
+        ['场景',a.scenes_ref,a.scenes_ref_masked],['真值',a.ground_truth_ref,a.ground_truth_ref_masked],
+        ['Airtest',a.airtest_ref,a.airtest_ref_masked]];
+    const shown=refs.filter(r=>r[1]).map(r=>`${r[0]}=${esc(r[1])}<span class="muted">(${esc(r[2]||'—')})</span>`).join(' · ');
+    return `<tr>
+      <td><strong>${esc(a.name)}</strong></td>
+      <td>${esc(a.kind)}</td>
+      <td class="muted">${shown||'—'}</td>
+      <td>${a.enabled?'<span class="chip c-success">启用</span>':'<span class="chip c-skipped">停用</span>'}</td>
+      <td class="row">
+        <a href="javascript:void 0" onclick="cfgEdit('asset',${a.id})">编辑</a>
+        <a href="javascript:void 0" onclick="cfgToggle('asset',${a.id})">${a.enabled?'停用':'启用'}</a>
+        <a href="javascript:void 0" onclick="cfgPrecheckNow('asset',${a.id})">预检</a>
+      </td></tr>`;
+  }).join('');
+  return `<div class="card">
+    <div class="row"><h2 style="margin:0">AssetSource（受控资产引用）</h2>
+      <button class="primary" style="margin-left:auto" onclick="cfgNew('asset')">新增</button></div>
+    <table style="margin-top:10px"><thead><tr><th>名称</th><th>类型</th><th>受控引用（脱敏）</th><th>状态</th><th>操作</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan=5 class="muted">暂无资产源</td></tr>'}</tbody></table></div>`;
+}
+
+// ---------- 新增/编辑表单（只提供受控下拉，不提供路径浏览器） ----------
+function cfgNew(type){cfgForm={type,id:null,data:{}};cfgRenderForm();}
+function cfgEdit(type,id){
+  const item=cfgList(type).find(x=>x.id===id);
+  if(!item)return;
+  cfgForm={type,id,data:JSON.parse(JSON.stringify(item))};
+  cfgRenderForm();
+  const el=$('cfg-form'); if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function cfgCloseForm(){cfgForm=null;cfgRenderForm();}
+function cfgList(type){return {environment:cfgData.envs,executor:cfgData.execs,asset:cfgData.assets}[type]||[];}
+
+function cfgRenderForm(){
+  const host=$('cfg-form-host'); if(!host)return;
+  if(!cfgForm){host.innerHTML='';return;}
+  const {type,id}=cfgForm;
+  host.innerHTML=`<div class="card" id="cfg-form">
+    <div class="row"><h2 style="margin:0">${id?'编辑':'新增'} ${CFG_TYPE_LABEL[type]}</h2>
+      <button style="margin-left:auto" onclick="cfgCloseForm()">取消</button></div>
+    <div class="form-grid" style="margin-top:12px">${cfgFields(type)}</div>
+    <div class="row" style="margin-top:14px">
+      <button class="primary" onclick="cfgSubmit()">保存</button>
+      <span class="muted" id="cfg-form-msg"></span></div></div>`;
+  cfgBindKind();
+}
+
+function cfgFields(type){
+  const d=cfgForm.data||{};
+  const opts=(list,cur,emptyLabel)=>`<option value="" ${!cur?'selected':''}>${esc(emptyLabel||'(不指定)')}</option>`+
+    list.map(o=>`<option value="${esc(o.key)}" ${cur===o.key?'selected':''}>${esc(o.label)}</option>`).join('');
+  if(type==='environment'){
+    const kinds=cfgCatalog.env_kinds.map(k=>`<option value="${esc(k)}" ${d.kind===k?'selected':''}>${esc(k)}</option>`).join('');
+    const protos=cfgCatalog.env_protocols.map(k=>`<option value="${esc(k)}" ${d.protocol===k?'selected':''}>${esc(k)}</option>`).join('');
+    const sks=['','env_var','external_ref'].map(k=>`<option value="${k}" ${(d.secret_kind||'')===k?'selected':''}>${k||'(无)'}</option>`).join('');
+    return `
+      <label>名称<input id="cf-name" value="${esc(d.name||'')}"></label>
+      <label>类型（受控）<select id="cf-kind" onchange="cfgBindKind()">${kinds}</select></label>
+      <label>协议（受控）<select id="cf-protocol">${protos}</select></label>
+      <label id="cf-host-wrap">目标 host<input id="cf-host" value="${esc(d.host||'')}" placeholder="仅主机名/IP，不接受路径或命令"></label>
+      <label id="cf-port-wrap">端口<input id="cf-port" type="number" min="0" max="65535" value="${d.port||0}"></label>
+      <label>secret 类型<select id="cf-secret-kind">${sks}</select></label>
+      <label>secret 引用名<input id="cf-secret-ref" value="${esc(d.secret_ref||'')}" placeholder="环境变量名或外部 secret 引用（不保存明文密钥）"></label>
+      <label>标签（逗号分隔，非敏感）<input id="cf-labels" value="${esc((d.labels||[]).join(','))}"></label>
+      <label>备注<input id="cf-notes" value="${esc(d.notes||'')}"></label>
+      <label class="inline"><input id="cf-enabled" type="checkbox" ${d.enabled!==0?'checked':''}> 启用</label>`;
+  }
+  if(type==='executor'){
+    const runners=cfgCatalog.engines.map(e=>`<label class="inline"><input type="checkbox" class="cf-runner" value="${esc(e)}" ${(d.allowed_runners||[]).includes(e)?'checked':''}> ${esc(e)}</label>`).join('');
+    return `
+      <label>名称<input id="cf-name" value="${esc(d.name||'')}"></label>
+      <label>Python 解释器引用（受控）<select id="cf-python-ref">${opts(cfgCatalog.interpreters,d.python_ref,'(未指定)')}</select></label>
+      <label>允许工作目录根（受控）<select id="cf-cwd-root">${opts(cfgCatalog.workdir_roots,d.cwd_root,'(不指定)')}</select></label>
+      <label>并发槽位<input id="cf-max-concurrency" type="number" min="1" value="${d.max_concurrency||1}"></label>
+      <label>备注<input id="cf-notes" value="${esc(d.notes||'')}"></label>
+      <label class="inline"><input id="cf-enabled" type="checkbox" ${d.enabled!==0?'checked':''}> 启用</label>
+      <div style="grid-column:1/-1"><div class="muted">允许的 Runner</div><div class="row">${runners}</div></div>`;
+  }
+  const A=cfgCatalog.asset||{};
+  const kinds=cfgCatalog.asset_kinds.map(k=>`<option value="${esc(k)}" ${d.kind===k?'selected':''}>${esc(k)}</option>`).join('');
+  return `
+    <label>名称<input id="cf-name" value="${esc(d.name||'')}"></label>
+    <label>类型（受控）<select id="cf-kind" onchange="cfgBindKind()">${kinds}</select></label>
+    <div id="cf-asset-matcheval" style="grid-column:1/-1">
+      <div class="form-grid">
+        <label>dataset（受控样本集）<select id="cf-dataset-ref">${opts(A.datasets,d.dataset_ref,'(不指定)')}</select></label>
+        <label>模板目录引用<select id="cf-tpl-ref">${opts(A.tpl_dirs,d.tpl_ref,'(不指定)')}</select></label>
+        <label>场景目录引用<select id="cf-scenes-ref">${opts(A.scenes_dirs,d.scenes_ref,'(不指定)')}</select></label>
+        <label>真值引用<select id="cf-ground-truth-ref">${opts(A.ground_truths,d.ground_truth_ref,'(不指定)')}</select></label>
+        <label>Airtest 目录引用<select id="cf-airtest-ref">${opts(A.airtest_dirs,d.airtest_ref,'(不指定)')}</select></label>
+      </div>
+    </div>
+    <div id="cf-asset-locust" style="grid-column:1/-1">
+      <label>Locust 场景引用<select id="cf-scenario-ref">${opts(A.locust_scenarios,d.scenario_ref,'(不指定)')}</select></label>
+    </div>
+    <label>备注<input id="cf-notes" value="${esc(d.notes||'')}"></label>
+    <label class="inline"><input id="cf-enabled" type="checkbox" ${d.enabled!==0?'checked':''}> 启用</label>`;
+}
+
+function cfgBindKind(){
+  if(!cfgForm)return;
+  if(cfgForm.type==='environment'){
+    const kind=($('cf-kind')||{}).value;
+    const offline=kind==='offline';
+    const hw=$('cf-host-wrap'), pw=$('cf-port-wrap');
+    if(hw) hw.style.display=offline?'none':'';
+    if(pw) pw.style.display=offline?'none':'';
+  }
+  if(cfgForm.type==='asset'){
+    const kind=($('cf-kind')||{}).value;
+    const me=$('cf-asset-matcheval'), lo=$('cf-asset-locust');
+    if(me) me.style.display=kind==='matcheval'?'':'none';
+    if(lo) lo.style.display=kind==='locust'?'':'none';
+  }
+}
+
+function cfgPayload(type){
+  const val=id=>{const el=$(id);return el?el.value:'';};
+  const num=id=>{const v=val(id);return v===''?0:Number(v);};
+  const on=id=>{const el=$(id);return el?!!el.checked:true;};
+  if(type==='environment'){
+    const kind=val('cf-kind');
+    const p={name:val('cf-name').trim(),kind,protocol:val('cf-protocol'),
+      secret_kind:val('cf-secret-kind'),secret_ref:val('cf-secret-ref').trim(),
+      labels:val('cf-labels').split(',').map(s=>s.trim()).filter(Boolean),
+      notes:val('cf-notes'),enabled:on('cf-enabled')?1:0};
+    p.host=kind==='offline'?'':val('cf-host').trim();
+    p.port=kind==='offline'?0:num('cf-port');
+    return p;
+  }
+  if(type==='executor'){
+    const runners=[...document.querySelectorAll('.cf-runner:checked')].map(x=>x.value);
+    return {name:val('cf-name').trim(),python_ref:val('cf-python-ref'),cwd_root:val('cf-cwd-root'),
+      allowed_runners:runners,max_concurrency:num('cf-max-concurrency')||1,
+      notes:val('cf-notes'),enabled:on('cf-enabled')?1:0};
+  }
+  const kind=val('cf-kind');
+  const p={name:val('cf-name').trim(),kind,notes:val('cf-notes'),enabled:on('cf-enabled')?1:0};
+  if(kind==='locust'){
+    p.scenario_ref=val('cf-scenario-ref');
+  }else{
+    p.dataset_ref=val('cf-dataset-ref');p.tpl_ref=val('cf-tpl-ref');
+    p.scenes_ref=val('cf-scenes-ref');p.ground_truth_ref=val('cf-ground-truth-ref');
+    p.airtest_ref=val('cf-airtest-ref');
+  }
+  return p;
+}
+
+async function cfgSubmit(){
+  const msg=$('cfg-form-msg'); if(msg) msg.textContent='保存中…';
+  try{
+    const {type,id}=cfgForm;
+    const url=id?`${CFG_BASE[type]}/${id}`:CFG_BASE[type];
+    await j(url,{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(cfgPayload(type))});
+    cfgForm=null; cfgPrecheck=null; await renderEnv();
+  }catch(e){if(msg) msg.textContent='保存失败：'+e.message;}
+}
+
+async function cfgToggle(type,id){
+  try{await j(`${CFG_BASE[type]}/${id}/toggle`,{method:'POST'});await renderEnv();}
+  catch(e){alert('操作失败：'+e.message);}
+}
+
+async function cfgPrecheckNow(type,id){
+  try{
+    cfgPrecheck=await j(`${CFG_BASE[type]}/${id}/precheck`,{method:'POST'});
+    const el=$('cfg-precheck');
+    if(el){el.innerHTML=cfgPrecheckHtml(cfgPrecheck);el.scrollIntoView({behavior:'smooth',block:'center'});}
+  }catch(e){alert('预检失败：'+e.message);}
+}
+
+function cfgPrecheckHtml(r){
+  if(!r)return '';
+  const badge=r.ok===true?'<span class="ok">可运行</span>'
+    :r.ok===false?'<span class="bad">缺少配置</span>':'<span class="muted">无需检查</span>';
+  const checks=(r.checks||[]).map(c=>{
+    const icon=c.ok===true?'✔':c.ok===false?'✘':'○';
+    const cls=c.ok===false?'bad':c.ok===true?'ok':'muted';
+    return `<li><span class="${cls}">${icon}</span> ${esc(c.name)}：${esc(c.detail||'')}</li>`;
+  }).join('');
+  const missing=(r.missing||[]).length?`<p class="bad" style="margin:8px 0 0">缺失项：${esc(r.missing.join('；'))}</p>`:'';
+  const steps=(r.next_steps||[]).length?`<p class="muted" style="margin:6px 0 0">下一步：</p><ul>${r.next_steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:'';
+  const fp=r.fingerprint?`<p class="muted" style="margin:6px 0 0">非敏感指纹：${esc(r.fingerprint)}${r.dir_fingerprint?' · 目录指纹 '+esc(r.dir_fingerprint):''}</p>`:'';
+  return `<div class="card"><h2>预检结果 · ${esc(r.entity||'')} <span class="muted">${esc(r.name||'')}</span> ${badge}</h2>
+    <div class="pre"><ul>${checks||'<li class="muted">（无检查项）</li>'}</ul>${missing}${steps}${fp}</div></div>`;
+}
+
+// ---------- 计划编辑器（受控表单：新建/编辑/复制/版本信息/一键执行/预检；步骤增删上下移） ----------
+const PL_ENGINES=['pytest','locust','matcheval'];
+const PL_ALGOS=['tpl','mstpl','kaze','brisk','akaze','orb'];
+let plCatalog=null, plRefs={envs:[],execs:[],assets:[],cases:[],suites:[]}, plForm=null, plPrecheck=null, plMsg='', plBusy=false;
+
+async function plEnsureRefs(){
+  const[envs,execs,assets,cases,suites,cat]=await Promise.all([
+    j('/api/environments'),j('/api/executors'),j('/api/asset-sources'),
+    j('/api/test-cases?enabled=1'),j('/api/suites?enabled=1'),j('/api/config/catalog')]);
+  plCatalog=cat;
+  plRefs={envs:envs.filter(e=>e.enabled),execs:execs.filter(e=>e.enabled),
+          assets:assets.filter(a=>a.enabled),cases:cases,suites:suites};
+}
+function plEmptyStep(engine){return {kind:'inline',fresh:true,engine:engine||'pytest',name:'',requires_exclusive:false,params:{}};}
+// 引用形态步骤：case_ref 固定 (id,revision,fingerprint)，override_params 只放与用例不同的键
+function plEmptyCaseStep(cid){return {kind:'case',case_ref:cid||null,override_params:{},
+  name:'',requires_exclusive:false,params:{}};}
+
+async function renderPlanEditor(idStr){
+  const app=$('app');
+  app.innerHTML='<h1>计划编辑器</h1><div class="card"><p class="muted">加载中…</p></div>';
+  try{
+    await plEnsureRefs();
+    const isNew=(!idStr||idStr==='new');
+    if(isNew){
+      plForm={id:null,revision:null,created_at:null,updated_at:null,
+        data:{name:'',description:'',environment_id:0,executor_id:0,asset_source_id:0,
+          fail_fast:true,steps:[plEmptyStep('pytest')]}};
+    }else{
+      const p=await j('/api/plans/'+idStr);
+      plForm={id:p.id,revision:p.revision??1,created_at:p.created_at,updated_at:p.updated_at,
+        data:{name:p.name||'',description:p.description||'',environment_id:p.environment_id||0,
+          executor_id:p.executor_id||0,asset_source_id:p.asset_source_id||0,
+          fail_fast:!!p.fail_fast,
+          // 透传点 8/9：引用了 TestCase 的步骤必须完整保留 case_ref / override_params，
+          // 且 legacy 步骤不得被追加任何新键 —— 否则保存时会把用例引用丢掉。
+          steps:(p.steps||[]).map(s=>s.case_ref
+            ? {kind:'case',case_ref:{...s.case_ref},override_params:{...(s.override_params||{})},
+               name:s.name||'',requires_exclusive:!!s.requires_exclusive,params:{}}
+            : {kind:'inline',engine:s.engine,name:s.name||'',
+               requires_exclusive:!!s.requires_exclusive,params:s.params||{}})
+        }};
+    }
+    plPrecheck=null; plMsg='';
+    plRenderEditor();
+  }catch(e){app.innerHTML=`<div class="card err">加载计划失败：${esc(e.message)}</div>`;}
+}
+
+function plRenderEditor(){
+  const app=$('app'); const f=plForm; if(!f)return;
+  const d=f.data;
+  const stepsHtml=d.steps.map((s,i)=>plStepCard(s,i)).join('')||'<p class="muted">暂无步骤，请添加。</p>';
+  app.innerHTML=`<h1>计划编辑器 <span class="muted">${f.id?('#'+f.id+' · rev '+(f.revision??1)):'新建'}</span></h1>
+    <div class="card">
+      <div class="row"><h2 style="margin:0">基础信息</h2>
+        <a href="#/plans" class="muted" style="margin-left:auto">返回计划列表</a></div>
+      <div class="form-grid" style="margin-top:12px">
+        <label>名称<input id="pl-name" value="${esc(d.name)}" placeholder="计划名称"></label>
+        <label>说明<input id="pl-desc" value="${esc(d.description)}" placeholder="用途/范围说明"></label>
+        <label>Environment（仅启用）<select id="pl-env">${plEnvOpts(d.environment_id)}</select></label>
+        <label>Executor（仅启用）<select id="pl-exec">${plExecOpts(d.executor_id)}</select></label>
+        <label>AssetSource（仅启用且兼容）<select id="pl-asset">${plAssetOpts(d.asset_source_id)}</select></label>
+        <label class="inline"><input id="pl-failfast" type="checkbox" ${d.fail_fast?'checked':''}> 失败即停（fail_fast）</label>
+      </div>
+      ${f.id?`<p class="muted" style="margin-top:10px">版本 rev ${f.revision??1} · 创建 ${esc(f.created_at||'-')} · 更新 ${esc(f.updated_at||'-')}。每次保存编辑 revision +1；执行时固化当时的版本与快照。</p>`
+        :'<p class="muted" style="margin-top:10px">新建计划初始 rev 1；执行时固化快照。</p>'}
+    </div>
+    <div class="card">
+      <div class="row"><h2 style="margin:0">执行步骤（默认串行）</h2>
+        <select id="pl-suite-pick" style="margin-left:auto" title="选择一个测试套件，展开为若干用例步骤">${plSuiteOpts()}</select>
+        <button onclick="plAddSuiteSteps()">插入测试套件</button>
+        <button onclick="plAddStep()">添加内联步骤</button>
+        <button onclick="plAddCaseStep()">添加用例步骤</button></div>
+      <p class="muted" style="margin:6px 0 0">内联步骤把参数直接写进本计划（legacy 形态）；
+        用例步骤只保存对 TestCase 的引用（id + revision + 指纹）与本计划的参数覆盖，执行时再展开。<br>
+        <b>插入测试套件</b>只在<b>编辑阶段</b>把套件展开成等价的用例步骤（可再单独增删调序）；
+        套件本身<b>不会</b>被写进计划，保存的仍是普通步骤。</p>
+      <div style="margin-top:10px">${stepsHtml}</div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <button class="primary" onclick="plSave(false)">保存</button>
+        <button onclick="plSave(true)">保存并执行</button>
+        <button onclick="plRunPrecheck()">预检 / 执行预览</button>
+        <span class="muted" id="pl-msg">${esc(plMsg||'')}</span>
+      </div>
+    </div>
+    <div id="pl-precheck-host">${plPrecheck?plPrecheckHtml(plPrecheck):''}</div>`;
+}
+
+function plStepCard(s,i){
+  const isCase=s.kind==='case';
+  const up=i>0?`<button onclick="plStepMove(${i},-1)">上移</button>`:'';
+  const down=i<plForm.data.steps.length-1?`<button onclick="plStepMove(${i},1)">下移</button>`:'';
+  const head = isCase
+    ? `<strong>步骤 ${i+1}</strong><span class="chip">引用用例</span>
+       <select id="pl-s${i}-case" onchange="plPickCase(${i},this.value)">${plCaseOpts(s.case_ref&&s.case_ref.id)}</select>`
+    : `<strong>步骤 ${i+1}</strong><span class="chip">内联</span>
+       <select id="pl-s${i}-engine" onchange="plStepEngine(${i},this.value)">${
+         PL_ENGINES.map(e=>`<option value="${e}" ${s.engine===e?'selected':''}>${e}</option>`).join('')}</select>`;
+  return `<div class="card" style="background:var(--bg2);margin-bottom:10px">
+    <div class="row">${head}
+      <span style="margin-left:auto"></span>
+      <button onclick="plToggleKind(${i})">${isCase?'改为内联步骤':'改为引用用例'}</button>
+      ${up}${down}
+      <button onclick="plStepDel(${i})">删除</button></div>
+    <div class="form-grid" style="margin-top:10px">${plStepFields(s,i)}</div></div>`;
+}
+
+function plFindCase(cid){return (plRefs.cases||[]).find(c=>String(c.id)===String(cid))||null;}
+function plCaseOpts(cur){
+  const list=plRefs.cases||[];
+  if(!list.length) return '<option value="">（暂无可用的已启用用例）</option>';
+  return `<option value="">（选择用例）</option>`+list.map(c=>
+    `<option value="${c.id}" ${String(cur)===String(c.id)?'selected':''}>${esc(c.name)} · ${esc(c.engine)} · rev${c.revision}</option>`).join('');
+}
+function plToggleKind(i){
+  plCollect();
+  const s=plForm.data.steps[i];
+  plForm.data.steps[i] = (s.kind==='case') ? plEmptyStep('pytest') : plEmptyCaseStep('');
+  plRenderEditor();
+}
+function plAddCaseStep(){plCollect();plForm.data.steps.push(plEmptyCaseStep(''));plRenderEditor();}
+
+// ---- 测试套件：**编辑期**展开为普通用例步骤 ----
+// 规则（与架构审计 §7 一致）：
+//   · 展开发生在编辑阶段，产物是 kind:'case' 的普通步骤 —— 与手动「添加用例步骤」完全等价；
+//   · 套件本身**不进入** plans.steps（不写 suite_ref，不写 suite 定义）；
+//   · 展开后用户仍可对单个步骤增删 / 上下移 / 改覆盖参数；
+//   · 顺序 = 套件里 cases 数组的顺序，插入到列表末尾。
+function plSuiteOpts(){
+  const list=plRefs.suites||[];
+  if(!list.length) return '<option value="">（暂无可用的已启用套件）</option>';
+  return `<option value="">（选择套件）</option>`+list.map(s=>
+    `<option value="${s.id}">${esc(s.name)} · ${(s.cases||[]).length} 个用例 · rev${s.revision}</option>`
+  ).join('');
+}
+function plAddSuiteSteps(){
+  plCollect();
+  const sel=$('pl-suite-pick');
+  const sid=sel?Number(sel.value)||0:0;
+  if(!sid){ plMsg='请先选择要插入的测试套件'; plRenderEditor(); return; }
+  const s=(plRefs.suites||[]).find(x=>Number(x.id)===sid);
+  if(!s){ plMsg='套件不存在或已停用，请刷新后重试'; plRenderEditor(); return; }
+  const cs=s.cases||[];
+  if(!cs.length){ plMsg=`套件「${s.name}」不含任何用例，无法展开`; plRenderEditor(); return; }
+  const unavailable=[];
+  const added=cs.map(c=>{
+    const tc=plFindCase(c.id);
+    if(!tc) unavailable.push(c.id);
+    return {kind:'case',
+      // ⚠️ 只带 case_ref（(id, revision, fingerprint) 三元组），**不带 suite_ref**
+      case_ref:{id:c.id,revision:c.revision,fingerprint:c.fingerprint},
+      override_params:{},
+      name:tc?tc.name:('用例#'+c.id),
+      requires_exclusive:tc?!!tc.requires_exclusive:false,
+      params:{}};
+  });
+  plForm.data.steps=plForm.data.steps.concat(added);
+  plMsg=`已从套件「${s.name}」rev${s.revision} 展开 ${added.length} 个用例步骤`
+       +(unavailable.length
+          ? `；⚠️ 其中 ${unavailable.length} 个用例当前不可用（id=${unavailable.join('、')}），保存时后端会如实报错`
+          : '')
+       +'。保存的是普通步骤，不含套件引用。';
+  plRenderEditor();
+}
+function plPickCase(i,cid){
+  plCollect();
+  const tc=plFindCase(cid?Number(cid):null);
+  plForm.data.steps[i]={kind:'case',
+    case_ref: tc?{id:tc.id,revision:tc.revision,fingerprint:tc.fingerprint}:null,
+    override_params:{}, name:tc?tc.name:'',
+    requires_exclusive:tc?!!tc.requires_exclusive:false, params:{}};
+  plRenderEditor();
+}
+
+function plStepFields(s,i){
+  const isCase=s.kind==='case';
+  const tc=isCase?plFindCase(s.case_ref&&s.case_ref.id):null;
+  if(isCase&&!tc){
+    return `<div style="grid-column:1/-1"><span class="err">请先选择要引用的 TestCase。</span></div>`;
+  }
+  // 用例步骤：表单展示"用例定义 ⊕ override"的最终有效值；收集时自动把与用例不同的项转成 override
+  const p = isCase ? {...(tc.params||{}),...(s.override_params||{})} : (s.params||{});
+  const eng = isCase ? tc.engine : s.engine;
+  const tip = isCase ? `<div style="grid-column:1/-1" class="muted">
+      引用用例 #${tc.id}「${esc(tc.name)}」rev${tc.revision} · 定义指纹 <code>${esc(tc.fingerprint)}</code>。
+      下方参数中<b>与用例不同的项</b>将自动记为 override_params（只允许调整该用例<b>已声明</b>的参数）。
+      <a href="#/cases" style="margin-left:6px">管理用例 →</a></div>` : '';
+  const common=`<label>步骤名<input id="pl-s${i}-name" value="${esc(s.name||'')}" placeholder="默认为引擎名/用例名"></label>
+    <label>超时(秒)<input id="pl-s${i}-timeout" type="number" min="1" value="${p.timeout_sec??300}"></label>
+    <label class="inline"><input id="pl-s${i}-excl" type="checkbox" ${s.requires_exclusive?'checked':''}> 独占执行机（UI/Unity 类）</label>`;
+  if(eng==='pytest'){
+    return tip+common+`<label style="grid-column:1/-1">测试选择器 / 参数（空格分隔；仅相对路径与开关，不接受绝对路径或命令）
+      <input id="pl-s${i}-args" value="${esc((p.args||[]).join(' '))}" placeholder="demo/test_platform_demo.py -o addopts= --tb=short"></label>
+      <label>工作目录根（受控）<select id="pl-s${i}-cwd-root">${plRootOpts(p.cwd_root)}</select></label>`;
+  }
+  if(eng==='locust'){
+    return tip+common+`<label>场景（受控引用）<select id="pl-s${i}-locustfile">${plScenarioOpts(p.locustfile)}</select></label>
+      <label>并发用户数 users<input id="pl-s${i}-users" type="number" min="1" value="${p.users??5}"></label>
+      <label>启动速率 spawn_rate<input id="pl-s${i}-spawn" type="number" min="1" value="${p.spawn_rate??2}"></label>
+      <label>运行时长 run_time<input id="pl-s${i}-runtime" value="${esc(p.run_time||'15s')}" placeholder="如 15s / 1m"></label>
+      <label class="inline"><input id="pl-s${i}-csv" type="checkbox" ${p.csv_full_history?'checked':''}> 记录完整 CSV 历史</label>`;
+  }
+  return tip+common+`<label>样本集 dataset（受控引用）<select id="pl-s${i}-dataset">${plDatasetOpts(p.dataset)}</select></label>
+    <label>阈值 threshold（0..1）<input id="pl-s${i}-threshold" type="number" min="0" max="1" step="0.01" value="${p.threshold??0.8}"></label>
+    <label>输出级别 output_level<select id="pl-s${i}-output-level">${plOutOpts(p.output_level)}</select></label>
+    <div style="grid-column:1/-1"><div class="muted">算法（受控白名单，多选）</div>
+      <div class="row">${PL_ALGOS.map(a=>`<label class="inline"><input type="checkbox" class="pl-alg-${i}" value="${a}" ${(p.algorithm||[]).includes(a)?'checked':''}> ${a}</label>`).join('')}</div></div>`;
+}
+
+function plEnvOpts(cur){
+  return `<option value="0" ${!cur?'selected':''}>（未选择）</option>`+
+    plRefs.envs.map(e=>`<option value="${e.id}" ${String(cur)===String(e.id)?'selected':''}>${esc(e.name)} · ${esc(e.kind)}</option>`).join('');
+}
+function plExecOpts(cur){
+  return `<option value="0" ${!cur?'selected':''}>（未选择）</option>`+
+    plRefs.execs.map(x=>`<option value="${x.id}" ${String(cur)===String(x.id)?'selected':''}>${esc(x.name)} · ${esc((x.allowed_runners||[]).join('/')||'—')}</option>`).join('');
+}
+function plAssetOpts(cur){
+  // 用例步骤的引擎取自其引用的用例（步骤本身不保存 engine）
+  const kinds=new Set(plForm.data.steps.map(s=>{
+    const eng = s.kind==='case' ? (plFindCase(s.case_ref&&s.case_ref.id)||{}).engine : s.engine;
+    return eng==='locust'?'locust':eng==='matcheval'?'matcheval':null;
+  }).filter(Boolean));
+  const list=plRefs.assets.filter(a=>kinds.size===0||kinds.has(a.kind));
+  return `<option value="0" ${!cur?'selected':''}>（不指定）</option>`+
+    list.map(a=>`<option value="${a.id}" ${String(cur)===String(a.id)?'selected':''}>${esc(a.name)} · ${esc(a.kind)}</option>`).join('');
+}
+function plRootOpts(cur){
+  const roots=(plCatalog&&plCatalog.workdir_roots)||[];
+  return `<option value="" ${!cur?'selected':''}>（不指定）</option>`+
+    roots.map(o=>`<option value="${esc(o.key)}" ${cur===o.key?'selected':''}>${esc(o.label)}</option>`).join('');
+}
+function plScenarioOpts(cur){
+  const list=(plCatalog&&plCatalog.asset&&plCatalog.asset.locust_scenarios)||[];
+  return `<option value="" ${!cur?'selected':''}>（选择受控场景）</option>`+
+    list.map(o=>`<option value="${esc(o.key)}" ${cur===o.key?'selected':''}>${esc(o.label)}</option>`).join('');
+}
+function plDatasetOpts(cur){
+  const list=(plCatalog&&plCatalog.asset&&plCatalog.asset.datasets)||[];
+  return `<option value="" ${!cur?'selected':''}>（选择受控样本集）</option>`+
+    list.map(o=>`<option value="${esc(o.key)}" ${cur===o.key?'selected':''}>${esc(o.label)}</option>`).join('');
+}
+function plOutOpts(cur){
+  return ['summary','full'].map(k=>`<option value="${k}" ${(cur||'summary')===k?'selected':''}>${k}</option>`).join('');
+}
+
+function plReadParams(i,eng){
+  const v=id=>{const el=$(id);return el?el.value:'';};
+  const num=id=>{const el=$(id);const t=el?el.value:'';return t===''?null:Number(t);};
+  const on=id=>{const el=$(id);return el?!!el.checked:false;};
+  const p={};
+  const to=num(`pl-s${i}-timeout`); if(to)p.timeout_sec=to;
+  if(eng==='pytest'){
+    const raw=v(`pl-s${i}-args`).trim(); if(raw)p.args=raw.split(/\s+/);
+    const cr=v(`pl-s${i}-cwd-root`); if(cr)p.cwd_root=cr;
+  }else if(eng==='locust'){
+    const lf=v(`pl-s${i}-locustfile`); if(lf)p.locustfile=lf;
+    p.users=num(`pl-s${i}-users`)||1;
+    p.spawn_rate=num(`pl-s${i}-spawn`)||1;
+    p.run_time=v(`pl-s${i}-runtime`)||'15s';
+    p.csv_full_history=on(`pl-s${i}-csv`);
+  }else{
+    const ds=v(`pl-s${i}-dataset`); if(ds)p.dataset=ds;
+    p.threshold=num(`pl-s${i}-threshold`);
+    p.output_level=v(`pl-s${i}-output-level`)||'summary';
+    const algs=[...document.querySelectorAll(`.pl-alg-${i}:checked`)].map(x=>x.value);
+    if(algs.length)p.algorithm=algs;
+  }
+  return p;
+}
+// ---- 内联步骤的参数合并：保证"打开旧计划 → 原样保存"不改变 steps ----
+// 背景（v0.2 遗留）：plReadParams 会按表单布局重新组装 params，因此单纯"打开即保存"
+// 就会（a）重排键序、（b）丢掉表单没有渲染的键、（c）为"有缺省回退"的键凭空注入默认值。
+// 其中 (c) 会改变 plan_snapshot 指纹（(a) 不会 —— 快照哈希用 sort_keys，键序无关）。
+// 规则：以原 params 为基底合并 —— 保键序、保留未管理的键；有缺省回退的键只在
+// "原本已声明"或"用户改成非默认值"时才写入；表单没产出 = 用户清空 → 删除该键。
+// 新建步骤（fresh）保持原有行为不变，避免影响新计划的默认值体验。
+const PL_MANAGED_KEYS={pytest:['args','cwd_root','timeout_sec'],
+  locust:['locustfile','users','spawn_rate','run_time','csv_full_history','timeout_sec'],
+  matcheval:['dataset','threshold','output_level','algorithm','timeout_sec']};
+// ⚠️ 必须与 plStepFields / plReadParams 的**表单回退值**严格一致（即 `${p.x??N}` 里的 N）。
+// 若这里写的值与表单实际显示的回退值不同，"原步骤没有该键 + 用户什么都没改" 就会被
+// 误判成"用户显式设置成非默认值"，从而把默认值凭空写进旧步骤的 params —— 后果是
+// legacy steps 变样、下一次 plan_snapshot 指纹漂移。回退值对照：
+//   timeout_sec→300（三引擎）· locust: users→5, spawn_rate→2, run_time→'15s', csv_full_history→false
+//   matcheval: threshold→0.8, output_level→'summary'
+const PL_DEFAULTED={
+  pytest:{timeout_sec:300},
+  locust:{users:5,spawn_rate:2,run_time:'15s',csv_full_history:false,timeout_sec:300},
+  matcheval:{threshold:0.8,output_level:'summary',timeout_sec:300}};
+function plMergeParams(orig,built,eng,fresh){
+  if(fresh) return built;                      // 新建步骤：沿用原行为
+  const managed=PL_MANAGED_KEYS[eng]||[], dflt=PL_DEFAULTED[eng]||{};
+  const out={};
+  Object.keys(orig).forEach(k=>{
+    if(!managed.includes(k)){out[k]=orig[k];return;}   // 表单不管理的键（如 legacy 里的 cwd）原样保留
+    if(k in built) out[k]=built[k];                    // 用户清空 → k 不在 built → 不写（等于删除）
+  });
+  Object.keys(built).forEach(k=>{
+    if(k in out) return;
+    if(k in dflt && JSON.stringify(built[k])===JSON.stringify(dflt[k])) return;  // 仍是缺省回退 → 不凭空注入
+    out[k]=built[k];
+  });
+  return out;
+}
+function plCollectStep(i){
+  const s=plForm.data.steps[i]; if(!s)return;
+  const v=id=>{const el=$(id);return el?el.value:'';};
+  const on=id=>{const el=$(id);return el?!!el.checked:false;};
+  if(s.kind==='case'){
+    const tc=plFindCase(s.case_ref&&s.case_ref.id);
+    if(!tc){ s.params={}; s.override_params={}; return; }
+    const cur=plReadParams(i,tc.engine);
+    s.params=cur;
+    s.name=v(`pl-s${i}-name`)||tc.name;
+    s.requires_exclusive=on(`pl-s${i}-excl`);
+    // 只对**用例已声明**的参数做差异比对：表单对未声明的键会填引擎默认值，
+    // 若一并比对会把默认值误记成"覆盖"。UI 只允许调整用例已声明的参数；
+    // 需要补充白名单内的其它键时，仍可通过 API 提交 override_params。
+    const base=tc.params||{}, ov={};
+    Object.keys(base).forEach(k=>{
+      if(JSON.stringify(cur[k])!==JSON.stringify(base[k])) ov[k]=cur[k];
+    });
+    s.override_params=ov;
+    return;
+  }
+  s.name=v(`pl-s${i}-name`)||s.engine;
+  s.requires_exclusive=on(`pl-s${i}-excl`);
+  // 保键序 / 保留未管理键 / 不凭空注入默认值（见 plMergeParams 注释）
+  s.params=plMergeParams(s.params||{}, plReadParams(i,s.engine), s.engine, !!s.fresh);
+}
+function plCollect(){
+  const f=plForm; if(!f)return;
+  const v=id=>{const el=$(id);return el?el.value:'';};
+  const on=id=>{const el=$(id);return el?!!el.checked:false;};
+  f.data.name=v('pl-name').trim();
+  f.data.description=v('pl-desc');
+  f.data.environment_id=Number(v('pl-env'))||0;
+  f.data.executor_id=Number(v('pl-exec'))||0;
+  f.data.asset_source_id=Number(v('pl-asset'))||0;
+  f.data.fail_fast=on('pl-failfast');
+  f.data.steps.forEach((_,i)=>plCollectStep(i));
+}
+function plPayload(){
+  plCollect();
+  const d=plForm.data;
+  return {name:d.name,description:d.description,environment_id:d.environment_id,
+    executor_id:d.executor_id,asset_source_id:d.asset_source_id,
+    // 透传点 9：用例步骤输出引用形态（case_ref + override_params），
+    // legacy 内联步骤维持原四键形态，不加任何新键。
+    steps:d.steps.map(s=> s.kind==='case'
+      ? {case_ref:{...(s.case_ref||{})},
+         override_params:{...(s.override_params||{})},
+         ...(s.name?{name:s.name}:{}),
+         requires_exclusive:!!s.requires_exclusive}
+      : {engine:s.engine,name:s.name,requires_exclusive:s.requires_exclusive,params:s.params}),
+    fail_fast:d.fail_fast,owner:'local'};
+}
+
+function plAddStep(){plCollect();plForm.data.steps.push(plEmptyStep('pytest'));plRenderEditor();}
+function plStepDel(i){plCollect();plForm.data.steps.splice(i,1);plRenderEditor();}
+function plStepMove(i,dir){
+  plCollect();
+  const st=plForm.data.steps, j=i+dir;
+  if(j<0||j>=st.length)return;
+  [st[i],st[j]]=[st[j],st[i]];
+  plRenderEditor();
+}
+function plStepEngine(i,eng){
+  plCollectStep(i);              // 先用旧引擎字段收集，避免输入丢失
+  plForm.data.steps[i].engine=eng;
+  plForm.data.steps[i].params={}; // 切换引擎后参数不再适用，重置
+  plRenderEditor();
+}
+
+async function plSave(andRun){
+  if(plBusy)return;
+  plBusy=true;
+  const msg=$('pl-msg'); if(msg)msg.textContent='保存中…';
+  try{
+    const body=plPayload();
+    if(!body.name)throw new Error('名称必填');
+    if(!body.steps.length)throw new Error('至少需要一个执行步骤');
+    const noCase=body.steps.findIndex(s=>!s.engine&&!(s.case_ref&&s.case_ref.id));
+    if(noCase>=0)throw new Error(`步骤 ${noCase+1} 尚未选择要引用的 TestCase`);
+    let pid=plForm.id;
+    if(pid){
+      await j('/api/plans/'+pid,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    }else{
+      const out=await j('/api/plans',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      pid=out.id;
+    }
+    if(andRun){
+      const out=await j(`/api/plans/${pid}/run`,{method:'POST'});
+      location.hash='#/run/'+out.run_id;
+    }else{
+      await renderPlanEditor(String(pid));   // 重新载入以反映递增后的 revision
+    }
+  }catch(e){if(msg)msg.textContent='保存失败：'+e.message;}
+  finally{plBusy=false;}
+}
+
+async function plCopy(id){
+  try{
+    const out=await j(`/api/plans/${id}/copy`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    location.hash='#/plan-editor/'+out.id;
+  }catch(e){alert('复制失败：'+e.message);}
+}
+
+async function plRunPrecheck(){
+  const host=$('pl-precheck-host');
+  if(host)host.innerHTML='<div class="card"><p class="muted">预检中…（不创建 PlanRun、不拉起子进程、不发起压测）</p></div>';
+  try{
+    const r=await j('/api/plans/precheck',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(plPayload())});
+    plPrecheck=r;
+    if(host)host.innerHTML=plPrecheckHtml(r);
+    if(host)host.scrollIntoView({behavior:'smooth',block:'center'});
+  }catch(e){if(host)host.innerHTML=`<div class="card err">预检失败：${esc(e.message)}</div>`;}
+}
+async function plPrecheckSaved(id){
+  const host=$('pl-precheck-host');
+  if(host)host.innerHTML='<div class="card"><p class="muted">预检中…</p></div>';
+  try{
+    const r=await j(`/api/plans/${id}/precheck`,{method:'POST'});
+    if(host)host.innerHTML=plPrecheckHtml(r);
+    if(host)host.scrollIntoView({behavior:'smooth',block:'center'});
+  }catch(e){if(host)host.innerHTML=`<div class="card err">预检失败：${esc(e.message)}</div>`;}
+}
+
+function plPrecheckHtml(r){
+  if(!r)return '';
+  const badge=r.ok===true?'<span class="ok">可运行</span>'
+    :r.ok===false?'<span class="bad">缺少配置 / 参数</span>':'<span class="muted">无需检查</span>';
+  const stepRows=(r.steps||[]).map(s=>{
+    const marks=[['引擎已注册',s.engine_registered],['参数合法',s.params_ok],
+      ['执行机允许',s.executor_allows],['依赖就绪',s.deps_ready]]
+      .map(([n,ok])=>`<span class="${ok?'ok':'bad'}" style="margin-right:8px">${ok?'✔':'✘'} ${n}</span>`).join('');
+    const errs=(s.params_errors||[]).map(e=>`<li>${esc(e)}</li>`).join('');
+    return `<tr><td>${s.index+1}</td><td><strong>${esc(s.engine)}</strong><div class="muted">${esc(s.name||'')}</div></td>
+      <td>${marks}</td><td class="muted">${esc(JSON.stringify(s.params||{}))}${errs?`<ul class="bad">${errs}</ul>`:''}</td></tr>`;
+  }).join('');
+  const cfg=r.config||{};
+  const cfgRow=(label,pc)=>pc?`<tr><td>${label}</td><td>${pc.ok===true?'<span class="ok">就绪</span>':pc.ok===false?'<span class="bad">缺失</span>':'<span class="muted">无需检查</span>'}</td><td class="muted">${esc((pc.missing||[]).join('；')||'—')}</td></tr>`
+    :`<tr><td>${label}</td><td class="muted">未引用</td><td class="muted">—</td></tr>`;
+  const conc=r.concurrency||{}, ff=r.fail_fast||{};
+  const missing=(r.missing||[]).length?`<p class="bad" style="margin:8px 0 0">缺失项：${esc(r.missing.join('；'))}</p>`:'';
+  const nxt=(r.next_steps||[]).length?`<p class="muted" style="margin:6px 0 0">下一步：</p><ul>${r.next_steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:'';
+  return `<div class="card"><h2>预检 / 执行预览 <span class="muted">${esc(r.name||'')} · rev ${r.revision??'-'}</span> ${badge}</h2>
+    <p class="muted">步骤顺序与解析后的引擎：</p>
+    <table><thead><tr><th>#</th><th>引擎</th><th>就绪项</th><th>参数</th></tr></thead>
+      <tbody>${stepRows||'<tr><td colspan=4 class="muted">无步骤</td></tr>'}</tbody></table>
+    <p class="muted" style="margin-top:10px">配置就绪度：</p>
+    <table><thead><tr><th>配置</th><th>状态</th><th>缺失</th></tr></thead><tbody>
+      ${cfgRow('Environment',cfg.environment)}${cfgRow('Executor',cfg.executor)}${cfgRow('AssetSource',cfg.asset_source)}</tbody></table>
+    <div class="pre" style="margin-top:10px">
+      <div>并发 / 锁：执行机独占锁${conc.exclusive_lock_held?`<span class="bad"> 已被 Job #${conc.holder_job_id} 持有</span>`:'<span class="ok"> 空闲</span>'} · 全局串行${conc.run_in_progress?'<span class="muted">（有进行中的 PlanRun）</span>':''}</div>
+      <div>fail_fast：${ff.enabled?'<span class="ok">开启</span>':'<span class="muted">关闭</span>'} —— ${esc(ff.behavior||'')}</div>
+      ${missing}${nxt}
+      <p class="muted" style="margin:6px 0 0">本预检不创建 PlanRun/Job、不拉起子进程、不发起压测或完整测试${r.fingerprint?` · 非敏感指纹 ${esc(r.fingerprint)}`:''}。</p>
+    </div></div>`;
+}
+
+function planSnapshotCard(snap){
+  if(!snap)return '';
+  const rows=(snap.steps||[]).map(s=>`<tr><td>${(s.index??0)+1}</td><td><strong>${esc(s.engine)}</strong></td>
+    <td>${esc(s.name||'')}</td><td class="muted">${esc(JSON.stringify(s.params||{}))}</td></tr>`).join('');
+  return `<div class="card"><h2>执行时的计划快照 <span class="muted">只读 · rev ${snap.revision??'-'}</span></h2>
+    <div class="row" style="gap:16px;flex-wrap:wrap">
+      <span class="muted">名称</span><strong>${esc(snap.name||'-')}</strong>
+      <span class="muted">fail_fast</span><strong>${snap.fail_fast?'开启':'关闭'}</strong>
+      <span class="muted">Environment</span><strong>#${snap.environment_id??'-'}</strong>
+      <span class="muted">Executor</span><strong>#${snap.executor_id??'-'}</strong>
+      <span class="muted">AssetSource</span><strong>#${snap.asset_source_id??'-'}</strong></div>
+    <p class="muted" style="margin-top:6px">${esc(snap.description||'')}</p>
+    <table><thead><tr><th>#</th><th>引擎</th><th>名称</th><th>参数</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan=4 class="muted">无</td></tr>'}</tbody></table>
+    ${snap.snapshot_fingerprint?`<p class="muted" style="margin-top:6px">非敏感指纹 ${esc(snap.snapshot_fingerprint)}</p>`:''}</div>`;
+}
+
+// ---------- 测试用例（v0.2 定义层：只描述"要跑什么"，不绑定环境/执行机/资产） ----------
+let tcList=[], tcEdit=null, tcMsg='', tcBusy=false;
+const TC_ASSET_KIND={pytest:'',locust:'locust',matcheval:'matcheval'};
+
+async function renderCases(){
+  const app=$('app'); app.innerHTML='<h1>测试用例</h1><div class="card"><p class="muted">加载中…</p></div>';
+  try{
+    await plEnsureRefs();
+    tcList=await j('/api/test-cases');
+    if(!tcEdit) tcEdit=tcBlank();
+    tcRender();
+  }catch(e){app.innerHTML=`<div class="card err">加载失败：${esc(e.message)}</div>`;}
+}
+function tcBlank(){
+  return {id:null,name:'',description:'',engine:'pytest',params:{},requires_exclusive:false,
+          asset_kind:'',owner:'local',tags:[],enabled:true,revision:null,fingerprint:''};
+}
+function tcRender(){
+  const app=$('app');
+  const rows=tcList.map(c=>`<tr>
+      <td>${c.id}</td>
+      <td>${esc(c.name)}${c.id===tcEdit.id?' <span class="chip">编辑中</span>':''}</td>
+      <td>${esc(c.engine)}</td>
+      <td>rev ${c.revision}</td>
+      <td><code>${esc(c.fingerprint)}</code></td>
+      <td>${c.enabled?'<span class="chip c-success">启用</span>':'<span class="chip c-skipped">停用</span>'}</td>
+      <td class="row">
+        <a href="javascript:void 0" onclick="tcLoad(${c.id})">编辑</a>
+        <a href="javascript:void 0" onclick="tcToggle(${c.id})">${c.enabled?'停用':'启用'}</a>
+        <a href="javascript:void 0" onclick="tcDelete(${c.id})">删除</a>
+      </td></tr>`).join('')||'<tr><td colspan=7 class="muted">暂无用例</td></tr>';
+  app.innerHTML=`<h1>测试用例 <span class="muted">定义层 · 可被多个计划引用</span></h1>
+    <div class="card">
+      <div class="row"><h2 style="margin:0">用例列表</h2>
+        <button style="margin-left:auto" onclick="tcNew()">新建用例</button></div>
+      <p class="muted" style="margin:6px 0 0">用例只描述"要跑什么"（引擎 + 受控参数）；
+        运行环境、执行机、数据来源由 <b>计划</b> 决定。修改 <b>定义字段</b>（名称/引擎/参数/独占）会让 revision +1 并重算定义指纹；
+        改说明、标签、启停、负责人 <b>不会</b> 改版本。</p>
+      <table style="margin-top:10px"><thead><tr><th>ID</th><th>名称</th><th>引擎</th><th>版本</th>
+        <th>定义指纹</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>
+    <div class="card">
+      <div class="row"><h2 style="margin:0">${tcEdit.id?('编辑用例 #'+tcEdit.id+' · rev '+(tcEdit.revision??1)):'新建用例'}</h2>
+        <span class="muted" style="margin-left:auto">${tcEdit.id?('当前定义指纹 <code>'+esc(tcEdit.fingerprint||'-')+'</code>'):'保存后计算定义指纹'}</span></div>
+      <div class="form-grid" style="margin-top:12px">
+        <label>名称<input id="pl-sc-name" value="${esc(tcEdit.name)}" placeholder="用例名称"></label>
+        <label>说明<input id="pl-sc-desc" value="${esc(tcEdit.description||'')}" placeholder="用途/范围说明"></label>
+        <label>引擎<select id="tc-engine" onchange="tcSetEngine(this.value)">${
+          PL_ENGINES.map(e=>`<option value="${e}" ${tcEdit.engine===e?'selected':''}>${e}</option>`).join('')}</select></label>
+        <label>资产种类 asset_kind<input id="tc-asset-kind" value="${esc(tcEdit.asset_kind||'')}" placeholder="留空即可（${esc(TC_ASSET_KIND[tcEdit.engine]||'')}）"></label>
+        <label>标签（逗号分隔）<input id="tc-tags" value="${esc((tcEdit.tags||[]).join(','))}" placeholder="privahigh,load"></label>
+      </div>
+      <div class="form-grid" style="margin-top:10px">${plStepFields(
+        {kind:'inline',engine:tcEdit.engine,name:'',requires_exclusive:!!tcEdit.requires_exclusive,
+         params:tcEdit.params||{}},'c')}</div>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" onclick="tcSave()">保存</button>
+        <button onclick="tcCancel()">取消 / 新建</button>
+        <span class="muted" id="tc-msg">${esc(tcMsg||'')}</span>
+      </div>
+      <p class="muted" style="margin-top:8px">参数与计划步骤共用同一套白名单校验；<code>asset_source_id</code> 属计划/执行级，不能写在用例里。</p>
+    </div>`;
+}
+function tcSetEngine(v){ plCollectTc(); tcEdit.engine=v; tcEdit.params={};
+  tcEdit.asset_kind=TC_ASSET_KIND[v]||''; tcRender(); }
+function tcNew(){ plCollectTc(); tcEdit=tcBlank(); tcMsg=''; tcRender(); }
+function tcCancel(){ tcNew(); }
+function tcLoad(id){
+  plCollectTc();
+  const c=tcList.find(x=>x.id===id); if(!c)return;
+  tcEdit=JSON.parse(JSON.stringify(c));
+  tcMsg=''; tcRender();
+}
+function plCollectTc(){
+  if(!tcEdit)return;
+  const el=$('pl-sc-name'); if(!el)return;
+  tcEdit.name=el.value.trim();
+  tcEdit.description=($('pl-sc-desc')||{}).value||'';
+  tcEdit.asset_kind=($('tc-asset-kind')||{}).value||'';
+  tcEdit.tags=(($('tc-tags')||{}).value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  tcEdit.requires_exclusive=!!($('pl-sc-excl')&&$('pl-sc-excl').checked);
+  tcEdit.params=plReadParams('c',tcEdit.engine);
+}
+async function tcSave(){
+  if(tcBusy)return; tcBusy=true;
+  const msg=$('tc-msg'); if(msg)msg.textContent='保存中…';
+  try{
+    plCollectTc();
+    const body={name:tcEdit.name,description:tcEdit.description,engine:tcEdit.engine,
+      params:tcEdit.params,requires_exclusive:!!tcEdit.requires_exclusive,
+      asset_kind:tcEdit.asset_kind||'',tags:tcEdit.tags||[],owner:tcEdit.owner||'local'};
+    if(!body.name)throw new Error('名称必填');
+    const saved = tcEdit.id
+      ? await j('/api/test-cases/'+tcEdit.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      : await j('/api/test-cases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    tcList=await j('/api/test-cases');
+    tcEdit=JSON.parse(JSON.stringify(saved));
+    tcMsg=`已保存 · rev ${saved.revision} · 指纹 ${saved.fingerprint}`;
+    tcRender();
+  }catch(e){if(msg)msg.textContent='保存失败：'+e.message;}
+  finally{tcBusy=false;}
+}
+async function tcToggle(id){
+  try{ await j(`/api/test-cases/${id}/toggle`,{method:'POST'});
+       tcList=await j('/api/test-cases'); tcRender(); }
+  catch(e){alert('操作失败：'+e.message);}
+}
+async function tcDelete(id){
+  if(!confirm('确认删除用例 #'+id+'？（被计划引用的用例会被拒绝删除）'))return;
+  try{ await j(`/api/test-cases/${id}`,{method:'DELETE'});
+       if(tcEdit&&tcEdit.id===id)tcEdit=tcBlank();
+       tcList=await j('/api/test-cases'); tcMsg='已删除 #'+id; tcRender(); }
+  catch(e){alert('删除失败：'+e.message);}
+}
+
+// ---------- 测试套件（v0.2 定义层：有序用例集合） ----------
+// Suite 只描述「引用哪些用例、按什么顺序」；不绑定环境 / 执行机 / 资产，**不参与执行链**
+// （不产生 PlanRun / Job / 报告，也没有任何"执行套件"入口）。
+// 它只在**计划编辑阶段**被展开成普通的用例步骤。
+let tsList=[], tsEdit=null, tsMsg='', tsBusy=false;
+
+function tsBlank(){
+  return {id:null,name:'',description:'',cases:[],owner:'local',tags:[],
+          enabled:true,revision:null,fingerprint:''};
+}
+
+async function renderSuites(){
+  const app=$('app'); app.innerHTML='<h1>测试套件</h1><div class="card"><p class="muted">加载中…</p></div>';
+  try{
+    await plEnsureRefs();               // 复用：需要已启用的 TestCase 列表供选择
+    tsList=await j('/api/suites');
+    if(!tsEdit) tsEdit=tsBlank();
+    tsRender();
+  }catch(e){app.innerHTML=`<div class="card err">加载失败：${esc(e.message)}</div>`;}
+}
+
+function tsCaseRows(){
+  const cs=tsEdit.cases||[];
+  if(!cs.length) return '<tr><td colspan="7" class="muted">暂无用例 —— 从右上方选择后点「添加到末尾」</td></tr>';
+  return cs.map((c,i)=>{
+    const tc=plFindCase(c.id);
+    const stale=!!tc&&(Number(tc.revision)!==Number(c.revision)
+                       ||String(tc.fingerprint)!==String(c.fingerprint));
+    const state=!tc
+      ? '<span class="chip c-failed" title="用例不存在或已停用">不可用</span>'
+      : stale
+        ? '<span class="chip c-timedout" title="用例已被修改，保存 / 展开时后端会如实报错">已过期</span>'
+        : '<span class="chip c-success">有效</span>';
+    return `<tr><td>${i+1}</td>
+      <td>${esc(tc?tc.name:('用例 #'+c.id))}</td>
+      <td>${esc(tc?tc.engine:'-')}</td>
+      <td>rev ${esc(c.revision)}</td>
+      <td><code>${esc(c.fingerprint||'-')}</code></td>
+      <td>${state}</td>
+      <td class="row">
+        <a href="javascript:void 0" onclick="tsMoveCase(${i},-1)">↑</a>
+        <a href="javascript:void 0" onclick="tsMoveCase(${i},1)">↓</a>
+        <a href="javascript:void 0" onclick="tsDelCase(${i})">删除</a>
+      </td></tr>`;
+  }).join('');
+}
+
+function tsCaseOpts(){
+  const used=new Set((tsEdit.cases||[]).map(c=>Number(c.id)));
+  const list=(plRefs.cases||[]).filter(c=>!used.has(Number(c.id)));
+  if(!list.length) return '<option value="">（没有可添加的已启用用例）</option>';
+  return '<option value="">（选择用例）</option>'+list.map(c=>
+    `<option value="${c.id}">${esc(c.name)} · ${esc(c.engine)} · rev${c.revision}</option>`).join('');
+}
+
+function tsRender(){
+  const app=$('app'); const e=tsEdit||tsBlank();
+  const rows=tsList.map(s=>`<tr>
+      <td>${s.id}</td>
+      <td>${esc(s.name)}${s.id===e.id?' <span class="chip">编辑中</span>':''}</td>
+      <td>${esc(s.description||'')}</td>
+      <td>${(s.cases||[]).length}</td>
+      <td>rev ${s.revision}</td>
+      <td><code>${esc(s.fingerprint)}</code></td>
+      <td>${s.enabled?'<span class="chip c-success">启用</span>':'<span class="chip c-skipped">停用</span>'}</td>
+      <td class="row">
+        <a href="javascript:void 0" onclick="tsLoad(${s.id})">查看 / 编辑</a>
+        <a href="javascript:void 0" onclick="tsToggle(${s.id})">${s.enabled?'停用':'启用'}</a>
+        <a href="javascript:void 0" onclick="tsDelete(${s.id})">删除</a>
+      </td></tr>`).join('')||'<tr><td colspan="8" class="muted">暂无套件</td></tr>';
+  app.innerHTML=`<h1>测试套件 <span class="muted">定义层 · 有序用例集合</span></h1>
+    <div class="card">
+      <div class="row"><h2 style="margin:0">套件列表</h2>
+        <button style="margin-left:auto" onclick="tsNew()">新建套件</button></div>
+      <p class="muted" style="margin:6px 0 0">套件只描述「引用哪些用例、按什么顺序」。
+        <b>运行环境、执行机、数据来源由计划决定</b>；套件<b>不参与执行链</b>（不产生 PlanRun / Job / 报告），
+        只在计划编辑时被展开成普通用例步骤。修改 <b>名称或用例列表（含顺序）</b> 会让 revision +1 并重算定义指纹；
+        改描述、标签、负责人、启停 <b>不会</b> 改版本。</p>
+      <table style="margin-top:10px"><thead><tr><th>ID</th><th>名称</th><th>描述</th><th>用例数</th>
+        <th>版本</th><th>定义指纹</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>
+    <div class="card">
+      <div class="row"><h2 style="margin:0">${e.id?('编辑套件 #'+e.id+' · rev '+(e.revision??1)):'新建套件'}</h2>
+        <span class="muted" style="margin-left:auto">${e.id?('当前定义指纹 <code>'+esc(e.fingerprint||'-')+'</code>'):'保存后计算定义指纹'}</span></div>
+      <div class="form-grid" style="margin-top:12px">
+        <label>名称<input id="ts-name" value="${esc(e.name)}" placeholder="套件名称"></label>
+        <label>描述<input id="ts-desc" value="${esc(e.description||'')}" placeholder="用途 / 范围说明"></label>
+        <label>负责人<input id="ts-owner" value="${esc(e.owner||'local')}"></label>
+        <label>标签（逗号分隔）<input id="ts-tags" value="${esc((e.tags||[]).join(','))}" placeholder="smoke,privahigh"></label>
+      </div>
+      <div class="row" style="margin-top:14px"><h3 style="margin:0">用例（按此顺序执行）</h3>
+        <select id="ts-add-case" style="margin-left:auto">${tsCaseOpts()}</select>
+        <button onclick="tsAddCase()">添加到末尾</button></div>
+      <table style="margin-top:8px"><thead><tr><th>#</th><th>用例</th><th>引擎</th><th>pin 的版本</th>
+        <th>pin 的定义指纹</th><th>状态</th><th>操作</th></tr></thead>
+        <tbody>${tsCaseRows()}</tbody></table>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" onclick="tsSave()">保存</button>
+        <button onclick="tsNew()">取消 / 新建</button>
+        <span class="muted" id="ts-msg">${esc(tsMsg||'')}</span>
+      </div>
+      <p class="muted" style="margin-top:8px">用例在这里以 <code>(id, revision, 指纹)</code> <b>固定引用</b>：
+        用例一旦被修改，本套件会显示「已过期」，保存时后端如实报错，不会静默跟随。
+        在<b>计划编辑器</b>里可以把本套件展开成等价的用例步骤（套件本身不会被写进计划）。</p>
+    </div>`;
+}
+
+function tsCollect(){
+  if(!tsEdit)return;
+  const el=$('ts-name'); if(!el)return;
+  tsEdit.name=el.value.trim();
+  tsEdit.description=($('ts-desc')||{}).value||'';
+  tsEdit.owner=($('ts-owner')||{}).value||'local';
+  tsEdit.tags=(($('ts-tags')||{}).value||'').split(',').map(s=>s.trim()).filter(Boolean);
+}
+function tsNew(){tsCollect();tsEdit=tsBlank();tsMsg='';tsRender();}
+function tsLoad(id){
+  tsCollect();
+  const s=tsList.find(x=>x.id===id); if(!s)return;
+  tsEdit=JSON.parse(JSON.stringify(s)); tsMsg=''; tsRender();
+}
+function tsAddCase(){
+  tsCollect();
+  const sel=$('ts-add-case'); const cid=sel?Number(sel.value)||0:0;
+  if(!cid){tsMsg='请先选择要添加的用例';tsRender();return;}
+  const tc=(plRefs.cases||[]).find(c=>Number(c.id)===cid);
+  if(!tc){tsMsg='用例不存在或已停用';tsRender();return;}
+  if((tsEdit.cases||[]).some(c=>Number(c.id)===cid)){tsMsg='该用例已在套件中';tsRender();return;}
+  tsEdit.cases=(tsEdit.cases||[]).concat([{id:tc.id,revision:tc.revision,fingerprint:tc.fingerprint}]);
+  tsMsg=''; tsRender();
+}
+function tsDelCase(i){tsCollect();tsEdit.cases.splice(i,1);tsMsg='';tsRender();}
+function tsMoveCase(i,dir){
+  tsCollect();
+  const a=tsEdit.cases, k=i+dir;
+  if(k<0||k>=a.length)return;
+  [a[i],a[k]]=[a[k],a[i]];
+  tsMsg='（顺序已调整，保存后 revision +1）'; tsRender();
+}
+async function tsSave(){
+  if(tsBusy)return; tsBusy=true;
+  const msg=$('ts-msg'); if(msg)msg.textContent='保存中…';
+  try{
+    tsCollect();
+    const body={name:tsEdit.name,description:tsEdit.description||'',cases:tsEdit.cases||[],
+      owner:tsEdit.owner||'local',tags:tsEdit.tags||[],enabled:!!tsEdit.enabled};
+    if(!body.name)throw new Error('名称必填');
+    const saved= tsEdit.id
+      ? await j('/api/suites/'+tsEdit.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      : await j('/api/suites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    tsList=await j('/api/suites');
+    tsEdit=JSON.parse(JSON.stringify(saved));
+    tsMsg=`已保存 · rev ${saved.revision} · 指纹 ${saved.fingerprint}`;
+    tsRender();
+  }catch(e){if(msg)msg.textContent='保存失败：'+e.message;}
+  finally{tsBusy=false;}
+}
+async function tsToggle(id){
+  try{ await j(`/api/suites/${id}/toggle`,{method:'POST'});
+       tsList=await j('/api/suites');
+       if(tsEdit&&tsEdit.id===id){const f=tsList.find(x=>x.id===id); if(f)tsEdit=JSON.parse(JSON.stringify(f));}
+       tsRender(); }
+  catch(e){alert('操作失败：'+e.message);}
+}
+async function tsDelete(id){
+  if(!confirm('确认删除套件 #'+id+'？（已被计划引用时会拒绝删除）'))return;
+  try{ await j(`/api/suites/${id}`,{method:'DELETE'});
+       if(tsEdit&&tsEdit.id===id)tsEdit=tsBlank();
+       tsList=await j('/api/suites'); tsMsg='已删除 #'+id; tsRender(); }
+  catch(e){alert('删除失败：'+e.message);}
+}
+
+// ---------- 报告中心（读模型：筛选 / 分页 / 统一字段 / 对比入口） ----------
+let rcState={page:1,plan_id:'',engine:'',status:'',env_name:'',time_from:'',time_to:''};
+async function renderReportCenter(){
+  const app=$('app');
+  app.innerHTML='<h1>报告中心</h1><div class="card"><p class="muted">加载中…</p></div>';
+  try{
+    const[data,opt,sel]=await Promise.all([
+      j(`/api/report-center?${rcParams()}`),
+      j('/api/report-center/options'),
+      Promise.resolve(compareSel()),
+    ]);
+    const rows=data.rows||[];
+    const incompl=rows.some(r=>r.metadata_incomplete);
+    const items=rows.map(r=>rcRow(r,sel)).join('');
+    app.innerHTML=`<h1>报告中心 <span class="muted">${data.total} 条</span></h1>
+      <div class="card">
+        <div class="filters">
+          <b>筛选</b>
+          <select id="f-plan" onchange="rcSet('plan_id',this.value)"><option value="">全部计划</option>${opt.plans.map(p=>`<option value="${p.id}" ${rcState.plan_id==p.id?'selected':''}>${esc(p.name)} (${p.n})</option>`).join('')}</select>
+          <select id="f-engine" onchange="rcSet('engine',this.value)"><option value="">全部引擎</option>${opt.engines.map(e=>`<option value="${esc(e)}" ${rcState.engine==e?'selected':''}>${esc(e)}</option>`).join('')}</select>
+          <select id="f-status" onchange="rcSet('status',this.value)"><option value="">全部状态</option>${opt.statuses.map(s=>`<option value="${esc(s)}" ${rcState.status==s?'selected':''}>${esc(s)}</option>`).join('')}</select>
+          <select id="f-env" onchange="rcSet('env_name',this.value)"><option value="">全部环境</option>${opt.envs.map(e=>`<option value="${esc(e.name)}" ${rcState.env_name==e.name?'selected':''}>${esc(e.name)} (${e.n})</option>`).join('')}</select>
+          <input id="f-from" type="text" placeholder="开始时间从 YYYY-MM-DD" value="${esc(rcState.time_from)}" onchange="rcSet('time_from',this.value)">
+          <input id="f-to" type="text" placeholder="到 YYYY-MM-DD" value="${esc(rcState.time_to)}" onchange="rcSet('time_to',this.value)">
+          <button onclick="rcClear()">重置</button>
+        </div>
+      </div>
+      <div class="card">
+        ${sel.b&&sel.c?`<div class="row" style="margin-bottom:8px;gap:6px">
+          <span class="muted">基线 #${sel.b} · 候选 #${sel.c}</span>
+          <a class="primary" href="#/compare/${sel.b}/${sel.c}" style="display:inline-block;background:var(--brand);color:#fff;padding:4px 12px;border-radius:6px;text-decoration:none;font-size:13px">进入对比视图</a>
+          <a href="javascript:void 0" onclick="sessionStorage.removeItem('rc_base');sessionStorage.removeItem('rc_cand');router()" class="muted" style="font-size:12px">清除选择</a>
+        </div>`:`
+        <p class="muted">在下方报告中，用“基线/候选”标记两份报告后生成对比。</p>`}
+        <table><thead><tr><th>状态</th><th>计划</th><th>引擎</th><th>环境</th><th>开始时间</th><th>耗时</th><th>关键摘要指标</th><th>操作</th></tr></thead>
+        <tbody>${items||'<tr><td colspan=8 class="muted">暂无报告</td></tr>'}</tbody></table>
+        <div class="pager">
+          <button ${data.page<=1?'disabled':''} onclick="rcGo(${data.page-1})">上一页</button>
+          <span class="muted">第 ${data.page} / ${Math.max(1,Math.ceil(data.total/Math.max(data.page_size,1)))} 页</span>
+          <button ${data.page*data.page_size>=data.total?'disabled':''} onclick="rcGo(${data.page+1})">下一页</button>
+          <span class="muted">每页 ${data.page_size} 条</span>
+        </div>
+        ${incompl?'<p class="muted" style="margin-top:8px">注：标记 ⚠ 的报告缺少可比性元数据（历史记录信息不完整），不参与有效对比。</p>':''}
+      </div>`;
+  }catch(e){app.innerHTML=`<div class="card err">加载报告中心失败：${esc(e.message)}</div>`;}
+}
+function rcParams(){
+  const q=new URLSearchParams();
+  q.set('page',rcState.page); q.set('page_size',20);
+  if(rcState.plan_id)q.set('plan_id',rcState.plan_id);
+  if(rcState.engine)q.set('engine',rcState.engine);
+  if(rcState.status)q.set('status',rcState.status);
+  if(rcState.env_name)q.set('env_name',rcState.env_name);
+  if(rcState.time_from)q.set('time_from',rcState.time_from);
+  if(rcState.time_to)q.set('time_to',rcState.time_to);
+  return q.toString();
+}
+function rcSet(k,v){rcState[k]=v;rcState.page=1;renderReportCenter();}
+function rcGo(p){rcState.page=p;renderReportCenter();}
+function rcClear(){rcState={page:1,plan_id:'',engine:'',status:'',env_name:'',time_from:'',time_to:''};renderReportCenter();}
+function rcRow(r,sel){
+  const m=r.metrics||{};
+  const incompl=!!r.metadata_incomplete;
+  const key=engineKeyMetric(r.engine,m);
+  const isBase=sel.b==String(r.job_id), isCand=sel.c==String(r.job_id);
+  const cls=(isBase?' sel-base':isCand?' sel-cand':'');
+  return `<tr class="${cls.trim()}">
+    <td>${chip(r.status)}${incompl?'<span title="历史记录信息不完整"> ⚠</span>':''}</td>
+    <td>${esc(r.plan_name||('plan#'+r.plan_id))}</td>
+    <td>${esc(r.engine)}${r.schema_main_version?`<div class="muted">${esc(r.schema_main_version)}</div>`:''}</td>
+    <td>${esc(r.env_name||'-')}</td>
+    <td class="muted">${esc(r.started_at||'-')}</td>
+    <td>${fmtDur(r.duration_ms)}</td>
+    <td>${esc(key)}</td>
+    <td class="row">
+      <a href="#/report/${r.job_id}">详情</a>
+      ${r.plan_run_id?`<a href="#/run/${r.plan_run_id}">所属执行</a>`:''}
+      <a href="javascript:void 0" onclick="pickBaseline(${r.job_id})">基线</a>
+      <a href="javascript:void 0" onclick="pickCandidate(${r.job_id})">候选</a>
+      <a href="javascript:void 0" onclick="showLogsRC(${r.job_id})">日志</a>
+    </td>
+  </tr>`;
+}
+async function showLogsRC(jobId){
+  try{const data=await j(`/api/jobs/${jobId}/logs`);alert((data.logs||[]).join('').slice(-1500)||'（暂无日志）');}
+  catch(e){alert('无日志：'+e.message);}
+}
+function engineKeyMetric(engine,m){
+  if(engine==='locust')return `RPS ${fmt(m.rps)} · 错误率 ${pct(m.failure_rate)} · P95 ${fmt(m.p95_ms)}ms`;
+  if(engine==='matcheval')return `P ${pct(m.precision)} · R ${pct(m.recall)} · F1 ${pct(m.f1)} · TP ${m.tp}`;
+  return `通过 ${m.passed??'-'} / 失败 ${m.failed??'-'} · ${fmt(m.duration_ms)}ms`;
+}
+function fmt(v,d){return (v==null||isNaN(v))?(d??'-'):v;}
+function pct(v){return (v==null||isNaN(v))?'-':(Number(v)*100).toFixed(1)+'%';}
+function fmtDur(ms){if(ms==null||isNaN(ms))return '-';return ms>=1000?(ms/1000).toFixed(1)+'s':ms+'ms';}
+
+// ---------- 两次运行对比视图（严格兼容校验） ----------
+async function renderCompare(baseId,candId){
+  const app=$('app'); app.innerHTML='<h1>对比视图</h1><div class="card"><p class="muted">加载中…</p></div>';
+  try{
+    const r=await j(`/api/report-center/compare`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({baseline_job_id:Number(baseId),candidate_job_id:Number(candId)})});
+    const reasons=(r.reasons||[]).map(x=>`<li>${esc(x)}</li>`).join('');
+    const deltaRows=(r.deltas.items||[]).map(d=>`<tr>
+      <td>${esc(d.label)}</td><td>${esc(d.base??'-')}</td><td>${esc(d.candidate??'-')}</td>
+      <td class="${d.delta==null?'muted':`diff ${d.color}`}">${d.delta==null?'N/A':(d.formatted||d.delta)} ${d.dir_label?`<span class="muted">(${d.dir_label})</span>`:''}</td>
+      <td class="muted">${d.direction==='higher_better'?'越高越好':d.direction==='lower_better'?'越低越好':'-'}</td>
+    </tr>`).join('')||'<tr><td colspan=5 class=muted>（无可用指标）</td></tr>';
+    app.innerHTML=`<h1>对比视图 <span class="muted">#${baseId} vs #${candId}</span></h1>
+      <div class="card"><div class="row"><span class="muted">结论</span>
+        <strong class="${r.compatible?'ok':'err'}">${esc(r.summary)}</strong>
+        <a href="#/reports-center" class="muted" style="margin-left:auto">返回报告中心</a></div>
+        ${reasons?`<ul style="margin-top:8px">${reasons}</ul>`:''}</div>
+      <div class="card"><h2>基线 <span class="muted">#${r.baseline.job_id}</span></h2>
+        ${sumIdx(r.baseline)}<p><a href="#/report/${r.baseline.job_id}">查看基线报告详情</a></p></div>
+      <div class="card"><h2>候选 <span class="muted">#${r.candidate.job_id}</span></h2>
+        ${sumIdx(r.candidate)}<p><a href="#/report/${r.candidate.job_id}">查看候选报告详情</a></p></div>
+      ${r.compatible?`<div class="card"><h2>引擎专项指标对比 <span class="muted">${esc((r.deltas.engine||'')+'')}</span></h2>
+        <table><thead><tr><th>指标</th><th>基线</th><th>候选</th><th>差值</th><th>方向</th></tr></thead><tbody>${deltaRows}</tbody></table>
+        <p class="muted" style="margin-top:6px">配色：绿=更优，红=更差，灰=持平。未生成跨引擎总分。</p></div>`:''}
+      ${trendBlock(r.trend)}
+      <div class="card"><h2>原始 report.json</h2>
+        <p><a href="#/report/${baseId}">基线</a> · <a href="#/report/${candId}">候选</a></p></div>`;
+  }catch(e){app.innerHTML=`<div class="card err">对比失败：${esc(e.message)}</div>`;}
+}
+function sumIdx(x){
+  return `<div class="metrics" style="margin-top:6px">
+    <div><div class="k">计划</div><div class="v" style="font-size:15px">${esc(x.plan_name||'-')}</div></div>
+    <div><div class="k">引擎</div><div class="v" style="font-size:15px">${esc(x.engine)}</div></div>
+    <div><div class="k">状态</div><div class="v" style="font-size:15px">${chip(x.status)}</div></div>
+    <div><div class="k">环境</div><div class="v" style="font-size:15px">${esc(x.env_name||'-')}</div></div>
+    <div><div class="k">开始</div><div class="v" style="font-size:15px">${esc(x.started_at||'-')}</div></div>
+    ${x.metadata_incomplete?`<div class="k" style="color:var(--fail)">⚠ 历史记录信息不完整，不参与有效对比</div>`:''}
+  </div>`;
+}
+function trendBlock(trend){
+  const pts=(trend.points||[]).map((p,i)=>`<tr>
+    <td>${p.job_id}</td><td class="muted">${esc(p.started_at||'-')}</td>
+    ${(trend.engine==='locust'?['rps','failure_rate','p95_ms']:trend.engine==='matcheval'?['precision','recall','f1']:['passed','failed']).map(k=>`<td>${fmtMetric(p.metrics[k],k)}</td>`).join('')}
+  </tr>`).join('');
+  if(!pts) return '';
+  const cols = trend.engine==='locust'?'<th>RPS</th><th>错误率</th><th>P95 ms</th>'
+    : trend.engine==='matcheval'?'<th>Precision</th><th>Recall</th><th>F1</th>'
+    : '<th>通过</th><th>失败</th>';
+  return `<div class="card"><h2>历史趋势 <span class="muted">同配置分组 · 共 ${trend.points.length} 次成功运行</span></h2>
+    <table><thead><tr><th>Job</th><th>开始</th>${cols}</tr></thead><tbody>${pts}</tbody></table>
+    <p class="muted" style="margin-top:6px">仅聚合同一可比性分组的成功报告；未生成跨引擎总分。</p></div>`;
+}
+function fmtMetric(v,k){
+  if(v==null||isNaN(v)) return '-';
+  if(k==='failure_rate'||k==='precision'||k==='recall'||k==='f1') return pct(v);
+  return v;
+}
+</script>
+</body>
+</html>

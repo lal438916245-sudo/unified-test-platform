@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="HZP5GeyT7HDKJzEEF0VE59">
+<head data-page-node-id="45PFtkpKT5Ft9rHZaXTRpj">
+<meta charset="UTF-8" data-page-node-id="qsVHdMVraHWDlrfAqBRN9q">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="ZicaTa7Cq1S0RsBDjT60Sn">
+<title>统一游戏测试平台 · 闭环差距分析与达成路径</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#eef2f6; --line:#d7dee6;
+    --fg:#1b2229; --muted:#5d6b7a; --accent:#1f6feb; --ok:#15803d;
+    --warn:#b45309; --bad:#b91c1c; --chip:#e7edf4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:36px 24px 72px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px}
+  h1{font-size:24px;margin:0 0 8px}
+  h1 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+  h2{font-size:17px;margin:30px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:15px;margin:18px 0 8px;color:#2b3641}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;background:var(--panel)}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#2b3641;font-weight:600}
+  code{background:#eef2f6;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#0b4f9e}
+  pre{background:#0f1720;border:1px solid #24313d;border-radius:8px;padding:12px 14px;
+    overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#d7e3ef;line-height:1.6}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:2px 10px;font-size:12px;margin:0 6px 6px 0;color:#33414f}
+  .ok{color:var(--ok);font-weight:600}
+  .bad{color:var(--bad);font-weight:600}
+  .warn{color:var(--warn);font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+  .card.hl{border-left:4px solid var(--ok)}
+  .card.warnbox{border-left:4px solid var(--warn)}
+  .card.note{border-left:4px solid var(--accent)}
+  ul,ol{margin:8px 0 8px 22px;padding:0}
+  li{margin:4px 0}
+  .bar{height:9px;border-radius:5px;background:#e3e9ef;overflow:hidden;margin-top:5px}
+  .bar > i{display:block;height:100%}
+  .b-ok{background:#15803d} .b-part{background:#d97706} .b-no{background:#b91c1c}
+  footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body data-page-node-id="8LoKbEGWdqcPvBUiGjmDZN">
+<div class="wrap" data-page-node-id="rHtjejGIfEK6oTbbLuYaf9">
+<header data-page-node-id="G7V5iTBokTL7BdTIxbSTOz">
+  <h1 data-page-node-id="ACUL26X4WGkZ5dDysgUQcs">闭环差距分析与达成路径<span class="sub" data-page-node-id="lHGtGkj2eIfIYz5RyvEnHn">统一游戏测试平台 · 2026-09-29</span></h1>
+  <p class="muted" data-page-node-id="CCotMwCLGJZ3dXjfV2vMA8">目标：三引擎（<b data-page-node-id="sVOoMVIoPVEpGZPGCjfvov">pytest / Locust / matcheval</b>）集成于一个平台，覆盖 <b data-page-node-id="cTaxEvRzEEuSdaK06Yq573">UI 测试 · 压力测试 · API 测试</b>。
+  当前两个被测系统（PrivaHigh、ColyseusTechDemo-MMO）是"手头缺一个既有 UI 又能联机进房的游戏"的替代方案。</p>
+  <p data-page-node-id="A6P8Ir8p9GAb5flQKXnL4v">
+    <span class="chip" data-page-node-id="HEHGDoYqFVN7QTQH3bcCEZ">平台本体：已闭环</span>
+    <span class="chip" data-page-node-id="y4M0Oth3XhNMWAASkLwvaR">真实链路：2 / 3 引擎</span>
+    <span class="chip" data-page-node-id="CtaHgPoGczN5hmzxHdgAch">单一 SUT 三引擎：0 / 1</span>
+    <span class="chip" data-page-node-id="THBW11ZN7hxTkv7ZJD3cqz">关键结论：闭环只差 3 件事</span>
+  </p>
+</header>
+
+<div class="card hl" data-page-node-id="oFaPdVNVb9ZJxpFe7rTuXV">
+<h3 style="margin-top:0" data-page-node-id="RrGTI0MLYDzQEjGGVb72Q5">一句话结论</h3>
+<p data-page-node-id="qHM72Qwvo62B0mZ23mxpGR"><b data-page-node-id="6xrpK7l722h1UsmyFRePJP">平台的"机械部分"已经闭环</b>（计划 → 执行 → 报告 → 配置，四件事全通，且 pytest / matcheval 都已在真实资产上跑通并留档）。
+<b data-page-node-id="ahGw7Kh96BhBxNNqvqQBpe">差的不是平台能力，而是"真实数据的第三类覆盖"与"资产归属同一个被测系统"</b> —— 具体三件事：
+<b data-page-node-id="H3CXdRquKOYoehw2W3MihF">① 压测从未真实执行过</b>；<b data-page-node-id="mYDtv35GktkqQyv9mr0A6j">② 三类资产分属两个 SUT</b>；<b data-page-node-id="RA8fGNXuI7o1vktYt7gcqw">③ 真实数据上的报告对比 / 趋势还没验证过</b>。</p>
+<p data-page-node-id="TssgvppamEzg5NFs4NRjiZ">而下面的关键发现表明：<b data-page-node-id="OqcSShYsiTAdk7o9W4V574">你不一定需要那个"完整游戏"就已经能拿到单 SUT 三引擎闭环</b>。</p>
+</div>
+
+<h2 data-page-node-id="2Wlr83KNiEcq5ZaIGqS1QG">1. 三引擎 × 三类能力 × 现状</h2>
+<table data-page-node-id="Wis4yEDaOxhvHuiZGgIjJ8">
+  <thead data-page-node-id="PHFUSqCbbTFyBANNIbJkPq">
+    <tr data-page-node-id="AdWTNXlgKPfZ4DtEhBo96T"><th data-page-node-id="dJKzMAOrTO7jN7fABaPGrW">你要的能力</th><th data-page-node-id="Vd3FhUqxNmQyUUGXnmFXFR">由哪个引擎承担</th><th data-page-node-id="ePeDk4usqwPkwqO4dPFiH2">真实资产现状</th><th data-page-node-id="owKyPIei1eXTgPBgrgIsat">判定</th></tr>
+  </thead>
+  <tbody data-page-node-id="NUG9ZeRjJtv2JbFKfLXc7G">
+    <tr data-page-node-id="k0gfh4ALEoyoxXFf5kFfa9">
+      <td data-page-node-id="kpag37HYiz2fpEkGtH1aW2"><b data-page-node-id="jFlzCMJqGjdBrHUMh6krAu">API 测试</b>（接口契约 / 业务规则）</td>
+      <td data-page-node-id="Jq6yruCAdEdM5LddBSktqK">pytest</td>
+      <td data-page-node-id="Witwgr44c4GuIbG7XQ8vx2">PrivaHigh 后端 49 条用例；修复后 <b class="ok" data-page-node-id="SWV8x6bYaaUMXFe9XsA7Ja">49 passed</b>（PlanRun#20 内为 46/3）</td>
+      <td data-page-node-id="WMzJbhu6rbQwkkPX1odlG9"><b class="ok" data-page-node-id="QNyQfnVknbCw2dT8H7AVr4">已真实跑通</b></td>
+    </tr>
+    <tr data-page-node-id="LFRBHNbIJpS1Q8eb7FQW5x">
+      <td data-page-node-id="V4PLMtgzk1d3gCPjZT4FWx"><b data-page-node-id="8B5VKKColqWiymkEhrYAMV">UI 测试</b>（界面识别 / 视觉评估）</td>
+      <td data-page-node-id="VA4LqQdRkzZDSvjuWE1w1n">matcheval</td>
+      <td data-page-node-id="HLzVa9bUo6PFnGi91agVlh">PrivaHigh 实机采集 5 场景 / 23 模板；<b class="ok" data-page-node-id="1VD6dy5VKlZSnaU9g5ABtN">P = R = F1 = 1.00</b>，与旁路基线零差异（PlanRun#21）</td>
+      <td data-page-node-id="i72pq8FGCkwaTA52YfIfb8"><b class="ok" data-page-node-id="E0CdsZ2Yz9U6bus7Mmt8RN">已真实跑通</b></td>
+    </tr>
+    <tr data-page-node-id="VHw9SHnXSPJ4Adz9MqvmsN">
+      <td data-page-node-id="hiNBIbc5TBfBHqHwCSk8Bg"><b data-page-node-id="wiTIdvKq2fQjxmGYCymnva">压力测试</b></td>
+      <td data-page-node-id="L9GtpGnqaL50tRdAASm7S5">Locust</td>
+      <td data-page-node-id="4dktCe5IBI34FtaVDicvYJ">仅两个受控场景：<code data-page-node-id="jiUdR9qyHFZLJtHDVE8CFU">http-fixture</code>（打平台自身）、<code data-page-node-id="vEnZAfL5bIf0lspyIfJkOd">colyseus-bot</code>（需 <code data-page-node-id="MLK4RyAuPP8dO6pGZ5fa1Q">:2567</code>）</td>
+      <td data-page-node-id="Iss65l4PApXBreP0cycdjS"><b class="bad" data-page-node-id="lVHNSP9JRAGauF9UErMTMh">从未真实执行</b></td>
+    </tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="aVPaF5pvVNVjjMF1WdpplP">⚠️ 口径提醒：<b data-page-node-id="ihWG2SdYnJaRASeGzYRBW7">matcheval 是"视觉识别 / 界面评估"，不是 UI 交互自动化</b>（不会点击、不会走流程）。
+若你说的"测试 UI"包含"自动点按钮跑完一段流程"，那属于<b data-page-node-id="IOcSBVJL7T314LYmgHHIKV">当前平台还没有的能力</b>（Airtest 的 poco 交互未被平台接管）—— 这一项要单独决策。</p>
+
+<h2 data-page-node-id="KgC3kjobEtSri8FcV8psKx">2. 完成度三档</h2>
+<table data-page-node-id="DrSeFE3OOB7tD7oNjlDhzc">
+  <thead data-page-node-id="TsCZnxBzsDaRVKg0EKfC7E"><tr data-page-node-id="wDTUgbiOZFco53FXE7kxg2"><th data-page-node-id="bWySlOvPhQ2m1kluGYqKVC">维度</th><th data-page-node-id="VK7bgwU9odNZNGY39LKqgv">完成度</th><th data-page-node-id="WOINq7GGIGQkjMzR79s91k">依据</th></tr></thead>
+  <tbody data-page-node-id="89hTusCVAGTWZ7bG7Ber96">
+    <tr data-page-node-id="8nFY2gpPAgAsiYRQnD6jbp">
+      <td data-page-node-id="j5ERM1z2nOZ1ZmI8icXDxE"><b data-page-node-id="PznPNifKsvXnWFwcKxaE2N">平台本体</b>（计划 / 执行 / 报告 / 配置）</td>
+      <td data-page-node-id="rRm6PAbTlHMOx2eYRptJLc"><b class="ok" data-page-node-id="T44xpoqP4hoGSqSPAWkBYv">已闭环</b><div class="bar" data-page-node-id="hMJmguBl53hxHNT3IgpDxS"><i class="b-ok" style="width:100%" data-page-node-id="SJQX97ueb2FoWqqNQHwmXt"></i></div></td>
+      <td data-page-node-id="6blsFKx6NANmSSpU0psRKC">API 全在：计划 CRUD + 复制 + 预检 + 执行；三类配置实体 CRUD + 预检 + 启停 + 就绪度；Job 详情 / 日志 / 取消 / 重试；报告中心索引 / 对比 / 趋势 / 产物下载。隔离 fixture 下 8 项 verify 全绿（历史基线）。</td>
+    </tr>
+    <tr data-page-node-id="qwIg0MDYFUEI2FHqPteGBN">
+      <td data-page-node-id="7wXt0wkI8UJEUAl4XjTLux"><b data-page-node-id="zrDDPDxxH0Bo1ggxGLmFv8">真实链路覆盖</b>（三引擎在真实资产上跑通）</td>
+      <td data-page-node-id="h60GEFk7Qg0URfZS5iDB9K"><b class="warn" data-page-node-id="BVD86tZTFB4G9sey86trVr">2 / 3</b><div class="bar" data-page-node-id="T6J0XnKfgyGOSEhpO5Ncbj"><i class="b-part" style="width:67%" data-page-node-id="zLy1hcxOYvX6pXkTVvH2mS"></i></div></td>
+      <td data-page-node-id="1TRiUHm3VL6rqhaUdthdFs">pytest ✅ · matcheval ✅ · Locust ❌（0 次真实执行）</td>
+    </tr>
+    <tr data-page-node-id="klhczmYtulvuMUPaqX6YWh">
+      <td data-page-node-id="drhXiKakusmRffWUZV8riJ"><b data-page-node-id="v2ihwHKpXmiJBEiq7gfzgn">单一被测系统三引擎闭环</b></td>
+      <td data-page-node-id="GSeG1gywZS7Xfi8ut7MSL8"><b class="bad" data-page-node-id="gatp7r5dYQ7vHtgUMCJ655">未达成</b><div class="bar" data-page-node-id="jMSqSHKCwGJXer1DNeYZPx"><i class="b-no" style="width:5%" data-page-node-id="Fe3S71QRtxzP21wuJre7OH"></i></div></td>
+      <td data-page-node-id="rM10E1OnIKgAa5ruIlJalZ">PrivaHigh 有功能 + 视觉资产、<b data-page-node-id="PP3nSADOuyioxFMZvX63u1">缺压测场景</b>；MMO 有联机压测脚本、<b data-page-node-id="JWeMEwQ57549zS4sy9Ukbd">缺功能与视觉资产</b>；两类资产分属两个 SUT，按 §0 口径不得合并表述。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="99dHVtpMP04aTyQS9azS6n">3. 关键发现：你不一定需要那个"完整游戏"</h2>
+<div class="card note" data-page-node-id="k1ZvyGVtI50mJkWKz0EENp">
+<p data-page-node-id="2KegQikNAUQwgeS1Pf86lC"><b data-page-node-id="jgzANoMtODUX809DF0b9y4">PrivaHigh 自带的后端就是一个完整的、有 12 个 REST 路由的 HTTP 服务</b>，而这正好是 Locust 的天然靶子：</p>
+<pre data-page-node-id="UyBJFeZzvyQtDxEUzEqHO9">@app.get   /health                    @app.get   /v1/game/state
+@app.get   /v1/saves                  @app.post  /v1/actions
+@app.post  /v1/saves/{slot}/new       @app.post  /v1/events/{event_id}/resolve
+@app.delete /v1/saves/{slot}          @app.post  /v1/semester/advance
+@app.post  /v1/game/new               @app.post  /v1/game/add-funds
+@app.get   /v1/game/cohorts           @app.get   /v1/game/report/{semester}
+统一鉴权：Header X-Game-Token（main.py:29 require_token，缺失即 401）</pre>
+<p data-page-node-id="3DJo3rJDsOIzEjGOYV6Oa2">也就是说：<b data-page-node-id="e88u2H0cGF4Fqjo3IKhfG1">PrivaHigh 这一个被测系统就能同时承载三类能力</b> ——</p>
+<ul data-page-node-id="0BUPZAQD8n6HqTCSDe0i5i">
+  <li data-page-node-id="NNVf2sRIXXGCQa2qnmMEGR"><b data-page-node-id="hZrL4GhF9ME0MIVoFhBoI0">API 测试</b>：pytest（49 条，<span class="ok" data-page-node-id="HOUPOSjpPz4EMZJMb8Q3ib">已有</span>）</li>
+  <li data-page-node-id="oaFcrZuolIMFzqVaxuxZPc"><b data-page-node-id="dP82K2aI36EIBG0EeUjxWG">UI 测试</b>：matcheval（23 模板 / 5 场景，<span class="ok" data-page-node-id="6bBBSEWmdVXqUkzBjDaLaJ">已有</span>）</li>
+  <li data-page-node-id="3af34njNRh80Q32caBCAND"><b data-page-node-id="FRMBtWduNXgk137DtDpErT">压力测试</b>：Locust 打上述 12 个路由（<b data-page-node-id="rfvQMA0B58vUfpLCwFczS2">缺，但只需新增一个受控场景 + 一个新 locustfile</b>）</li>
+</ul>
+<p data-page-node-id="Brx7cksNxz48yEsckziPs4">反观另一条线：<b data-page-node-id="NY1ZfrdwBMSnRcJl5k6Dia">MMO 的服务端是 Node / TypeScript</b>（<code data-page-node-id="txiWYAwBLIKvzbWDyq2SR4">colyseus-demo-server/src</code>，5 个 room 全是 <code data-page-node-id="wojRXAyjfnh1hLOKlM8AY8">.ts</code>，<b data-page-node-id="0omqjt7DFApDmwhb2dHxGy">零测试文件</b>），
+而平台只有 pytest 引擎（Python）→ <b data-page-node-id="uAKUugri08B5ehHURfpuSg">用 MMO 凑齐"三引擎"这条路在现有引擎集下走不通</b>，它天生只适合承担"联机 + 压测"这一环。</p>
+</div>
+
+<h2 data-page-node-id="HL7jIXX0JWQl2WJJ0v57m5">4. 缺口清单（按优先级）</h2>
+<table data-page-node-id="m82kLacFpwly3nfMcQmULn">
+  <thead data-page-node-id="IEaRWFClIk7LqpGFMbjdRt"><tr data-page-node-id="x82fu0WHagfBACf4Iu3gZR"><th data-page-node-id="vg0oZOomfIg6Yzz2c1SbYp">级别</th><th data-page-node-id="CQqmqWPG1BhHSGoCcwmX1T">缺口</th><th data-page-node-id="WBwylFBTTj01sR1lZLVmLx">证据 / 现状</th><th data-page-node-id="pXtkcvNoHmPvXPZLiSOlKw">需要什么</th></tr></thead>
+  <tbody data-page-node-id="rYNnODyoxHndOmhbOAPTmV">
+    <tr data-page-node-id="TDAtxoQlpaffHrECZcW1hj">
+      <td data-page-node-id="QYeQ9zWeGIm7GmemYpwKii"><b class="bad" data-page-node-id="AkFrTOuxIiynm1CAJARRoZ">P0</b></td>
+      <td data-page-node-id="ZkMkmNnpKf9VPXreiTFzlM"><b data-page-node-id="mOcbM5Z7n96EJ3uBwKSodY">压测从未真实执行</b></td>
+      <td data-page-node-id="LHNPGp4Hnu8nCeVzJasHwl">平台 <code data-page-node-id="gTlWstQGQ70a5hNBS8SkpH">LOCUST_SCENARIOS</code> 仅 <code data-page-node-id="kQvmcAQ94Ity2fDPrPhqCS">http-fixture</code> / <code data-page-node-id="heojmYQiuEoxU7Klu31hBS">colyseus-bot</code>；
+      <code data-page-node-id="EpEVGj1IxGNseN6fcEN99G">Colyseus-Storm/locustfile.py:84</code> 的 WS 地址硬编码，脚本无 <code data-page-node-id="QpcqHC3ca5jtBpEAM5DXLr">import os</code>；<code data-page-node-id="VVn7GF7oK7sLsFHxR7xV2H">:2567</code> 当前不可达</td>
+      <td data-page-node-id="whSINBvXwuWmqDkJUA9Twu">新增一个可压测的真实场景（见路线 B）+ 授权 + 拉起目标</td>
+    </tr>
+    <tr data-page-node-id="WPVe4cQsLdcoALWWMUzZGg">
+      <td data-page-node-id="AifiDStPDubSiCBanVrETN"><b class="bad" data-page-node-id="LkvFEOSuDxUQoXFaizKsh3">P0</b></td>
+      <td data-page-node-id="eGnAMEqQUBPQ5HAg8ToHCA"><b data-page-node-id="Pkz6oF3Yd57zWiXoCO07Gd">三类资产分属两个被测系统</b></td>
+      <td data-page-node-id="39k0W8RtH0gNNt6qRK2VPF">PrivaHigh：功能 ✅ / 视觉 ✅ / 压测 ❌；MMO：压测脚本 ✅ / 功能 ❌（TS 无测试）/ 视觉 ❌</td>
+      <td data-page-node-id="qz7xc2uRJsa0OkDHeGemRz">选一条路线（A 分开闭环 / B PrivaHigh 单 SUT 三引擎）</td>
+    </tr>
+    <tr data-page-node-id="hhwBsRiIzGJawh7bWrqUD1">
+      <td data-page-node-id="dV7FlMJhC51a0N74U6LQn9"><b class="warn" data-page-node-id="9szpw2AAZMY9tdizQxrG2i">P1</b></td>
+      <td data-page-node-id="tfnTd5D4SpScDc1YLFDn6a">真实数据上的报告<b data-page-node-id="mR8AAgV1nvosr6pSCZuud2">对比 / 趋势</b>未验证</td>
+      <td data-page-node-id="05MthtawAZZF2faqPC2lLR"><code data-page-node-id="mPpTIgunNCyJCFTVspSwEC">POST /report-center/compare</code>、<code data-page-node-id="e5KQK3uIt4e4OlRCr5Cmjb">build_trend()</code> 代码就绪，但从未在两个<b data-page-node-id="Y5GPMcW9njoYJWrXnjdz9H">真实</b>运行之间做过 A/B 对比</td>
+      <td data-page-node-id="NAlIdTxok2ugo1YSprfLEZ">同一计划跑两次（或改一个参数再跑），做一次真实对比并核对指纹</td>
+    </tr>
+    <tr data-page-node-id="aF4plkZab8NVZyMeoAOUgt">
+      <td data-page-node-id="u8PlWCDgMo35LpAz1Z98eg"><b class="warn" data-page-node-id="vYdQEJOFvVh8517KYFT9fy">P1</b></td>
+      <td data-page-node-id="35gAo6dg7ocJHglYewmFQ1">pytest 修复结果<b data-page-node-id="fHTb6OD4QKKgECNE910l9y">未过平台留档</b></td>
+      <td data-page-node-id="ndBGI6oiLk6RobUdbCYTtx">「49 passed」是本地直跑得出；平台侧最新记录仍是 PlanRun#20 的 46 / 3 failed</td>
+      <td data-page-node-id="iAQciIKTwlHilRS1zdkPxj">平台重跑一次 pytest 步骤（历史记录不可变，会新增一条）</td>
+    </tr>
+    <tr data-page-node-id="gJ9kAKtildNlLtYbbLnnol">
+      <td data-page-node-id="kETxzta2c0cCOCk195LB6C"><b class="warn" data-page-node-id="PZKHQgEBKY9QxaXEdpzjHO">P1</b></td>
+      <td data-page-node-id="jCC8Aykx1CSbEZljI9480K">平台 verify 基线未复跑</td>
+      <td data-page-node-id="Pfu2KAuLFHU4TWOxVG1140">白名单登记（9-29）后，<code data-page-node-id="A6xwRzKW624ujSxEcLmD6D">backend/tests</code> 52 passed + 8 个 <code data-page-node-id="HKkEORGOC144sWex8ZGY64">verify_*.py</code> 尚未复跑</td>
+      <td data-page-node-id="uDMRTUfuVPn5Oqdcplxh6L">隔离环境复跑一轮（约几分钟）</td>
+    </tr>
+    <tr data-page-node-id="Mh0GAez38FEixmr5dOhLq1">
+      <td data-page-node-id="qKiLZpjx1E4eRe0cS6VVRu">P2</td>
+      <td data-page-node-id="UEOtgsSCGXL2mjxFCabIVc">Job#24 的 69s 退出延迟根因未确证</td>
+      <td data-page-node-id="ieY0O0A2h8edacRQdOZHq1">墙钟 72s vs pytest 自报 2.03s；Run#21 未复现</td>
+      <td data-page-node-id="ybAgpJlGF7ITILssmmCtEo">观察型排查（不改 Runner）</td>
+    </tr>
+    <tr data-page-node-id="OBslmguSJhrwBGU51vz2AD">
+      <td data-page-node-id="sztgSDmQdp4oStXnzQDdsb">P2</td>
+      <td data-page-node-id="h8C5E4MQRWXqV5Vvg9EBAZ">预检 <code data-page-node-id="FdXbYotEYF4E6nEWxwJ1KD">run_in_progress</code> 误报</td>
+      <td data-page-node-id="sWJEYL2BRjmAVIxiUa7r47"><code data-page-node-id="AQoYziAEwwaRwwrcVJszXR">db.any_non_terminal_run</code> 漏判 <code data-page-node-id="oynLCqhK946QClTdUl62AH">timedout</code>（仅显示层，不拦执行）</td>
+      <td data-page-node-id="7rtpnsngHEM0LfAqTTSZWM">一行修复（需授权）</td>
+    </tr>
+    <tr data-page-node-id="G4Sb6Vw0TUkExIpkGMIHHa">
+      <td data-page-node-id="hI5BLiVJNw21H3csj9sDai">P2</td>
+      <td data-page-node-id="YGkGCokFom2bgIDBOoJbnj">平台无常驻服务与一键编排</td>
+      <td data-page-node-id="uTiK9scB7SLHZA289PBhzP">靠 <code data-page-node-id="slofIAI8uPyQgtoIQK69Ou">start.bat</code> 手动起；执行前需人工确认快照</td>
+      <td data-page-node-id="VnY729aJNHwbVk52DlAWrO">可选（不影响闭环）</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="o0c6GDIC89Vc8xdyn3Ow2G">5. 两条路线</h2>
+<table data-page-node-id="cH0rn20IfRZgItyKq8KU2W">
+  <thead data-page-node-id="ZxG8TCWu8bdFKSYJAoScMr"><tr data-page-node-id="N5m8ygwhxVNLalO1mu4YZ1"><th data-page-node-id="6EJkB2NxS2KkjFbHEEFnN2">路线</th><th data-page-node-id="3ELB2wgfmOz3MWAkBi2SlD">做法</th><th data-page-node-id="fHwIwWCu7UCj2h5DPHOFX0">能否达成"单 SUT 三引擎"</th><th data-page-node-id="C6WERqca5DJMLpNiVlaYaV">前置/代价</th></tr></thead>
+  <tbody data-page-node-id="pgRKxuxTO9cjqBXCNMzbXA">
+    <tr data-page-node-id="dBLCOvCMPNkbMczMCX55On">
+      <td data-page-node-id="HVxkYzlK2tsb8dygRTKRjH"><b data-page-node-id="oULHcCJg472ztaDpbCBJhz">A · 双 SUT 分开闭环</b></td>
+      <td data-page-node-id="83OlLQ5QZe6MZvznmu2GL2">PrivaHigh 跑 pytest + matcheval（<b data-page-node-id="WFoe0n4GxgUlR0HEtdd48h">已完成</b>）；MMO 单独跑 Locust</td>
+      <td data-page-node-id="8LhFZTXdFIlykrAvuwoomA"><b class="bad" data-page-node-id="i8FEOMr35xjVJCNUCSUwGk">不能</b>（按 §0 口径永远是两套验收）</td>
+      <td data-page-node-id="rEa9wUiCMemPoTQvZ4zj5G">需授权改 <code data-page-node-id="mPg6zKJCf34GqhtDRJ9aX7">locustfile.py</code> 的 WS 地址为受控配置 + 拉起 <code data-page-node-id="bZyFa44baNmUdyUNXJiOxU">:2567</code> + 起 MMO 客户端</td>
+    </tr>
+    <tr data-page-node-id="xNiFKkoL68lh9QmPWghvZe">
+      <td data-page-node-id="1ijwSFAOKYQHKqBJLOEnqq"><b data-page-node-id="qjeLzGdEpASkke2XoZdHdr">B · PrivaHigh 单 SUT 三引擎</b><br data-page-node-id="IrHSta24SiwzdshtZ0L3B2"><span class="muted" data-page-node-id="T0kwKzr6INMQnj0zXoB60J">（推荐）</span></td>
+      <td data-page-node-id="9XK1Xg6tE0N0HdlhILZLw0">pytest + matcheval（已有）+ <b data-page-node-id="KOHeAJEAXS6RcKyYT6AuPE">新增 Locust 打 PrivaHigh 后端 12 个 REST 路由</b></td>
+      <td data-page-node-id="XMNRfw0Xk6SEXp6aM4lRUB"><b class="ok" data-page-node-id="Nq9RGXYCAjbF0tg54K3NQb">能</b> —— 三引擎全部指向同一个被测系统</td>
+      <td data-page-node-id="AKoK9ZUM3EwNpnvg6ik7SX">需授权：① 新增 1 个受控 locustfile 场景 key（平台白名单）② 新增 1 个 locustfile 脚本 ③ 新增 1 个 Environment（<code data-page-node-id="aYl1RQJvGc8rz4DrPXeGNk">127.0.0.1:8765</code>）④ 以固定端口 + 令牌启动后端</td>
+    </tr>
+  </tbody>
+</table>
+<p class="muted" data-page-node-id="o0NT9PuGqlDnqjmBdOSuBh">两条路线<b data-page-node-id="K1VcaEB0C90KXAFG29Nt2L">不冲突</b>：B 先把"单产品三引擎"闭环做出来（这是平台能力的证明），A 作为"联机线"的独立验收另建计划。
+未来一旦有"既含 UI 又能联机进房"的游戏，只需<b data-page-node-id="NqbT7VAAlm283p7t0NxErO">换资产与场景登记</b>（matcheval 换素材、locust 换场景），<b data-page-node-id="HLeBwT8OHLxrlqnWuIDkmw">平台架构不用动</b>。</p>
+
+<h2 data-page-node-id="QHC28ULYPMaJAeBIJYnX04">6. 到闭环的最短路径（推荐顺序）</h2>
+<table data-page-node-id="t6JuWMSFmvB5p8s8nhf4IF">
+  <thead data-page-node-id="0GwJETdVs64A3XxSjvALwJ"><tr data-page-node-id="nBsy6DaRLZnvZ7ekdBw22x"><th data-page-node-id="hFZhNlGXRei5bJN5l8oxPk">#</th><th data-page-node-id="oBvcKYHkFnHYlJWzf76qmV">动作</th><th data-page-node-id="jNW5K4AqBniTy9bCm72Cgy">产出</th><th data-page-node-id="AL2AJ9sW7uVRcX74TuvNaw">需要的授权</th></tr></thead>
+  <tbody data-page-node-id="o0py9dmVos9T6dCqcHp6gV">
+    <tr data-page-node-id="RsMytDjPGAGwekthMiGrfW"><td data-page-node-id="X9GyigedKbDjI9WPLGpmbk">1</td><td data-page-node-id="ZdK5Q6XlvRT5DT53AGEaog">平台重跑 PrivaHigh pytest 步骤</td><td data-page-node-id="6n7JGtliKalQx8ff0GsM71">把「49 passed」留档为新业务基线（不覆盖历史）</td><td data-page-node-id="KRoQmDdsmv1jn8pc3tbTKl">执行授权</td></tr>
+    <tr data-page-node-id="UGkGYHGCpSepaA7Uftvbp9"><td data-page-node-id="eDi5ShY9rA3LijVknLrBsR">2</td><td data-page-node-id="Jn5CO9dLVkHYp8HHIbb8AY">新增受控 Locust 场景 <code data-page-node-id="e1CXGbuIqIIjMMn1hQhi6T">privahigh-api</code> + locustfile</td><td data-page-node-id="vrqsVALdccBhboDMNIb5C1">可压测 PrivaHigh 后端的受控场景</td><td data-page-node-id="pwuG8RTQzr0Lht170RRwa0"><b data-page-node-id="oTeUXjX8ZKJkyP82080C65">白名单 + 新脚本授权</b></td></tr>
+    <tr data-page-node-id="tqy0TUySaIUN6tAWtJ9aK5"><td data-page-node-id="EafFSlbtWlthYmF4sfCnDG">3</td><td data-page-node-id="TJCBeXi5wJ4nbK5stzZGVV">以固定端口 + 令牌启动 PrivaHigh 后端</td><td data-page-node-id="zUzn9yA1IEwjocsAmdpnpY">压测目标可达（<code data-page-node-id="zhCNhkiZz2hGjdRyZOht6s">127.0.0.1:8765</code>）+ 受控 Environment</td><td data-page-node-id="PjoQvnY3wG8HdR1fDcOcvg">启动授权 / 你手动启动</td></tr>
+    <tr data-page-node-id="WV2ApCHaD3J3gz4xWmlbJA"><td data-page-node-id="VZM74RhpwzGdL9u70PTPLF">4</td><td data-page-node-id="OaJl0dlDmK4M2sFNDeQFfj">建一份三引擎计划：pytest → matcheval → Locust</td><td data-page-node-id="jPFRSAkll19ovUc26U4Gfx"><b data-page-node-id="vlr1HeQG3ZuJmI2l77YyqE">单 SUT 三引擎首次闭环</b>，含配置快照与三份报告</td><td data-page-node-id="n0bvNYCyj2FeIpPlfsNQwp">执行授权</td></tr>
+    <tr data-page-node-id="YPEmsFNjjUU6wC85iZ13aV"><td data-page-node-id="e9MO2i1IGZzU4WjkYzumd7">5</td><td data-page-node-id="tA8AXxNcNsaVdKHI85FjGh">同一计划再跑一次（或改一个参数）做 A/B 对比</td><td data-page-node-id="Jp3VUOcUpHbGqr7Gp2H1d2">真实数据上的<b data-page-node-id="bENBHXW0xqhAQDoChduyij">对比 / 趋势</b>能力验证</td><td data-page-node-id="ErKy9RxCDsdZiXsbRJAGJu">执行授权</td></tr>
+    <tr data-page-node-id="OyyggOJHE5OkM3uXwgGWE1"><td data-page-node-id="qkZRnPViveY0OO9AUlCSMo">6</td><td data-page-node-id="jVETwoJfB3VcVPdf8PtpPM">复跑平台 verify 基线</td><td data-page-node-id="jWjh9923gmmZgnbxu689MA">改动后的回归证据</td><td data-page-node-id="BgrZFVurF5V81GMrMveRoS">执行授权</td></tr>
+  </tbody>
+</table>
+
+<h2 data-page-node-id="OOqATWRnveO0kKcp2gYmv5">7. 需要你定的三件事</h2>
+<ol data-page-node-id="sPak04MmalLqT34Vkz4NPm">
+  <li data-page-node-id="YaEU2VcXK8B8iUsoBo7CJ1"><b data-page-node-id="FD7kdYixu88IjacP2xwTnE">走路线 B 吗？</b>（用 PrivaHigh 的后端 API 承担压测，从而一个被测系统集齐三引擎）—— 还是先按 A 把 MMO 的联机压测单独跑通？</li>
+  <li data-page-node-id="iFAQk6OUssAahlZ8CEVCgH"><b data-page-node-id="hK2cPNMNqg5WQ3HQQaFKLY">若走 B，是否授权</b>新增 1 个受控 locustfile 场景 key（平台白名单登记）+ 1 个新 locustfile 脚本（打 12 个路由，带 <code data-page-node-id="00BRywkedwzaNPQIHeXIkp">X-Game-Token</code>，令牌只存引用名不落明文）？</li>
+  <li data-page-node-id="F9Ha44bJydKMOhT6JusEdV"><b data-page-node-id="kDAYTWb9M2G9Sv8covbRHT">压测边界</b>：目标即本机 <code data-page-node-id="OMIVlgy9TT6mluScCEuuDM">127.0.0.1:8765</code>（PrivaHigh 后端，非生产）；并发参数建议保守起步（users=3 / spawn_rate=1 / run_time=30s）由你确认。</li>
+</ol>
+
+<footer data-page-node-id="XToCNRs5eMc3GDhQRSFNUR">
+本报告为只读盘点 + 路径建议：未创建配置、未改代码、未执行任何测试、未启动任何服务。口径遵循项目硬约束「PrivaHigh 与 ColyseusTechDemo-MMO 是两个不同被测系统，不得合并表述为同一产品的真实三引擎验收」。
+</footer>
+</div>
+</body>
+</html>
