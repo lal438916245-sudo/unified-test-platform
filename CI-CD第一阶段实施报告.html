@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CI/CD 第一阶段实施报告 · L0 + L1</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#eef2f6; --line:#d7dee6;
+    --fg:#1b2229; --muted:#5d6b7a; --accent:#1f6feb; --ok:#15803d;
+    --warn:#b45309; --bad:#b91c1c; --chip:#e7edf4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:14px/1.68 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:36px 24px 72px}
+  header{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:24px}
+  h1{font-size:24px;margin:0 0 8px}
+  h1 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
+  h2{font-size:17px;margin:30px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+  h3{font-size:15px;margin:18px 0 8px;color:#2b3641}
+  p{margin:8px 0}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;background:var(--panel)}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:#2b3641;font-weight:600}
+  code{background:#eef2f6;border:1px solid var(--line);border-radius:4px;padding:1px 5px;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#0b4f9e}
+  pre{background:#0f1720;border:1px solid #24313d;border-radius:8px;padding:12px 14px;
+    overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:#d7e3ef;line-height:1.6}
+  .chip{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:2px 10px;font-size:12px;margin:0 6px 6px 0;color:#33414f}
+  .ok{color:var(--ok);font-weight:600}
+  .bad{color:var(--bad);font-weight:600}
+  .warn{color:var(--warn);font-weight:600}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+  .card.hl{border-left:4px solid var(--ok)}
+  .card.note{border-left:4px solid var(--accent)}
+  .card.warnbox{border-left:4px solid var(--warn)}
+  ul,ol{margin:8px 0 8px 22px;padding:0}
+  li{margin:4px 0}
+  footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>CI/CD 第一阶段实施报告<span class="sub">统一游戏测试平台 · 2026-10-04</span></h1>
+  <p class="muted">目标只有一个：最小 CI/CD 闭环 —— GitHub Actions → Windows self-hosted runner → 平台 → <b>L0 平台测试</b> → <b>L1 真实启动 + Demo Plan</b> → Report → CI Pass/Fail。未做 L2/L3，未改兄弟项目 workflow，未扩展 TestSuite。</p>
+  <p>
+    <span class="chip">git init + .gitignore 先行</span>
+    <span class="chip">入库 91 文件 / 2.5 MB（原 353 MB）</span>
+    <span class="chip">新增 GET /health</span>
+    <span class="chip">L0 = 94 passed</span>
+    <span class="chip">L1 = 42/42 PASS</span>
+    <span class="chip">真实库逐字节未变</span>
+    <span class="chip">无残留进程 / 无残留临时目录</span>
+  </p>
+</header>
+
+<div class="card hl">
+  <b>结论：A–G 七项验收标准全部实测通过；H（workflow_dispatch 实跑）因环境前置条件未满足而无法在本轮实测 —— 属"未验证"而非"失败"。</b><br>
+  H 的两个前置条件是：① 本机<b>尚未注册 self-hosted runner</b>（无 <code>actions-runner</code> 目录）；② workflow 文件必须先在 GitHub 远程仓库上，而本轮按要求<b>未 push、未建远程</b>。<br>
+  除 H 之外的每一层都<b>用与 CI 完全相同的命令在本机真跑过</b>，并留有输出证据（见 §5/§6）。
+</div>
+
+<h2>1. 修改了哪些文件</h2>
+<table>
+  <thead><tr><th>文件</th><th>改动</th><th>为什么</th><th>影响生产逻辑</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>backend/app/api/__init__.py</code></td>
+      <td>在 <code>build_app()</code> 内新增 <code>GET /health</code>（约 14 行）</td>
+      <td>CI 需要一个"HTTP 服务已就绪"的判据；本机 <code>netstat</code>/<code>tasklist</code> 都静默返回空，不能用来判端口</td>
+      <td>是（新增只读端点，不含业务逻辑）</td>
+    </tr>
+    <tr>
+      <td><code>backend/tests/test_test_case.py</code></td>
+      <td>受控 <code>cwd</code> 从硬编码 <code>F:\…\backend</code> 改为从 <code>__file__</code> 派生（+注释）</td>
+      <td>该文件会入仓库，且 <code>cwd</code> 必须落在受控根下才能过白名单校验 —— 只能派生、不能删</td>
+      <td>否（测试夹具）</td>
+    </tr>
+    <tr>
+      <td><code>backend/tests/test_config_center.py</code></td>
+      <td>脱敏用例的示例路径 <code>F:\Anaconda3\…</code> → <code>C:\Anaconda3\…</code></td>
+      <td>去掉库内 <code>F:</code> 盘符；断言结果不变</td>
+      <td>否（测试样例）</td>
+    </tr>
+    <tr>
+      <td><code>backend/tests/test_frontend_roundtrip.py</code></td>
+      <td>删除硬编码本机 node 路径，改为 <code>PLATFORM_NODE</code> 环境变量 + PATH 上的 <code>node</code></td>
+      <td>原写法把 <code>C:\Users\lenovo\…</code> 写进仓库，换机器即失效</td>
+      <td>否（测试）</td>
+    </tr>
+    <tr>
+      <td><code>_v0.3_baseline/fe_roundtrip_test.js</code></td>
+      <td><code>ROOT</code> 改为 <code>process.env.PLATFORM_ROOT || path.resolve(__dirname, '..')</code>；合成夹具的 <code>F:\x\y</code> → <code>X:\probe\dir</code></td>
+      <td>该 JS 测试台会入仓库，需对任意 runner 可用</td>
+      <td>否（验证资产）</td>
+    </tr>
+    <tr>
+      <td><code>_v0.3_baseline/dump_real_input.py</code><br><code>_v0.3_baseline/e2e_isolated.py</code></td>
+      <td>仓库根 / 真实库 / 输出 / 解释器全部改为 <code>__file__</code> 派生 + 环境变量覆盖</td>
+      <td>同上（原先写死 <code>F:\测试平台\platform</code>、<code>F:\Anaconda3\python.exe</code>）</td>
+      <td>否（验证资产）</td>
+    </tr>
+    <tr>
+      <td><code>README.md</code></td>
+      <td>§9 基线修正（<code>52 passed</code> → <code>94 passed</code>）；新增 §10「CI（GitHub Actions）」</td>
+      <td>原基线已过期；补 CI 用法与 <code>/health</code> 说明</td>
+      <td>否（文档）</td>
+    </tr>
+    <tr>
+      <td><code>.gitignore</code></td>
+      <td>新建（<b>早于 <code>git init</code></b>）</td>
+      <td>见 §3</td>
+      <td>否</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>2. 新增了哪些文件</h2>
+<table>
+  <thead><tr><th>文件</th><th>作用</th></tr></thead>
+  <tbody>
+    <tr><td><code>.gitignore</code></td><td>仓库卫生规则（详见 §3）</td></tr>
+    <tr><td><code>.github/workflows/platform-ci.yml</code></td><td>CI 定义：仅 <code>workflow_dispatch</code>、<code>runs-on: [self-hosted, Windows]</code>、workflow 级 <code>concurrency</code>、L0→L1 两个 job</td></tr>
+    <tr><td><code>_ci/l1_smoke.py</code></td><td>L1 隔离冒烟脚本（动态端口 + 临时数据目录 + 身份自证 + 清理 + 真实库前后比对）</td></tr>
+    <tr><td><code>_ci/README.md</code></td><td>CI 说明：L0/L1 分工、本地复现命令、runner 要求、隔离契约、产物位置</td></tr>
+    <tr><td><code>backend/tests/test_health.py</code></td><td><code>/health</code> 的 4 条测试（含"零副作用"断言）</td></tr>
+    <tr><td><code>CI-CD第一阶段实施报告.html</code></td><td>本报告</td></tr>
+  </tbody>
+</table>
+<p class="muted">另有 <code>_ci_out/&lt;时间戳&gt;/</code>（运行期产物，已 gitignore）：平台 stdout、Job 的 report 目录、<code>ci-meta.json</code>。</p>
+
+<h2>3. <code>.gitignore</code> 排除了什么</h2>
+<p>按你列的 14 项逐条落实。<b>关键点：它必须在 <code>git init</code> 之前定稿</b> —— 否则 <code>git add .</code> 会把 321 MB / 8445 文件的 <code>.venv-locust</code> 与真实运行库一次性写进 Git 历史，之后无法简单清除。</p>
+<table>
+  <thead><tr><th>你的要求</th><th>排除规则</th><th>实测命中</th></tr></thead>
+  <tbody>
+    <tr><td>1. <code>platform/.venv/</code>、2. <code>.venv-locust/</code></td><td><code>.venv/</code> <code>.venv-locust/</code> <code>venv/</code> <code>env/</code> <code>ENV/</code></td><td><span class="ok">已排除</span>（321 MB / 8445 文件）</td></tr>
+    <tr><td>3. <code>platform/data/</code>、4. SQLite、5. 日志、6. 历史 report/artifact</td><td><code>data/</code> <code>data_verify_*/</code> <code>*.sqlite*</code> <code>*.db*</code> <code>*.log</code> <code>logs/</code> <code>.ci-data/</code> <code>_ci_out/</code></td><td><span class="ok">已排除</span>（真实库 + 236 个文件 + 39 个报告目录）</td></tr>
+    <tr><td>7. <code>_v0.2_backup_*</code> 等备份目录</td><td><code>_v0.2_backup_*/</code> <code>_v0.2_current/</code> <code>_v0.2_baseline/</code> <code>.v0.2_*</code> <code>*.bak-*</code> <code>*.tmp</code></td><td><span class="ok">已排除</span></td></tr>
+    <tr><td>8. <code>_v0.3_baseline/fe_input.json</code>（含本机绝对路径）</td><td>显式单文件排除</td><td><span class="ok">已排除</span>（该文件含 20+ 条 <code>F:\…</code> 路径）</td></tr>
+    <tr><td>9. Python cache、10. node_modules、11. IDE 临时文件</td><td><code>__pycache__/</code> <code>*.py[cod]</code> <code>.pytest_cache/</code> <code>.mypy_cache/</code> <code>.ruff_cache/</code> <code>node_modules/</code> <code>.idea/</code> <code>.vscode/</code> <code>Thumbs.db</code> …</td><td><span class="ok">已排除</span></td></tr>
+    <tr><td>12. 真实游戏测试素材</td><td>不在仓库根内（<code>real_assets/</code> 位于上级目录，天然不入库）；<code>backend/demo/matcheval_fixture/*</code> 是 <b>合成</b> fixture（由 <code>make_matcheval_fixture.py</code> 生成），非真实游戏素材</td><td><span class="ok">无真实素材入库</span></td></tr>
+    <tr><td>13. 任何 API key / token / secret</td><td><code>.env*</code> <code>*.key</code> <code>*.pem</code> <code>*.p12</code> <code>*.pfx</code> <code>secrets/</code> <code>credentials*</code></td><td><span class="ok">已排除</span>（平台本身也只登记"凭据引用名"）</td></tr>
+    <tr><td>14. 含本机 <code>F:\</code> 路径的个人配置</td><td>见下方"残留说明"</td><td><span class="warn">部分残留，均为可覆盖默认值</span></td></tr>
+  </tbody>
+</table>
+
+<h3>实测结果（<code>git status --short</code> 复核）</h3>
+<pre>入库文件数: 91          合计约 2496 KB（若误入 .venv-locust 则 353 MB → 约 141 倍）
+.venv-locust 命中: 0    data/ 命中: 0    *.sqlite 命中: 0
+fe_input.json 命中: 0   _v0.2_backup 命中: 0   __pycache__ 命中: 0   *.log 命中: 0
+远程仓库: 0 个（未 push、未建远程）</pre>
+
+<div class="card warnbox">
+  <b>残留说明（必须如实报备）：入库代码里仍有 4 处"本机默认值"，全部可被环境变量覆盖，且 CI 不依赖它们。</b>
+  <ul>
+    <li><code>backend/app/config_center.py:34</code> <code>DEFAULT_PYTHON = os.environ.get("PLATFORM_DEFAULT_PYTHON") or r"F:\Anaconda3\python.exe"</code></li>
+    <li><code>backend/app/config_center.py:40</code> <code>SDET_PROJ = os.environ.get("PLATFORM_SDET_PROJ") or r"F:\Colyseus_SDET_Project"</code></li>
+    <li><code>start.bat:6</code> <code>if "%PYTHON_EXE%"=="" (set PYTHON_EXE=F:\Anaconda3\python.exe)</code></li>
+    <li><code>start.ps1:5</code> <code>else { "F:\Anaconda3\python.exe" }</code></li>
+  </ul>
+  <p>保留理由：这是<b>本机开箱可用</b>的默认值（你此前明确要求把环境相关常量集中并支持环境变量覆盖）。<b>CI 侧已切断依赖</b> —— workflow 用 <code>PYTHON_EXE</code>（仓库变量 <code>PLATFORM_CI_PYTHON</code>，缺省 <code>python</code>）调用，L1 脚本再把它注入子进程的 <code>PLATFORM_PYTHON</code>/<code>PLATFORM_DEFAULT_PYTHON</code>，于是被预置的 Executor 指向的正是 runner 自己的解释器。</p>
+  <p class="muted">如果你要求仓库里完全不出现盘符，我可以把这 4 处改为"必须由环境变量提供，否则报错退出" —— 但那样本机不再开箱可用，需你确认。</p>
+</div>
+
+<h2>4. <code>/health</code> 怎么实现</h2>
+<pre>def build_app(static_dir: str) -&gt; FastAPI:
+    app = FastAPI(title="统一游戏测试平台 MVP")
+
+    @app.get("/health", include_in_schema=False)
+    def _health() -&gt; dict[str, str]:
+        """最小存活探针：只证明 HTTP 服务已监听。严格零副作用。"""
+        return {"status": "ok"}
+
+    app.include_router(api_router)          # 业务 API 仍在 /api/*
+    ...</pre>
+<ul>
+  <li><b>刻意的设计选择</b>：挂在 <b>app 根路径</b>，<b>不经业务 router</b>（<code>router = APIRouter(prefix="/api")</code>）。这样"服务已起来"与"配置/资产是否就绪"彻底解耦 —— 它不继承 <code>/api</code> 的依赖链。</li>
+  <li><b>零副作用</b>：不访问 DB、不创建 PlanRun/Job、不读被测资产、不依赖 Environment/Executor/AssetSource，也不依赖 Locust/MatchEval。测试里有一条专门的断言：给 app 设了 <code>db_path</code> 后调 <code>/health</code>，该 sqlite 文件<b>必须仍不存在</b>。</li>
+  <li><b>配套测试</b> <code>backend/tests/test_health.py</code>（4 条）：① 200 + 载荷严格等于 <code>{"status":"ok"}</code>；② 在根路径而非 <code>/api/health</code>（后者必须 404）；③ 零副作用（不创建 DB 文件）；④ 未配置 <code>db_path</code> 也可用（证明不依赖 DB/调度器/资产）。</li>
+  <li>按要求<b>只做 <code>/health</code></b>：没有 <code>/ready</code>、<code>/metrics</code>、Prometheus、tracing、auth、dashboard。</li>
+</ul>
+
+<h2>5. L0 如何执行</h2>
+<pre>python -m pytest backend/tests -q -o addopts=</pre>
+<p>（<b>注意路径</b>：仓库根 = <code>platform/</code>，所以 CI 里是 <code>backend/tests</code>，而不是你原文写的 <code>platform/backend/tests</code> —— 二者指的是同一个目录，只是相对基准不同。见 §7 说明。）</p>
+<p>workflow 里 L0 被拆成 5 步，把"外部依赖"这件事显式化：</p>
+<ol>
+  <li><b>Runner 环境自检</b>：打印 <code>RUNNER_OS</code>/<code>ARCH</code>/workspace，并 <code>import fastapi, uvicorn, pydantic, pytest, httpx</code> —— <b>缺任何一个立刻失败</b>，不允许"静默跳过用例"。</li>
+  <li><b>记录真实库指纹（前）</b>。</li>
+  <li><b>跑测试</b>：<code>$LASTEXITCODE -ne 0</code> 即抛出。</li>
+  <li><b>校验 L0 未写真实库</b>：比对前后 MD5，不一致就抛错。</li>
+</ol>
+<div class="card note">
+  <b>实测结果：<code>94 passed, 1 warning in 11.10s</code></b>（原 90 条 + 新增 4 条 <code>/health</code>）。<b>0 skipped</b> —— 包括前端往返测试台也真跑了（说明 runner 上能找到 node）；若某机器没有 node，它会 skip 且不计为失败。<br>
+  <b>L0 不需要</b>：游戏服务 / MongoDB / Colyseus / 真实游戏素材 / 真实数据库 / 外网。全部用例走进程内 <code>TestClient</code> + 隔离临时 SQLite。<br>
+  <b>关于隐式外部依赖</b>：本轮<b>未发现</b>需要用 <code>continue-on-error</code> 掩盖的项 —— 也<b>没有</b>使用它。若将来出现，环境自检步骤会先失败，不会被掩盖成绿灯。
+</div>
+
+<h2>6. L1 如何执行</h2>
+<pre>python _ci/l1_smoke.py          # 或：python _ci/l1_smoke.py --keep（保留临时目录排障）</pre>
+<h3>7 个阶段</h3>
+<table>
+  <thead><tr><th>阶段</th><th>做什么</th><th>关键断言</th></tr></thead>
+  <tbody>
+    <tr><td>1 启动前检查</td><td><code>socket.bind(0)</code> 取空闲端口；建 <code>%TEMP%\platform_ci_l1_*</code>；取真实库基线</td><td>端口<b>启动前必须不可达</b>（证明是新起的，不是遗留实例）；<code>PORT != 8000</code></td></tr>
+    <tr><td>2 启动 + 等 <code>/health</code></td><td><code>Popen([python, backend/run.py, --host, --port, --data-dir, --db, --no-browser])</code>；轮询 <code>/health</code></td><td>120s 内 200 且载荷等于 <code>{"status":"ok"}</code>；期间<b>每个循环都检查子进程是否已死</b>（早死立刻失败并打印日志尾部）</td></tr>
+    <tr><td>3 身份自证</td><td>见下</td><td><b>PID ↔ 端口 ↔ 数据目录</b>三者一致</td></tr>
+    <tr><td>4 建 CI Demo Plan</td><td>找 <code>offline-eval</code> + 支持 pytest 的 Executor；<code>POST /api/plans</code></td><td>4 条预检断言：<code>ok=True</code>、<code>no_side_effects=True</code>、<code>missing</code> 为空、<code>ready=[True]</code></td></tr>
+    <tr><td>5 执行</td><td><code>POST /plans/{id}/run</code> → 轮询 <code>/api/runs/{id}</code></td><td>300s 内到终态；<code>PlanRun==success</code>；<b>1 个 Job</b>；<code>Job==success</code>、<code>exit_code==0</code>、<code>engine==pytest</code></td></tr>
+    <tr><td>6 报告</td><td>读 <code>report.json</code>；查 Report Center</td><td>文件存在、<b>路径落在本次临时目录内</b>（未写真实 data）、结构完整、<code>status==success</code>；索引 total≥1 且含本次 job</td></tr>
+    <tr><td>7 写入去向自证 + 收尾</td><td>临时库计数；真实库前后比对；强杀进程、扫残留、验端口释放、删临时目录</td><td>临时库 <code>plan_runs==1</code>；真实库 md5/mtime/文件数/计数<b>全等</b>；无残留；端口已释放</td></tr>
+  </tbody>
+</table>
+
+<h3>身份自证（你 §11 特别强调的那件事）</h3>
+<p>2026-10-01 曾因"只看端口 UP、把遗留实例误认成自己启动的实例"而把 9 条 PlanRun 写进真实库。为此 L1 用<b>五重、互相独立</b>的证据链，而不是单一信号：</p>
+<ol>
+  <li><b>启动前端口不可达</b> → 起完后可达 ⇒ 这个监听者只可能是本次新起的进程。</li>
+  <li><b>子进程自己 stdout 声明</b>了它绑定的 <code>http://127.0.0.1:&lt;port&gt;</code>、<code>数据库:</code>、<code>数据目录:</code> —— 读它的原话，不靠推测。（首版这里踩了坑：子进程 stdout 被块缓冲，横幅滞留在缓冲区读不到；已在子进程环境强制 <code>PYTHONUNBUFFERED=1</code> 解决。）</li>
+  <li><b>OS 报告的该 PID 命令行</b>同时含本次 <code>run.py</code>、本次端口、本次临时数据目录。</li>
+  <li><b>进程存活用 Windows API</b>（<code>OpenProcess</code> + <code>GetExitCodeProcess==STILL_ACTIVE</code>）判定 —— <b>不用 <code>tasklist</code></b>（本机 <code>tasklist</code> 与 <code>netstat</code> 一样会静默返回空）。</li>
+  <li><b>进程退出后端口再次不可达</b> ⇒ 闭合证明"监听者确为本次进程"。</li>
+</ol>
+<p>再叠加一条"写入去向"的硬证据：执行后<b>临时库有本次记录、真实库计数不变</b>。</p>
+
+<h3>实测结果</h3>
+<pre>L1 结果：42 passed, 0 failed          EXIT=0
+  [隔离] 动态端口=59432（≠8000）· 数据目录=%TEMP%\platform_ci_l1_qisoozu5 · 唯一标记=platform_ci_l1_qisoozu5
+  [PASS] 子进程自报绑定了本次端口 / 数据库 / 数据目录
+  [PASS] PlanRun status == success（平台链路成功）  ·  Job status == success · exit_code == 0
+  [PASS] report.json 落在临时目录内（未写入真实 data）· 结构完整 · status == success
+  [PASS] Report Center 已建立索引 · 索引中包含本次 Job
+  [PASS] 临时库记录了本次 PlanRun / Job
+  [PASS] 真实库 md5 未变 · mtime 未变 · data 文件数未变 · PlanRun 未新增（仍为 34）
+  [PASS] OS 级确认该 PID 已消亡（非 tasklist）· 无残留 backend 进程 · 端口已释放 · 临时目录已删除</pre>
+<div class="card hl">
+  <b>L1 首版自身有两个缺陷，是在真跑中被抓出来并修掉的（不是"写完即宣布通过"）：</b>
+  <ol>
+    <li><b>子进程 stdout 块缓冲</b>：<code>run.py</code> 的启动横幅（端口/DB/数据目录）在重定向到文件时滞留缓冲区 → 身份自证读不到。修法：子进程环境注入 <code>PYTHONUNBUFFERED=1</code>。</li>
+    <li><b>残留扫描自匹配</b>：扫描命令自身是 <code>powershell.exe</code>，其命令行里含"唯一标记"，于是把自己也算成残留进程。修法：限定 <code>Name='python.exe'</code>。</li>
+  </ol>
+</div>
+
+<h2>7. CI workflow 如何执行</h2>
+<p>文件：<b>仓库根 = <code>platform/</code></b>，因此路径是 <code>platform/.github/workflows/platform-ci.yml</code>。</p>
+<pre>name: Platform CI (L0 + L1)
+on:
+  workflow_dispatch:              # 第一阶段只开手动触发，不加 push / pull_request
+concurrency:
+  group: platform-ci              # 平台是 SQLite + 进程内 scheduler + executor_locks，
+  cancel-in-progress: false       # 存在全局串行约束 → 整个 workflow 串行化
+permissions:
+  contents: read
+env:
+  PYTHON_EXE: ${{ vars.PLATFORM_CI_PYTHON || 'python' }}
+  NO_PROXY: 127.0.0.1,localhost   # 本机有 http_proxy，否则 127.0.0.1 会被送去代理(502)
+jobs:
+  l0-unit:            runs-on: [self-hosted, Windows]   # 环境自检 → 真实库指纹(前) → pytest → 校验未写真实库
+  l1-platform-smoke:  runs-on: [self-hosted, Windows]   # needs: l0-unit
+                      # 指纹(前) → python _ci/l1_smoke.py → 校验未写真实库
+                      # → 残留进程检查(always) → 上传 _ci_out/ 为 artifact l1-smoke-logs(always)</pre>
+<h3>几个刻意的选择</h3>
+<table>
+  <thead><tr><th>选择</th><th>理由</th></tr></thead>
+  <tbody>
+    <tr><td><code>runs-on: [self-hosted, Windows]</code></td><td>平台依赖 Windows 本机 Python 与受控本地路径；托管 runner 看不到这些，跑不了 L1</td></tr>
+    <tr><td>只开 <code>workflow_dispatch</code></td><td>按你的要求：等它在当前 runner 上稳定通过后，再单独评估是否加 <code>push</code>/<code>pull_request</code></td></tr>
+    <tr><td>workflow 级 <code>concurrency</code></td><td>同一平台同时只允许一个实例；不通过 Worker/队列解决</td></tr>
+    <tr><td>残留进程检查只匹配"<code>run.py</code> 且带 <code>--data-dir</code>"</td><td>CI 启动的平台必然带 <code>--data-dir</code>；这样<b>不会误伤开发机自己起的</b> <code>python backend/run.py --no-browser</code>（否则该 job 会被无关进程搞红）</td></tr>
+    <tr><td>两个 job 各自记录真实库指纹并前后比对</td><td>把"CI 不得写真实库"做成 workflow 级断言，而不只是脚本内部的自我承诺</td></tr>
+    <tr><td>日志上传用 <code>if: always()</code></td><td>失败时更需要现场</td></tr>
+  </tbody>
+</table>
+<p><b>YAML 已做结构校验</b>：解析通过，并断言 <code>on</code> 仅 <code>workflow_dispatch</code>、两个 job 均为 <code>self-hosted + Windows</code>、<code>jobs</code> 中不含 <code>ubuntu</code>、<code>concurrency.group == platform-ci</code> 且 <code>cancel-in-progress == false</code>、<code>l1</code> 依赖 <code>l0</code>。</p>
+
+<h2>8. self-hosted runner 要求</h2>
+<table>
+  <thead><tr><th>项</th><th>要求</th></tr></thead>
+  <tbody>
+    <tr><td>操作系统 / 标签</td><td>Windows；标签需同时含 <code>self-hosted</code> 与 <code>Windows</code></td></tr>
+    <tr><td>Python</td><td>PATH 上有 <code>python</code>，且装有 <code>fastapi</code> <code>uvicorn</code> <code>pydantic</code> <code>pytest</code> <code>httpx</code>；或设仓库变量 <code>PLATFORM_CI_PYTHON</code> 指向别的解释器</td></tr>
+    <tr><td>node</td><td><b>可选</b>；缺失时前端往返测试台自动 skip（不计为失败）；也可用 <code>PLATFORM_NODE</code> 指定</td></tr>
+    <tr><td>不需要</td><td>MongoDB / Colyseus / 游戏 / 真实游戏素材 —— L0/L1 都不依赖</td></tr>
+    <tr><td>网络</td><td>只需 <code>127.0.0.1</code>（本地回环）；建议设 <code>NO_PROXY=127.0.0.1,localhost</code></td></tr>
+  </tbody>
+</table>
+
+<h2>9. 真实 DB 是否保持不变</h2>
+<div class="card hl">
+  <b>是。逐字节未变 —— 且这是 L1 每次运行内部断言的，不只是我事后抽查。</b>
+</div>
+<table>
+  <thead><tr><th>指标</th><th>基线（本轮开始前）</th><th>终态（全部验证结束后）</th></tr></thead>
+  <tbody>
+    <tr><td><code>data/db.sqlite</code> md5</td><td><code>9c191da86caaad20bac5d621a0142cae</code></td><td><code>9c191da86caaad20bac5d621a0142cae</code> <span class="ok">✓</span></td></tr>
+    <tr><td>mtime</td><td><code>2026-10-01 20:10:44</code></td><td><code>2026-10-01 20:10:44</code> <span class="ok">✓</span></td></tr>
+    <tr><td>文件大小 / data 文件数</td><td>278528 B / 236</td><td>278528 B / 236 <span class="ok">✓</span></td></tr>
+    <tr><td><code>plan_runs / jobs / plans</code></td><td>34 / 41 / 15</td><td>34 / 41 / 15 <span class="ok">✓</span></td></tr>
+    <tr><td><code>MAX(run_id) / MAX(job_id)</code></td><td>34 / 41</td><td>34 / 41 <span class="ok">✓</span></td></tr>
+    <tr><td>表数</td><td>10（<code>test_cases</code>/<code>test_suites</code> 仍未在真实库创建）</td><td>10 <span class="ok">✓</span></td></tr>
+  </tbody>
+</table>
+<p>隔离机制：CI/L1 全程用 <code>--data-dir &lt;%TEMP%\platform_ci_l1_*&gt;</code> + <code>--db &lt;该目录&gt;\db.sqlite</code>，<b>从不指向 <code>platform/data</code></b>。L1 实测中临时库 <code>plan_runs==1</code>、真实库仍为 34 —— 写入去向是双向自证的。</p>
+
+<h2>10. 是否有残留进程</h2>
+<table>
+  <thead><tr><th>检查项</th><th>结果</th></tr></thead>
+  <tbody>
+    <tr><td>本次 CI 标记的 <code>run.py --data-dir</code> 进程</td><td><span class="ok">0 个</span>（PowerShell <code>Win32_Process</code> 精确匹配）</td></tr>
+    <tr><td>全部 <code>run.py</code> 进程</td><td><span class="ok">0 个</span>（连开发机自己的平台也没在跑）</td></tr>
+    <tr><td>残留临时数据目录 <code>%TEMP%\platform_ci_l1_*</code></td><td><span class="ok">0 个</span></td></tr>
+    <tr><td>端口 8000 / 8001 / 8002 / 8123 / 8199 / 以及本次用过的 59432、61109、60963</td><td><span class="ok">全部已释放</span></td></tr>
+    <tr><td>用过的 CI 平台 PID（多次运行）</td><td><span class="ok">均已消亡</span>（OS 级 <code>GetExitCodeProcess</code> 确认）</td></tr>
+  </tbody>
+</table>
+<p>期间<b>唯一一次</b>残留：L1 首版在 <code>finally</code> 里因 PowerShell 缺失抛异常，导致一个临时目录没删掉 —— 已定位、清理，并已修好脚本（PowerShell 变为可选、失败不再中断清理流程）。</p>
+
+<h2>11. <code>workflow_dispatch</code> 实测结果</h2>
+<div class="card warnbox">
+  <b>无法在本轮实测 —— 两个前置条件都不满足，且都不由本轮授权范围覆盖：</b>
+  <ol>
+    <li><b>本机未注册 self-hosted runner</b>（已核查：无 <code>actions-runner</code> 目录）。没有 runner，GitHub 无处投递该 job。</li>
+    <li><b>workflow 文件必须先存在于 GitHub 远程仓库</b>才能被 <code>workflow_dispatch</code> 触发。而本轮明确<b>不 push、不建远程仓库</b>。</li>
+  </ol>
+  <p>我不会用"看起来应该能过"来充当实测结果。本轮的替代证据是：<b>把 workflow 里每条命令原样在本机执行了一遍</b>。</p>
+</div>
+<table>
+  <thead><tr><th>workflow 步骤</th><th>本轮本地等价执行</th><th>结果</th></tr></thead>
+  <tbody>
+    <tr><td>Runner 环境自检</td><td><code>python --version</code> + <code>import fastapi,uvicorn,pydantic,pytest,httpx</code></td><td><span class="ok">通过</span></td></tr>
+    <tr><td>L0：<code>pytest backend/tests -q -o addopts=</code></td><td>同命令原样执行</td><td><span class="ok">94 passed</span></td></tr>
+    <tr><td>L1：<code>python _ci/l1_smoke.py</code></td><td>同命令原样执行（3 次，含 2 轮修复后）</td><td><span class="ok">42 passed / 0 failed，exit 0</span></td></tr>
+    <tr><td>校验未写真实库（前后 MD5）</td><td>等价：脚本内 + 独立复核</td><td><span class="ok">md5 一致</span></td></tr>
+    <tr><td>残留进程检查</td><td>同查询条件在本机执行</td><td><span class="ok">0 个</span></td></tr>
+    <tr><td>上传 artifact <code>_ci_out/</code></td><td>产物已生成：<code>_ci_out/20261004-121609｜121655｜122134</code></td><td><span class="ok">可上传</span></td></tr>
+    <tr><td>YAML 语法 / 结构</td><td><code>yaml.safe_load</code> + 7 条结构断言</td><td><span class="ok">通过</span></td></tr>
+  </tbody>
+</table>
+<p class="muted">另：仓库已 <code>git init</code> 并完成 1 次提交（分支已改为 <code>main</code>，commit <code>d7ca781</code>，91 files / 22214 insertions）。提交是本地行为，未 push。</p>
+
+<h2>12. 当前 CI/CD 完成到什么程度</h2>
+<table>
+  <thead><tr><th>层</th><th>状态</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>Git 仓库卫生</td><td><span class="ok">完成并实测</span></td><td>.gitignore 先于 init；91 文件 / 2.5 MB；零大目录、零真实数据、零凭据入库</td></tr>
+    <tr><td><code>GET /health</code></td><td><span class="ok">完成并实测</span></td><td>零副作用；4 条测试</td></tr>
+    <tr><td>L0（平台代码级）</td><td><span class="ok">完成并实测</span></td><td>94 passed，零 skip，零外部依赖</td></tr>
+    <tr><td>L1（真实启动 + Demo Plan）</td><td><span class="ok">完成并实测</span></td><td>42 项断言，端到端 success，含身份自证与清理自证</td></tr>
+    <tr><td>CI 数据隔离</td><td><span class="ok">完成并实测</span></td><td>动态端口 + 临时数据目录；真实库逐字节未变</td></tr>
+    <tr><td>并发控制</td><td><span class="ok">已配置</span></td><td>workflow 级 <code>concurrency: platform-ci</code>，不自动取消</td></tr>
+    <tr><td>workflow 定义</td><td><span class="ok">已编写 + 结构校验</span></td><td>仅 <code>workflow_dispatch</code>，self-hosted Windows</td></tr>
+    <tr><td><b>workflow 端到端实跑</b></td><td><span class="warn">未验证（前置条件缺失）</span></td><td>需：注册 self-hosted runner + push 到 GitHub</td></tr>
+  </tbody>
+</table>
+<p><b>一句话：平台侧"跑得起来、测得准、不污染真实数据"已经是可复现的事实；差的是把它交给 GitHub 调度这一步。</b></p>
+
+<h2>13. 后续可选、但本轮明确不做</h2>
+<ul>
+  <li><b>L2</b>：真实 PrivaHigh pytest（`privahigh-backend`）与 MatchEval（`privahigh-real`）—— 依赖本机磁盘资产。</li>
+  <li><b>L3</b>：Locust 打 <code>:2567</code> —— 需 MongoDB + Colyseus 服务端进程，建议 <code>workflow_dispatch</code> 或 <code>continue-on-error</code>，<b>不要挂 PR 关卡</b>。</li>
+  <li>启动 Colyseus / MongoDB、Worker、Job Queue、Jenkins、Webhook、CI Dashboard、RBAC、参数化矩阵、多仓库编排。</li>
+  <li>Suite execution、<code>suite_ref</code>、Run Diff、新测试引擎、DB 架构重构、<code>get_conn</code> P1 技术债修复。</li>
+  <li>给旧的两个游戏项目 workflow 换入口（Colyseus-Storm / GameAutoTest-Pro 本轮<b>未改、未删</b>）。</li>
+</ul>
+
+<h2>验收标准逐条核对</h2>
+<table>
+  <thead><tr><th>#</th><th>标准</th><th>结果</th><th>证据</th></tr></thead>
+  <tbody>
+    <tr><td>A</td><td>Git 卫生</td><td><span class="ok">通过</span></td><td><code>git status</code> 干净；<code>.venv-locust</code>/<code>data/</code>/真实报告/本机配置均未入库；未 push（remote 数 = 0）</td></tr>
+    <tr><td>B</td><td><code>GET /health</code> → 200 且 <code>status=ok</code></td><td><span class="ok">通过</span></td><td>L1 阶段 2 实测；<code>test_health.py</code> 4 条</td></tr>
+    <tr><td>C</td><td>L0 全通过</td><td><span class="ok">通过</span></td><td><code>94 passed</code>，0 skip</td></tr>
+    <tr><td>D</td><td>L1：真实进程启动 / health / Demo Plan / PlanRun / Job / Report 成功</td><td><span class="ok">通过</span></td><td><code>_ci/l1_smoke.py</code> 42/42，退出码 0</td></tr>
+    <tr><td>E</td><td>隔离：真实 <code>platform/data</code> md5 相同、mtime 不变、文件数不变</td><td><span class="ok">通过</span></td><td>三者实测全等（§9）</td></tr>
+    <tr><td>F</td><td>无残留 <code>backend/run.py</code> 进程</td><td><span class="ok">通过</span></td><td>残留数 0（且全部 run.py 数为 0）</td></tr>
+    <tr><td>G</td><td><code>concurrency</code> 配置存在</td><td><span class="ok">通过</span></td><td>YAML 结构断言 <code>group=platform-ci</code>、<code>cancel-in-progress=false</code></td></tr>
+    <tr><td>H</td><td>workflow 可在 self-hosted Windows runner 上通过 <code>workflow_dispatch</code> 成功执行</td><td><span class="warn">未验证</span></td><td><b>前置条件缺失</b>：无 self-hosted runner 注册；且未 push（workflow 必须先存在于远程）。已用"同命令本地全跑通"作为替代证据（§11）</td></tr>
+  </tbody>
+</table>
+
+<div class="card hl">
+  <b>最终判定：CI/CD 第一阶段 —— 代码与脚本层面验收通过（A–G 全绿）；整体交付状态为"就差一步上跑步机"。</b><br><br>
+  唯一未闭环的是 <b>H</b>，且它<b>不是实现缺陷</b>，而是环境前置条件：需要①在本机注册 self-hosted runner、②把仓库 push 到 GitHub。<br>
+  这两件事本轮都不在你的授权范围内（"不要自动 git push、不要创建远程仓库"），因此我停在这里等你决定。<br><br>
+  <b>要真正闭环 H，请先做这两步，然后我可以立刻用 <code>workflow_dispatch</code> 跑一次并汇报真实结果。</b>
+</div>
+
+<footer>
+  统一游戏测试平台 · CI/CD 第一阶段实施报告 · 生成于 2026-10-04 ·
+  本轮未修改旧的两个游戏项目 workflow、未启动任何被测服务、未执行 Locust / MatchEval / 真实 PrivaHigh 测试、
+  未扩展 TestSuite。真实运行库 md5 <code>9c191da86caaad20bac5d621a0142cae</code> 全程未变。
+</footer>
+</div>
+</body>
+</html>
