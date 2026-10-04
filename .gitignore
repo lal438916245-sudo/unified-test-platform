@@ -88,3 +88,11 @@ desktop.ini
 *.pfx
 secrets/
 credentials*
+
+# ---------- 8. 开发期报告与自验收脚本：不随仓库发布 ----------
+# 这些是平台开发/验收过程的一次性产物，不是平台本体：
+#   · 根目录 *.html = 各阶段实施/验收/归因报告（平台本体页面是 frontend/index.html，不受影响）
+#   · 根目录 verify_*.py = 开发期自验收脚本（需本机真实服务/资产，README 已说明其不在仓库内）
+# 保留：backend/tests/（平台单测）、_ci/（平台 CI）、_v0.3_baseline/（回归测试台，pytest 依赖）
+/*.html
+/verify*.py

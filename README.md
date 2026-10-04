@@ -124,7 +124,7 @@ F:\Anaconda3\python.exe backend\run.py            # 默认 127.0.0.1:8000
 | **配置中心** | 三类实体 CRUD + 预检 + 启停；`privahigh-real` 资产源预检 6/6 通过；执行机预检含依赖探测 |
 | **Precheck** | `POST /api/plans/precheck`（草稿）与 `/api/plans/{pid}/precheck`（已保存），`no_side_effects=true`，缺失项与下一步可行动 |
 | **Plan / PlanRun / Job / 快照** | 计划编辑 `revision` 递增；执行固化 `plan_snapshot` + `config_snapshot`；历史 `plan_runs#1–19` / `jobs#1–23` 与执行前备份**逐行一致**（未被改写） |
-| **隔离验证** | `backend/tests` **52 条单测** + 7 个 `verify_*.py`（隔离 SQLite / 独立数据目录） |
+| **隔离验证** | `backend/tests` **94 条单测**（隔离临时库 / 独立数据目录，含前端步骤往返契约）；另有 7 个开发期自验收脚本 `verify*.py`，**不随仓库发布** |
 
 ---
 
@@ -149,7 +149,7 @@ F:\Anaconda3\python.exe backend\run.py            # 默认 127.0.0.1:8000
 |---|---|
 | 运行历史入口 | 「最近执行记录」默认 8 条、可点「加载更多」逐批展开；无筛选。**没有报告的运行**（skipped/cancelled）只能在执行记录里看到 |
 | Locust 真实服务 | 见 §4；WS 地址改造与真实压测需单独授权 |
-| verify 脚本前置 | 7 个脚本中 `verify.py` / `verify_control.py` 假定 **:8000 已有服务**；`verify_locust.py` / `verify_matcheval.py` 假定**非 8000 端口的隔离实例**已运行；其余 3 个自包含 |
+| verify 脚本不随仓库发布 | 7 个 `verify*.py` 是**开发期自验收脚本，不在本仓库内**（依赖本机真实服务/资产，不宜作为产品交付物）：其中 `verify.py` / `verify_control.py` 假定 **:8000 已有服务**，`verify_locust.py` / `verify_matcheval.py` 假定**非 8000 端口的隔离实例**已运行，其余 3 个自包含 |
 | 环境依赖 | 平台默认解释器与真实项目根是本机路径，可通过环境变量覆盖（见下表） |
 | 解释器依赖缺口 | 无 `pytest-html`（跑 GameAutoTest-Pro 用例必须加 `-o addopts=`，预置选择器已带）；无 `pymongo`（其账号清理夹具会静默跳过） |
 | AssetSource 语义 | 资产源**不决定执行内容**：只在步骤未填 `dataset` / `locustfile` 时兜底注入，且 kind 与引擎不匹配时静默跳过 —— **步骤参数优先** |
@@ -207,19 +207,18 @@ F:\Anaconda3\python.exe -m pip install -r requirements.txt
 ## 9. 验证
 
 ```powershell
-# 1) 平台单测（自包含，隔离临时库，不需要服务）
+# 1) 平台单测（自包含，隔离临时库，不需要服务）—— 仓库内的标准回归
 F:\Anaconda3\python.exe -m pytest backend\tests -o addopts= -q          # 94 passed
 
-# 2) 隔离验证脚本（自包含，不依赖外部服务）
-F:\Anaconda3\python.exe verify_config_center.py
-F:\Anaconda3\python.exe verify_plan_editor.py
-F:\Anaconda3\python.exe verify_report_center.py
-
-# 3) 需要先启动平台的脚本（默认 http://127.0.0.1:8000）
-F:\Anaconda3\python.exe verify.py                 # 端到端：计划→执行→日志→报告→产物
-F:\Anaconda3\python.exe verify_control.py         # 任务控制（含预置 CTRL 计划）
-# verify_locust.py / verify_matcheval.py 需先启动“非 8000 端口的隔离实例”，详见各自文件头部
+# 2) 隔离回归测试台（自包含，不依赖外部服务与真实资产）
+F:\Anaconda3\python.exe _v0.3_baseline\e2e_isolated.py                  # 隔离实例端到端 39 项
+node _v0.3_baseline\fe_roundtrip_test.js                                # 前端步骤往返 54 项（已并入 pytest）
 ```
+
+> ⚠️ 开发期另有一组自验收脚本 `verify*.py`（`verify.py`、`verify_config_center.py`、`verify_control.py`、
+> `verify_locust.py`、`verify_matcheval.py`、`verify_plan_editor.py`、`verify_report_center.py`）：
+> 它们依赖本机真实服务 / 真实资产 / 真实项目根，**按设计不随仓库发布**，
+> 因此上述命令在本仓库内不可直接执行（对应证据已归档在平台报告里，不在本仓库）。
 
 ## 10. CI（GitHub Actions）
 
