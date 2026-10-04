@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="zh-CN" data-page-node-id="sl0pjPpH1Jo7QFbEeCVKhG">
+<head data-page-node-id="3wKB15QSKuAQwa7itY7t0F">
+<meta charset="UTF-8" data-page-node-id="2qjiAUu2X8C98oTCipzlHv">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="cZQIqmFU3LhoT6hVFQDYN0">
 <title>CI/CD 第一阶段实施报告 · L0 + L1</title>
 <style>
   :root{
@@ -42,133 +42,133 @@
   footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
 </style>
 </head>
-<body>
-<div class="wrap">
-<header>
-  <h1>CI/CD 第一阶段实施报告<span class="sub">统一游戏测试平台 · 2026-10-04</span></h1>
-  <p class="muted">目标只有一个：最小 CI/CD 闭环 —— GitHub Actions → Windows self-hosted runner → 平台 → <b>L0 平台测试</b> → <b>L1 真实启动 + Demo Plan</b> → Report → CI Pass/Fail。未做 L2/L3，未改兄弟项目 workflow，未扩展 TestSuite。</p>
-  <p>
-    <span class="chip">git init + .gitignore 先行</span>
-    <span class="chip">入库 91 文件 / 2.5 MB（原 353 MB）</span>
-    <span class="chip">新增 GET /health</span>
-    <span class="chip">L0 = 94 passed</span>
-    <span class="chip">L1 = 42/42 PASS</span>
-    <span class="chip">真实库逐字节未变</span>
-    <span class="chip">无残留进程 / 无残留临时目录</span>
+<body data-page-node-id="6oaVszNDmObcZSLuDKOKTu">
+<div class="wrap" data-page-node-id="xxFAOsowHamJM6WrpwfoSy">
+<header data-page-node-id="zBEG53b7oLWLHeAJVjNbIH">
+  <h1 data-page-node-id="xb5VxweBhyXCP3S7CR7JhT">CI/CD 第一阶段实施报告<span class="sub" data-page-node-id="AhDDOrzpPPqnO0OeRPr742">unified-test-platform · 统一游戏测试平台 · 2026-10-04</span></h1>
+  <p class="muted" data-page-node-id="BtnjwAHx6iy3ZMHi1F6VeR">目标只有一个：最小 CI/CD 闭环 —— GitHub Actions → Windows self-hosted runner → 平台 → <b data-page-node-id="lzpNjVLKE2cfVGlS3U5wF7">L0 平台测试</b> → <b data-page-node-id="ZNvku66h7rq5eSxAriBDXM">L1 真实启动 + Demo Plan</b> → Report → CI Pass/Fail。未做 L2/L3，未改兄弟项目 workflow，未扩展 TestSuite。</p>
+  <p data-page-node-id="2TL7cdAIcdHVDue9OoZAX9">
+    <span class="chip" data-page-node-id="pA4luV13pXKdB4KS0dhCsQ">git init + .gitignore 先行</span>
+    <span class="chip" data-page-node-id="7yWDACpCLnUNEb8z8Z27ZQ">入库 91 文件 / 2.5 MB（原 353 MB）</span>
+    <span class="chip" data-page-node-id="c9rL3vabzp0TOcD9vkVJYg">新增 GET /health</span>
+    <span class="chip" data-page-node-id="xqJEay1AkyFQ4qvLvq9NIq">L0 = 94 passed</span>
+    <span class="chip" data-page-node-id="GYGh2GAFbl9EJKLw6ZNMyO">L1 = 42/42 PASS</span>
+    <span class="chip" data-page-node-id="UTdBEKEEOtjRW2f6LcwArY">真实库逐字节未变</span>
+    <span class="chip" data-page-node-id="HqX3Wqjy82FWl5J9HLsQgF">无残留进程 / 无残留临时目录</span>
   </p>
 </header>
 
-<div class="card hl">
-  <b>结论：A–G 七项验收标准全部实测通过；H（workflow_dispatch 实跑）因环境前置条件未满足而无法在本轮实测 —— 属"未验证"而非"失败"。</b><br>
-  H 的两个前置条件是：① 本机<b>尚未注册 self-hosted runner</b>（无 <code>actions-runner</code> 目录）；② workflow 文件必须先在 GitHub 远程仓库上，而本轮按要求<b>未 push、未建远程</b>。<br>
-  除 H 之外的每一层都<b>用与 CI 完全相同的命令在本机真跑过</b>，并留有输出证据（见 §5/§6）。
+<div class="card hl" data-page-node-id="ms1mDuScNQYhh71j3n27Ok">
+  <b data-page-node-id="5x9FRFMLLBxjhgkYI8AMQc">结论：A–G 七项验收标准全部实测通过；H（workflow_dispatch 实跑）因环境前置条件未满足而无法在本轮实测 —— 属"未验证"而非"失败"。</b><br data-page-node-id="2vd7h2L6iKL5O1ak4xELHF">
+  H 的两个前置条件是：① 本机<b data-page-node-id="JpBzQwWJOhOYUfkV44RfPj">尚未注册 self-hosted runner</b>（无 <code data-page-node-id="vrHZI8bBvgECAfaNt9ojvm">actions-runner</code> 目录）；② workflow 文件必须先在 GitHub 远程仓库上，而本轮按要求<b data-page-node-id="INpGUISQ4gInM0TpTMhf3C">未 push、未建远程</b>。<br data-page-node-id="X0wxpDQv47WE7rBZWzvleD">
+  除 H 之外的每一层都<b data-page-node-id="I1upgEp3oW9N7J5dyXBJBU">用与 CI 完全相同的命令在本机真跑过</b>，并留有输出证据（见 §5/§6）。
 </div>
 
-<h2>1. 修改了哪些文件</h2>
-<table>
-  <thead><tr><th>文件</th><th>改动</th><th>为什么</th><th>影响生产逻辑</th></tr></thead>
-  <tbody>
-    <tr>
-      <td><code>backend/app/api/__init__.py</code></td>
-      <td>在 <code>build_app()</code> 内新增 <code>GET /health</code>（约 14 行）</td>
-      <td>CI 需要一个"HTTP 服务已就绪"的判据；本机 <code>netstat</code>/<code>tasklist</code> 都静默返回空，不能用来判端口</td>
-      <td>是（新增只读端点，不含业务逻辑）</td>
+<h2 data-page-node-id="EprurCWT7UlwGs88wfcs9w">1. 修改了哪些文件</h2>
+<table data-page-node-id="fnTr2FzGRfBhRobK06TdKy">
+  <thead data-page-node-id="SfDWi6JyYbfGYL55h8zDAt"><tr data-page-node-id="C15yi3gbo83ne4NGtRH9uA"><th data-page-node-id="NkKtizLa2Lr40RjRLhlYYW">文件</th><th data-page-node-id="s9RcFNPqaDoJYs6Mba379b">改动</th><th data-page-node-id="H2mfXLtKQF0GpAYOq4udIJ">为什么</th><th data-page-node-id="4McpM2EF3o5gvQyrppYyYN">影响生产逻辑</th></tr></thead>
+  <tbody data-page-node-id="irFSJdKBC2rPtQHqMhnuyh">
+    <tr data-page-node-id="NzgU6pY6HvMdEtgaZMwwNF">
+      <td data-page-node-id="Wv0UHkgQKSLrcxpCOlsSmh"><code data-page-node-id="RjTEfPQbLC0CCmjpGwENuU">backend/app/api/__init__.py</code></td>
+      <td data-page-node-id="Nl70IlyKfgJTAFN4A3mE5H">在 <code data-page-node-id="3NDsBJjHU25WYyFqLRQFHf">build_app()</code> 内新增 <code data-page-node-id="7XBnsFqvxsMZOT0bcd0myA">GET /health</code>（约 14 行）</td>
+      <td data-page-node-id="OsnSPMi8WP9rh1rGj5yq0i">CI 需要一个"HTTP 服务已就绪"的判据；本机 <code data-page-node-id="iEpqBL7DAfKiWXWRzXGuoS">netstat</code>/<code data-page-node-id="jwJq55gVi9FVFuqFyEskGc">tasklist</code> 都静默返回空，不能用来判端口</td>
+      <td data-page-node-id="H16XObaldVp8jrCCCFy7NT">是（新增只读端点，不含业务逻辑）</td>
     </tr>
-    <tr>
-      <td><code>backend/tests/test_test_case.py</code></td>
-      <td>受控 <code>cwd</code> 从硬编码 <code>F:\…\backend</code> 改为从 <code>__file__</code> 派生（+注释）</td>
-      <td>该文件会入仓库，且 <code>cwd</code> 必须落在受控根下才能过白名单校验 —— 只能派生、不能删</td>
-      <td>否（测试夹具）</td>
+    <tr data-page-node-id="QnrkqPj1AKCjR94H68gVEE">
+      <td data-page-node-id="R7mCkdIyzqmRGEprwvLaA5"><code data-page-node-id="i5vbYsXEiDGpAizIg0nevT">backend/tests/test_test_case.py</code></td>
+      <td data-page-node-id="6GLOGYhnWa2TDukWNIAiLE">受控 <code data-page-node-id="2Ac5FEpraK4g2dPun0naPt">cwd</code> 从硬编码 <code data-page-node-id="Z1K02HavLzDtYWcWdzvMuW">F:\…\backend</code> 改为从 <code data-page-node-id="Srgsi1fpgnP9qJwwbpwbMF">__file__</code> 派生（+注释）</td>
+      <td data-page-node-id="ycpWogTY4f6I6a8mwLdMhU">该文件会入仓库，且 <code data-page-node-id="9aTe5yiFw6edpUmBxKiA6R">cwd</code> 必须落在受控根下才能过白名单校验 —— 只能派生、不能删</td>
+      <td data-page-node-id="rXbF5sjBpVAfGtTczP1ci9">否（测试夹具）</td>
     </tr>
-    <tr>
-      <td><code>backend/tests/test_config_center.py</code></td>
-      <td>脱敏用例的示例路径 <code>F:\Anaconda3\…</code> → <code>C:\Anaconda3\…</code></td>
-      <td>去掉库内 <code>F:</code> 盘符；断言结果不变</td>
-      <td>否（测试样例）</td>
+    <tr data-page-node-id="GomvzEICgrEYH2iRIzkPhr">
+      <td data-page-node-id="nUqQ4LAvm5bdNpnDdVQN1Y"><code data-page-node-id="YZfZQsFCPetodgg9oOPMPq">backend/tests/test_config_center.py</code></td>
+      <td data-page-node-id="lGZDW7MUHFA8xenOhijKXa">脱敏用例的示例路径 <code data-page-node-id="GfdOvGzo06kAWlwesPFHI7">F:\Anaconda3\…</code> → <code data-page-node-id="g9CnSpIQ2EPe9nuSCw08ND">C:\Anaconda3\…</code></td>
+      <td data-page-node-id="kYgMjLgFPM2BoQJZLGFlfY">去掉库内 <code data-page-node-id="K92JQEI9DF3sIgpdsFMNoY">F:</code> 盘符；断言结果不变</td>
+      <td data-page-node-id="dCn2cExaPHFvcHwE2MOJpV">否（测试样例）</td>
     </tr>
-    <tr>
-      <td><code>backend/tests/test_frontend_roundtrip.py</code></td>
-      <td>删除硬编码本机 node 路径，改为 <code>PLATFORM_NODE</code> 环境变量 + PATH 上的 <code>node</code></td>
-      <td>原写法把 <code>C:\Users\lenovo\…</code> 写进仓库，换机器即失效</td>
-      <td>否（测试）</td>
+    <tr data-page-node-id="UHKFCCahgogxmIJCYox1I1">
+      <td data-page-node-id="r2zCCnJKWPDUCzEAlEBaAg"><code data-page-node-id="NaQYx2UnSKxyWaFRni1Hea">backend/tests/test_frontend_roundtrip.py</code></td>
+      <td data-page-node-id="gjCXysOqCjkyGWYkFrUdi6">删除硬编码本机 node 路径，改为 <code data-page-node-id="58VKIF6cA4A5p6CsCjq5e7">PLATFORM_NODE</code> 环境变量 + PATH 上的 <code data-page-node-id="zzMqdA6sQZDlc0lDGheSCN">node</code></td>
+      <td data-page-node-id="IGCsJTmHEeGN7c3dnYILYW">原写法把 <code data-page-node-id="YMcCCz6mxngn8aXv6MMyv2">C:\Users\lenovo\…</code> 写进仓库，换机器即失效</td>
+      <td data-page-node-id="dM7sMfywBbZkVqnoqF3OnJ">否（测试）</td>
     </tr>
-    <tr>
-      <td><code>_v0.3_baseline/fe_roundtrip_test.js</code></td>
-      <td><code>ROOT</code> 改为 <code>process.env.PLATFORM_ROOT || path.resolve(__dirname, '..')</code>；合成夹具的 <code>F:\x\y</code> → <code>X:\probe\dir</code></td>
-      <td>该 JS 测试台会入仓库，需对任意 runner 可用</td>
-      <td>否（验证资产）</td>
+    <tr data-page-node-id="II7l6Ud3KHk4anwFzbaPI8">
+      <td data-page-node-id="x8aXQQJN5EMfomczaktQdf"><code data-page-node-id="GOYAeif0CvQ0e4GZD0ducs">_v0.3_baseline/fe_roundtrip_test.js</code></td>
+      <td data-page-node-id="wOWhWWGtctPW5upcaQSesE"><code data-page-node-id="ORrue9MIiDW9Pvh3NV7vQO">ROOT</code> 改为 <code data-page-node-id="WaHnxapm7fDOVxsOEHeqVW">process.env.PLATFORM_ROOT || path.resolve(__dirname, '..')</code>；合成夹具的 <code data-page-node-id="gGqZo7PkQJrvdxhbAfmWXE">F:\x\y</code> → <code data-page-node-id="BXrEu7axhbsNkwoDYFtvGB">X:\probe\dir</code></td>
+      <td data-page-node-id="F8DmIbxf0C6Fxv8x9MIjWR">该 JS 测试台会入仓库，需对任意 runner 可用</td>
+      <td data-page-node-id="VzZwIOVRbPPRLl9qix8yrV">否（验证资产）</td>
     </tr>
-    <tr>
-      <td><code>_v0.3_baseline/dump_real_input.py</code><br><code>_v0.3_baseline/e2e_isolated.py</code></td>
-      <td>仓库根 / 真实库 / 输出 / 解释器全部改为 <code>__file__</code> 派生 + 环境变量覆盖</td>
-      <td>同上（原先写死 <code>F:\测试平台\platform</code>、<code>F:\Anaconda3\python.exe</code>）</td>
-      <td>否（验证资产）</td>
+    <tr data-page-node-id="OGiZ8E1y7C4YxVfDR5WhDa">
+      <td data-page-node-id="yYCELGcNLBhftWzlXIZyIm"><code data-page-node-id="Llq6y5F4PNT3aE2joDotaZ">_v0.3_baseline/dump_real_input.py</code><br data-page-node-id="LUo70WOJgq7hRN1uRrscVo"><code data-page-node-id="kVkwJcPVKaFmkaYPGwE7rg">_v0.3_baseline/e2e_isolated.py</code></td>
+      <td data-page-node-id="YLhFcktku0OPsojZdSv8zF">仓库根 / 真实库 / 输出 / 解释器全部改为 <code data-page-node-id="FBdtqjDCVkWM8f8KF1W31I">__file__</code> 派生 + 环境变量覆盖</td>
+      <td data-page-node-id="rAbE56Pxz1Ukrc1v4PfEAV">同上（原先写死 <code data-page-node-id="2vjNtubm7qBqR0i3WzDt6D">F:\测试平台\platform</code>、<code data-page-node-id="GuPEoIILMgRzq0RtN5DbEn">F:\Anaconda3\python.exe</code>）</td>
+      <td data-page-node-id="f5EwRJYpgxd2dOT52PelEi">否（验证资产）</td>
     </tr>
-    <tr>
-      <td><code>README.md</code></td>
-      <td>§9 基线修正（<code>52 passed</code> → <code>94 passed</code>）；新增 §10「CI（GitHub Actions）」</td>
-      <td>原基线已过期；补 CI 用法与 <code>/health</code> 说明</td>
-      <td>否（文档）</td>
+    <tr data-page-node-id="zZrGykwjOmEAjay5uK7zOB">
+      <td data-page-node-id="Hmr5zvoz7ZUtwfL0xVAi97"><code data-page-node-id="ooNCL0mLzDYJ5Q0SGlrl3O">README.md</code></td>
+      <td data-page-node-id="nuuj1ZKnCQCNcTfKD8HlK9">§9 基线修正（<code data-page-node-id="OnTC5fYAOTMACeYNh2uFGa">52 passed</code> → <code data-page-node-id="HBdqBM3Aui99FqLUIF1DBJ">94 passed</code>）；新增 §10「CI（GitHub Actions）」</td>
+      <td data-page-node-id="m8cbNjRBXFRSrB8KqzGxh2">原基线已过期；补 CI 用法与 <code data-page-node-id="hQBT0PY2g29vDbbDoqi2oS">/health</code> 说明</td>
+      <td data-page-node-id="Z7IBD2quTig0QIYy6wVDpb">否（文档）</td>
     </tr>
-    <tr>
-      <td><code>.gitignore</code></td>
-      <td>新建（<b>早于 <code>git init</code></b>）</td>
-      <td>见 §3</td>
-      <td>否</td>
+    <tr data-page-node-id="yJxxZzwBjEjc6byu2OzPyt">
+      <td data-page-node-id="mo7zZEXICxJI1tjpMHeXVv"><code data-page-node-id="Dy5EFleCaWOJ1uFBQqNVUA">.gitignore</code></td>
+      <td data-page-node-id="sYzGrOGoRzrSXOldSmAyfr">新建（<b data-page-node-id="pvIOhcum8S2qmNOrcydWW7">早于 <code data-page-node-id="4GobM2s6qEUN2e8YAEFxAt">git init</code></b>）</td>
+      <td data-page-node-id="DyDtdy6at3sbmUEDrC0Nq7">见 §3</td>
+      <td data-page-node-id="6QDcmMcxZCGY2EB8DSjv6E">否</td>
     </tr>
   </tbody>
 </table>
 
-<h2>2. 新增了哪些文件</h2>
-<table>
-  <thead><tr><th>文件</th><th>作用</th></tr></thead>
-  <tbody>
-    <tr><td><code>.gitignore</code></td><td>仓库卫生规则（详见 §3）</td></tr>
-    <tr><td><code>.github/workflows/platform-ci.yml</code></td><td>CI 定义：仅 <code>workflow_dispatch</code>、<code>runs-on: [self-hosted, Windows]</code>、workflow 级 <code>concurrency</code>、L0→L1 两个 job</td></tr>
-    <tr><td><code>_ci/l1_smoke.py</code></td><td>L1 隔离冒烟脚本（动态端口 + 临时数据目录 + 身份自证 + 清理 + 真实库前后比对）</td></tr>
-    <tr><td><code>_ci/README.md</code></td><td>CI 说明：L0/L1 分工、本地复现命令、runner 要求、隔离契约、产物位置</td></tr>
-    <tr><td><code>backend/tests/test_health.py</code></td><td><code>/health</code> 的 4 条测试（含"零副作用"断言）</td></tr>
-    <tr><td><code>CI-CD第一阶段实施报告.html</code></td><td>本报告</td></tr>
+<h2 data-page-node-id="TrcWOAqshmYOx0gnR7Lvsq">2. 新增了哪些文件</h2>
+<table data-page-node-id="fGp1mEZ7CR5I0ND8EJEVE9">
+  <thead data-page-node-id="xqMDbgki3y7xmB69sUAQdW"><tr data-page-node-id="5Gb98kFebowA6VkSyMYOfS"><th data-page-node-id="M35WNqBtZsVd3WmwV4rDxD">文件</th><th data-page-node-id="YZJmi7yvhf2b0pmTs2EAKh">作用</th></tr></thead>
+  <tbody data-page-node-id="7qyrUKEWWpoE6TpibvHGWm">
+    <tr data-page-node-id="cVQOvmbxRpiCSbS6HKPjY9"><td data-page-node-id="mmEIzLOJBsDTK7uoFfvII0"><code data-page-node-id="tRCJXO95YqgA3c7mpgl8LC">.gitignore</code></td><td data-page-node-id="d8ebflxvw3pXVD2bGNyaey">仓库卫生规则（详见 §3）</td></tr>
+    <tr data-page-node-id="enLmOCtRAAfvvZWykUuVpE"><td data-page-node-id="32JdoAtu9b1f9Qp0y08s9i"><code data-page-node-id="30wAnjXX6WFMfsvA5hjhYX">.github/workflows/platform-ci.yml</code></td><td data-page-node-id="qjUNA1VY6CshrURMIP2maY">CI 定义：仅 <code data-page-node-id="xbDHXHK1HzFkZoMXxv9uby">workflow_dispatch</code>、<code data-page-node-id="HT9sMRKqbOxwU9g817LCe5">runs-on: [self-hosted, Windows]</code>、workflow 级 <code data-page-node-id="JdK6qvbM3S4nsyVnD6v48L">concurrency</code>、L0→L1 两个 job</td></tr>
+    <tr data-page-node-id="SAPVIaXvfWqoHIxGUjXLVi"><td data-page-node-id="0PTB2Gqxnz0pVtDoxhVKOh"><code data-page-node-id="s4tR5Vi99i9RttIA0oQOna">_ci/l1_smoke.py</code></td><td data-page-node-id="jTOFPyUewvOPO4KR5bzFW3">L1 隔离冒烟脚本（动态端口 + 临时数据目录 + 身份自证 + 清理 + 真实库前后比对）</td></tr>
+    <tr data-page-node-id="3p2wmnAKywTsdGkJN2jMDt"><td data-page-node-id="8RNn0OBzSVX4bqhEcOPGCt"><code data-page-node-id="W1fl59hJxgffnnJJDBJxGO">_ci/README.md</code></td><td data-page-node-id="uT9liieFG0UBWH19Xrdug9">CI 说明：L0/L1 分工、本地复现命令、runner 要求、隔离契约、产物位置</td></tr>
+    <tr data-page-node-id="uxMMZxtvf0wSfHz8JPxFiE"><td data-page-node-id="zspo38mcRf5s3CXa7tcvXs"><code data-page-node-id="DrWXSz576ynD9vbQnaHMtP">backend/tests/test_health.py</code></td><td data-page-node-id="k6ZYlbHFpdJfIIBsVKJXem"><code data-page-node-id="QNIVx0dtuGFKgADCNgkwIR">/health</code> 的 4 条测试（含"零副作用"断言）</td></tr>
+    <tr data-page-node-id="xHDBr5wV9YHChc1xRLWcSf"><td data-page-node-id="Hm4BIiyr3AVb8NqUi19iI1"><code data-page-node-id="Ws0mvLGZCG1ePHxWNm0f50">CI-CD第一阶段实施报告.html</code></td><td data-page-node-id="e55vQGJAwClBn4F7qSfv8K">本报告</td></tr>
   </tbody>
 </table>
-<p class="muted">另有 <code>_ci_out/&lt;时间戳&gt;/</code>（运行期产物，已 gitignore）：平台 stdout、Job 的 report 目录、<code>ci-meta.json</code>。</p>
+<p class="muted" data-page-node-id="cKfpQH6lXA3G6wvbWskxnB">另有 <code data-page-node-id="kMo8728oyG0yCy6dWK3pQr">_ci_out/&lt;时间戳&gt;/</code>（运行期产物，已 gitignore）：平台 stdout、Job 的 report 目录、<code data-page-node-id="xzrDGMhwCFE1PT5QgXMUgD">ci-meta.json</code>。</p>
 
-<h2>3. <code>.gitignore</code> 排除了什么</h2>
-<p>按你列的 14 项逐条落实。<b>关键点：它必须在 <code>git init</code> 之前定稿</b> —— 否则 <code>git add .</code> 会把 321 MB / 8445 文件的 <code>.venv-locust</code> 与真实运行库一次性写进 Git 历史，之后无法简单清除。</p>
-<table>
-  <thead><tr><th>你的要求</th><th>排除规则</th><th>实测命中</th></tr></thead>
-  <tbody>
-    <tr><td>1. <code>platform/.venv/</code>、2. <code>.venv-locust/</code></td><td><code>.venv/</code> <code>.venv-locust/</code> <code>venv/</code> <code>env/</code> <code>ENV/</code></td><td><span class="ok">已排除</span>（321 MB / 8445 文件）</td></tr>
-    <tr><td>3. <code>platform/data/</code>、4. SQLite、5. 日志、6. 历史 report/artifact</td><td><code>data/</code> <code>data_verify_*/</code> <code>*.sqlite*</code> <code>*.db*</code> <code>*.log</code> <code>logs/</code> <code>.ci-data/</code> <code>_ci_out/</code></td><td><span class="ok">已排除</span>（真实库 + 236 个文件 + 39 个报告目录）</td></tr>
-    <tr><td>7. <code>_v0.2_backup_*</code> 等备份目录</td><td><code>_v0.2_backup_*/</code> <code>_v0.2_current/</code> <code>_v0.2_baseline/</code> <code>.v0.2_*</code> <code>*.bak-*</code> <code>*.tmp</code></td><td><span class="ok">已排除</span></td></tr>
-    <tr><td>8. <code>_v0.3_baseline/fe_input.json</code>（含本机绝对路径）</td><td>显式单文件排除</td><td><span class="ok">已排除</span>（该文件含 20+ 条 <code>F:\…</code> 路径）</td></tr>
-    <tr><td>9. Python cache、10. node_modules、11. IDE 临时文件</td><td><code>__pycache__/</code> <code>*.py[cod]</code> <code>.pytest_cache/</code> <code>.mypy_cache/</code> <code>.ruff_cache/</code> <code>node_modules/</code> <code>.idea/</code> <code>.vscode/</code> <code>Thumbs.db</code> …</td><td><span class="ok">已排除</span></td></tr>
-    <tr><td>12. 真实游戏测试素材</td><td>不在仓库根内（<code>real_assets/</code> 位于上级目录，天然不入库）；<code>backend/demo/matcheval_fixture/*</code> 是 <b>合成</b> fixture（由 <code>make_matcheval_fixture.py</code> 生成），非真实游戏素材</td><td><span class="ok">无真实素材入库</span></td></tr>
-    <tr><td>13. 任何 API key / token / secret</td><td><code>.env*</code> <code>*.key</code> <code>*.pem</code> <code>*.p12</code> <code>*.pfx</code> <code>secrets/</code> <code>credentials*</code></td><td><span class="ok">已排除</span>（平台本身也只登记"凭据引用名"）</td></tr>
-    <tr><td>14. 含本机 <code>F:\</code> 路径的个人配置</td><td>见下方"残留说明"</td><td><span class="warn">部分残留，均为可覆盖默认值</span></td></tr>
+<h2 data-page-node-id="hju9LEx5rFrwI08bNUmcd7">3. <code data-page-node-id="2BIMajRDtFbdFg0Y5NEpz0">.gitignore</code> 排除了什么</h2>
+<p data-page-node-id="QEJ2IiKwK1OEEQxwP9Vb56">按你列的 14 项逐条落实。<b data-page-node-id="qOtaj6mABoAoLJP3p7RC9A">关键点：它必须在 <code data-page-node-id="A3w8kcUyXz8WuFm5c4SO1P">git init</code> 之前定稿</b> —— 否则 <code data-page-node-id="B7YF4DVZ8XUaRDANEkqITg">git add .</code> 会把 321 MB / 8445 文件的 <code data-page-node-id="n4E5Fr7ASqEgwkKAKY9P46">.venv-locust</code> 与真实运行库一次性写进 Git 历史，之后无法简单清除。</p>
+<table data-page-node-id="X9RFpeCEdgxbMVQxHirHLg">
+  <thead data-page-node-id="wtgn6jPnk5eTn9rWdwT5wu"><tr data-page-node-id="NXAeDycBOWKFwFGoCtBWKC"><th data-page-node-id="16EhgCcIkycEnZvnJr2uEZ">你的要求</th><th data-page-node-id="x3vOMe01MtJlc8p9FOQOxh">排除规则</th><th data-page-node-id="rFTmrgfBMmnZxeLbdMzsXQ">实测命中</th></tr></thead>
+  <tbody data-page-node-id="cFkGEcMr2Q1Yqv8lOeKGBA">
+    <tr data-page-node-id="oovr4Kz1NaLQ3lV8jf3uo3"><td data-page-node-id="X1LiBXpZXX9qCLQxKDdQoK">1. <code data-page-node-id="RnrP1QPrDkPRwqvoubBF16">platform/.venv/</code>、2. <code data-page-node-id="LVBAcH6oWaHbEZCh6PNd1i">.venv-locust/</code></td><td data-page-node-id="5I1A6wuRim7q6oBZ4GArPz"><code data-page-node-id="sUmWYOJp3pNGr5U832ZSyA">.venv/</code> <code data-page-node-id="aRfAmwr016Z2U33YRbxXnP">.venv-locust/</code> <code data-page-node-id="5uwby6LDyuF1EMM7Gpgsmv">venv/</code> <code data-page-node-id="GOVILLADdClBojNt3g1IlW">env/</code> <code data-page-node-id="C6hgUNhHZ2lOTpGLFqa7kh">ENV/</code></td><td data-page-node-id="ixh5jz6IKzs3orjW5N471I"><span class="ok" data-page-node-id="PDFA3sWL4X0FZ57Roh0gwT">已排除</span>（321 MB / 8445 文件）</td></tr>
+    <tr data-page-node-id="WOxq54tX0sWPeCRTrNAUwf"><td data-page-node-id="N7T9bjRjw5PTzDvWtHyqpY">3. <code data-page-node-id="NPo0ondEVXZFsP4iFsmSZv">platform/data/</code>、4. SQLite、5. 日志、6. 历史 report/artifact</td><td data-page-node-id="EU9kzwDqk6Hdxi1uA5nxC3"><code data-page-node-id="IKoeizAPc4Zpg5sZT2S4so">data/</code> <code data-page-node-id="8CdKATAQK5kLh5DTc2xr6L">data_verify_*/</code> <code data-page-node-id="97LuhUK7pfKZFDMTS2Xq1p">*.sqlite*</code> <code data-page-node-id="yD3CmGNMH7LS61eo93ldbf">*.db*</code> <code data-page-node-id="C5BANp0Xv4wkXFeWPC0XQp">*.log</code> <code data-page-node-id="ox3xIb0OkonjJsda6F86EC">logs/</code> <code data-page-node-id="dn1EbBnP77ED5MBy0JCOIn">.ci-data/</code> <code data-page-node-id="20EF6fpHPSzDv0tWEjFgz5">_ci_out/</code></td><td data-page-node-id="JmuRqePaKBjS04oJCAKgnD"><span class="ok" data-page-node-id="bBRRv8Ir5SGRu34MFf9eK9">已排除</span>（真实库 + 236 个文件 + 39 个报告目录）</td></tr>
+    <tr data-page-node-id="962z9dW87YAN7ESfZIt0i9"><td data-page-node-id="f6SEJL3MPerQyP0gJE3hy6">7. <code data-page-node-id="5BhGL46uRcZN16l1W4A8sd">_v0.2_backup_*</code> 等备份目录</td><td data-page-node-id="CviLPw3QRHW2dmEXoWF2JA"><code data-page-node-id="BMFUqI1XfjEqrxFbxwDZb3">_v0.2_backup_*/</code> <code data-page-node-id="baqsVk7BoSecgIwA9XXpkB">_v0.2_current/</code> <code data-page-node-id="w3fsxiOjvlomEQ2g5FHsjx">_v0.2_baseline/</code> <code data-page-node-id="htMy8Te5WDFgWDVyYzjoqa">.v0.2_*</code> <code data-page-node-id="V0obDAqandZVGtooL0Ar26">*.bak-*</code> <code data-page-node-id="V8yGOQrOHgt6nJWNftpY3I">*.tmp</code></td><td data-page-node-id="fMRdPag1QDiIbZaCVIWRYY"><span class="ok" data-page-node-id="SXhuKX2yF60KN7UNLcqqac">已排除</span></td></tr>
+    <tr data-page-node-id="3Qu3vJzyRCJFuoGw6dxdBE"><td data-page-node-id="LyY9tvRSnGA919xcIxF7SW">8. <code data-page-node-id="Xw9X5nPLd2eV8EDwzHw5Sd">_v0.3_baseline/fe_input.json</code>（含本机绝对路径）</td><td data-page-node-id="C1acUAGLKB8SP9Ph91l1tW">显式单文件排除</td><td data-page-node-id="ZsGDrC6CCuEFEo7FHuXSv7"><span class="ok" data-page-node-id="5ex7yE6z7hhLYfCeRSgEpE">已排除</span>（该文件含 20+ 条 <code data-page-node-id="TI4LbUGGvxMwK9eWgdm65D">F:\…</code> 路径）</td></tr>
+    <tr data-page-node-id="NwJLdli1JVBP44S7WnAe1n"><td data-page-node-id="hvIFoLBIG2F5J5lVtOXERe">9. Python cache、10. node_modules、11. IDE 临时文件</td><td data-page-node-id="ZEwScB3OqlED6H2dQ1dhMK"><code data-page-node-id="Q9gWB5M5tNTZ1fxGECOZBA">__pycache__/</code> <code data-page-node-id="aclEMq7WovIP4P470UhTwH">*.py[cod]</code> <code data-page-node-id="vVKTQrA4feHVE1EMtoYPoc">.pytest_cache/</code> <code data-page-node-id="JAQc30Kx1SG0gA4KCLWMFi">.mypy_cache/</code> <code data-page-node-id="Jxr7Bmzexzs46DINdawpnR">.ruff_cache/</code> <code data-page-node-id="A4VAnkkhqGRSnUCaUJEUmY">node_modules/</code> <code data-page-node-id="RzJCqp4AdfEARyHOb1mulF">.idea/</code> <code data-page-node-id="qwwtdUD1E4jTQOfNOEqu3x">.vscode/</code> <code data-page-node-id="uAKR1ChdHp20jnG9yJDGAs">Thumbs.db</code> …</td><td data-page-node-id="LBdxQa8IHabdgLLszDKH7j"><span class="ok" data-page-node-id="V0QVJrip4bbUXPQCKcReKf">已排除</span></td></tr>
+    <tr data-page-node-id="lTFoDnzvVirKFgxhsCFsE3"><td data-page-node-id="jB1mzg7UtnYJ9Wm7dyz7fu">12. 真实游戏测试素材</td><td data-page-node-id="nrUshSdwy5sizecj8Tekzg">不在仓库根内（<code data-page-node-id="g6it1qxSqnwXRrlSXSvSdG">real_assets/</code> 位于上级目录，天然不入库）；<code data-page-node-id="jnnEynGNzf1PmYnMPjf6fe">backend/demo/matcheval_fixture/*</code> 是 <b data-page-node-id="0YgQRGYNskBA6dqWChjpae">合成</b> fixture（由 <code data-page-node-id="CKKLFX5cZVxxA9w1Ht7smx">make_matcheval_fixture.py</code> 生成），非真实游戏素材</td><td data-page-node-id="Lal4sfiPbmPsJuEu5nVQMX"><span class="ok" data-page-node-id="WI4Z3pkUDqkNdsE6YJkx1y">无真实素材入库</span></td></tr>
+    <tr data-page-node-id="SeZ66KPKWCr3hfb1NDpAeV"><td data-page-node-id="xDpnGt8nH9jBpFTFdMRqQo">13. 任何 API key / token / secret</td><td data-page-node-id="bcF7r9sCRsauSEKvZx8dio"><code data-page-node-id="vDf7sByDBaIfFFxgjsnzjI">.env*</code> <code data-page-node-id="4WZYOQeDA966a7Aip21mCR">*.key</code> <code data-page-node-id="fGJ4mTcdvEuI0Xb6CE0fV6">*.pem</code> <code data-page-node-id="Z2N1BqAhV6zig4rYjen4HZ">*.p12</code> <code data-page-node-id="eGC05DTCAGG9KhGC7gKTff">*.pfx</code> <code data-page-node-id="dCN5fgM8jhBLddQeVdYjNX">secrets/</code> <code data-page-node-id="FMEWAL9HxEvuqEG1EtRuAp">credentials*</code></td><td data-page-node-id="8DVXHuCcyju0FRaTNh4Dd6"><span class="ok" data-page-node-id="SoUyTxOyngTxH016wjB4QA">已排除</span>（平台本身也只登记"凭据引用名"）</td></tr>
+    <tr data-page-node-id="04jIJZSiC6usbDZxoQN9nC"><td data-page-node-id="T0srtkT3eyVgI3L6b3o7Ss">14. 含本机 <code data-page-node-id="UcE6EdJvgXmG87p85HPnbK">F:\</code> 路径的个人配置</td><td data-page-node-id="TCSDkusWOt4AvBzDcqZDUC">见下方"残留说明"</td><td data-page-node-id="ivBMKy96D9NSAX7KH1uwy7"><span class="warn" data-page-node-id="Y5Ibpp9weyw1E1TTfJGJiF">部分残留，均为可覆盖默认值</span></td></tr>
   </tbody>
 </table>
 
-<h3>实测结果（<code>git status --short</code> 复核）</h3>
-<pre>入库文件数: 91          合计约 2496 KB（若误入 .venv-locust 则 353 MB → 约 141 倍）
+<h3 data-page-node-id="YRiSJK6hHNFHMTyyV5BREM">实测结果（<code data-page-node-id="qnvR0rIALw8rj1PvTsBBsY">git status --short</code> 复核）</h3>
+<pre data-page-node-id="dj1h7DhRkgSB7mlh7K0rMg">入库文件数: 91          合计约 2496 KB（若误入 .venv-locust 则 353 MB → 约 141 倍）
 .venv-locust 命中: 0    data/ 命中: 0    *.sqlite 命中: 0
 fe_input.json 命中: 0   _v0.2_backup 命中: 0   __pycache__ 命中: 0   *.log 命中: 0
 远程仓库: 0 个（未 push、未建远程）</pre>
 
-<div class="card warnbox">
-  <b>残留说明（必须如实报备）：入库代码里仍有 4 处"本机默认值"，全部可被环境变量覆盖，且 CI 不依赖它们。</b>
-  <ul>
-    <li><code>backend/app/config_center.py:34</code> <code>DEFAULT_PYTHON = os.environ.get("PLATFORM_DEFAULT_PYTHON") or r"F:\Anaconda3\python.exe"</code></li>
-    <li><code>backend/app/config_center.py:40</code> <code>SDET_PROJ = os.environ.get("PLATFORM_SDET_PROJ") or r"F:\Colyseus_SDET_Project"</code></li>
-    <li><code>start.bat:6</code> <code>if "%PYTHON_EXE%"=="" (set PYTHON_EXE=F:\Anaconda3\python.exe)</code></li>
-    <li><code>start.ps1:5</code> <code>else { "F:\Anaconda3\python.exe" }</code></li>
+<div class="card warnbox" data-page-node-id="CDU5qLmZ5RaDkHb6a9dBn1">
+  <b data-page-node-id="nIdydODmck4GFooFAhH7bl">残留说明（必须如实报备）：入库代码里仍有 4 处"本机默认值"，全部可被环境变量覆盖，且 CI 不依赖它们。</b>
+  <ul data-page-node-id="GgUaAbmxDZPTgTLrpsWkSz">
+    <li data-page-node-id="GqwEx67dTey96aF7v07Owj"><code data-page-node-id="lxCitlMg7nHtHgR9soIj3d">backend/app/config_center.py:34</code> <code data-page-node-id="ZJm5CejKv1Da1tMFGymiGq">DEFAULT_PYTHON = os.environ.get("PLATFORM_DEFAULT_PYTHON") or r"F:\Anaconda3\python.exe"</code></li>
+    <li data-page-node-id="m3l8LnnAcYhF6JpxhzDeo8"><code data-page-node-id="ANySiEjXCOBnFLhDnPicc4">backend/app/config_center.py:40</code> <code data-page-node-id="NBJzfZPoIWzSVA5XGbfdYt">SDET_PROJ = os.environ.get("PLATFORM_SDET_PROJ") or r"F:\Colyseus_SDET_Project"</code></li>
+    <li data-page-node-id="Oh0rAEVUBFk3An2XA8UsRH"><code data-page-node-id="Kq82B12pZaeXThFWTGonn4">start.bat:6</code> <code data-page-node-id="vo8kZAE9m2DGHkwnVEdkyS">if "%PYTHON_EXE%"=="" (set PYTHON_EXE=F:\Anaconda3\python.exe)</code></li>
+    <li data-page-node-id="UMtHBjn48MuaSBZqFblZpA"><code data-page-node-id="fQvN16Sf1cU53oiXqMZ6Jd">start.ps1:5</code> <code data-page-node-id="cePXqL7eCmosRa2s1zDpDI">else { "F:\Anaconda3\python.exe" }</code></li>
   </ul>
-  <p>保留理由：这是<b>本机开箱可用</b>的默认值（你此前明确要求把环境相关常量集中并支持环境变量覆盖）。<b>CI 侧已切断依赖</b> —— workflow 用 <code>PYTHON_EXE</code>（仓库变量 <code>PLATFORM_CI_PYTHON</code>，缺省 <code>python</code>）调用，L1 脚本再把它注入子进程的 <code>PLATFORM_PYTHON</code>/<code>PLATFORM_DEFAULT_PYTHON</code>，于是被预置的 Executor 指向的正是 runner 自己的解释器。</p>
-  <p class="muted">如果你要求仓库里完全不出现盘符，我可以把这 4 处改为"必须由环境变量提供，否则报错退出" —— 但那样本机不再开箱可用，需你确认。</p>
+  <p data-page-node-id="JbYCk9o2HXC6SoNzA1huFQ">保留理由：这是<b data-page-node-id="8vIgorKzaLlfrMYqMu4K5D">本机开箱可用</b>的默认值（你此前明确要求把环境相关常量集中并支持环境变量覆盖）。<b data-page-node-id="TKlqzzeELXJgewpcBOK8GO">CI 侧已切断依赖</b> —— workflow 用 <code data-page-node-id="4FUYLxME6JDEey9ddgaqwI">PYTHON_EXE</code>（仓库变量 <code data-page-node-id="l3BJ3MOXxEEpWRUobJwAs1">PLATFORM_CI_PYTHON</code>，缺省 <code data-page-node-id="rVTPIISQMzA8VAg8I8CtiH">python</code>）调用，L1 脚本再把它注入子进程的 <code data-page-node-id="ACXVM4ruHIOCVlGB9zPFLR">PLATFORM_PYTHON</code>/<code data-page-node-id="5EcMFqMBkU2elNEosn0YRA">PLATFORM_DEFAULT_PYTHON</code>，于是被预置的 Executor 指向的正是 runner 自己的解释器。</p>
+  <p class="muted" data-page-node-id="PHmbh1Jdo6jjRWQaouCSUX">如果你要求仓库里完全不出现盘符，我可以把这 4 处改为"必须由环境变量提供，否则报错退出" —— 但那样本机不再开箱可用，需你确认。</p>
 </div>
 
-<h2>4. <code>/health</code> 怎么实现</h2>
-<pre>def build_app(static_dir: str) -&gt; FastAPI:
+<h2 data-page-node-id="ZOFEeE039B6fIxZJ1pPm6g">4. <code data-page-node-id="lnuDQJz9ymQhcWW6qBgtdV">/health</code> 怎么实现</h2>
+<pre data-page-node-id="AVBit0Um0iyk3BmRo1s2Ix">def build_app(static_dir: str) -&gt; FastAPI:
     app = FastAPI(title="统一游戏测试平台 MVP")
 
     @app.get("/health", include_in_schema=False)
@@ -178,58 +178,58 @@ fe_input.json 命中: 0   _v0.2_backup 命中: 0   __pycache__ 命中: 0   *.log
 
     app.include_router(api_router)          # 业务 API 仍在 /api/*
     ...</pre>
-<ul>
-  <li><b>刻意的设计选择</b>：挂在 <b>app 根路径</b>，<b>不经业务 router</b>（<code>router = APIRouter(prefix="/api")</code>）。这样"服务已起来"与"配置/资产是否就绪"彻底解耦 —— 它不继承 <code>/api</code> 的依赖链。</li>
-  <li><b>零副作用</b>：不访问 DB、不创建 PlanRun/Job、不读被测资产、不依赖 Environment/Executor/AssetSource，也不依赖 Locust/MatchEval。测试里有一条专门的断言：给 app 设了 <code>db_path</code> 后调 <code>/health</code>，该 sqlite 文件<b>必须仍不存在</b>。</li>
-  <li><b>配套测试</b> <code>backend/tests/test_health.py</code>（4 条）：① 200 + 载荷严格等于 <code>{"status":"ok"}</code>；② 在根路径而非 <code>/api/health</code>（后者必须 404）；③ 零副作用（不创建 DB 文件）；④ 未配置 <code>db_path</code> 也可用（证明不依赖 DB/调度器/资产）。</li>
-  <li>按要求<b>只做 <code>/health</code></b>：没有 <code>/ready</code>、<code>/metrics</code>、Prometheus、tracing、auth、dashboard。</li>
+<ul data-page-node-id="XeW5eWwL8UDCznlu7LhI4G">
+  <li data-page-node-id="KCqDJdWoeYaTLehOXTh1mM"><b data-page-node-id="x9JGZ0rXPP0A8BeXtL4IfJ">刻意的设计选择</b>：挂在 <b data-page-node-id="Xhm8bf23fDjVUy8QkzYjHE">app 根路径</b>，<b data-page-node-id="3Q9RVJd6c4DqVZaSNbnPPn">不经业务 router</b>（<code data-page-node-id="Xvxpkw1nTrmuS1zGiOIqzK">router = APIRouter(prefix="/api")</code>）。这样"服务已起来"与"配置/资产是否就绪"彻底解耦 —— 它不继承 <code data-page-node-id="l0M12lFQ06ydymXjytS94p">/api</code> 的依赖链。</li>
+  <li data-page-node-id="JEjgnF0ydOs1z9ICn7SD4W"><b data-page-node-id="KpsTVVlCejdLYZ5gTouRSm">零副作用</b>：不访问 DB、不创建 PlanRun/Job、不读被测资产、不依赖 Environment/Executor/AssetSource，也不依赖 Locust/MatchEval。测试里有一条专门的断言：给 app 设了 <code data-page-node-id="L3wwoqrvKJRBMt4h1DYnON">db_path</code> 后调 <code data-page-node-id="pcu0XL3krZ6YL1i6U8A83E">/health</code>，该 sqlite 文件<b data-page-node-id="VZYN4BW8bjH8aD67LY6zKM">必须仍不存在</b>。</li>
+  <li data-page-node-id="TfsGcqyuSxdS7oEx0IPhKL"><b data-page-node-id="j4xklAWvSLBSgLaFs7urkH">配套测试</b> <code data-page-node-id="HBsk4dJinZ1WgrOq01773z">backend/tests/test_health.py</code>（4 条）：① 200 + 载荷严格等于 <code data-page-node-id="vmkt4vGmO5Yp0woUUjDMDD">{"status":"ok"}</code>；② 在根路径而非 <code data-page-node-id="NSWA9aq2bOplRvVPcL64V8">/api/health</code>（后者必须 404）；③ 零副作用（不创建 DB 文件）；④ 未配置 <code data-page-node-id="rPodfiQhqxSzcUCVZgZhl8">db_path</code> 也可用（证明不依赖 DB/调度器/资产）。</li>
+  <li data-page-node-id="z9TcK96oD15Yj2ZSUf8oVQ">按要求<b data-page-node-id="Dk0emTvxE97wsl4Oqz4xoW">只做 <code data-page-node-id="FZOlNyBvFrOF6yBpE4f2z5">/health</code></b>：没有 <code data-page-node-id="R5eqDecFii1ZYv2PO212Kz">/ready</code>、<code data-page-node-id="BsUvvWEOEuYQEfKPgLDaIO">/metrics</code>、Prometheus、tracing、auth、dashboard。</li>
 </ul>
 
-<h2>5. L0 如何执行</h2>
-<pre>python -m pytest backend/tests -q -o addopts=</pre>
-<p>（<b>注意路径</b>：仓库根 = <code>platform/</code>，所以 CI 里是 <code>backend/tests</code>，而不是你原文写的 <code>platform/backend/tests</code> —— 二者指的是同一个目录，只是相对基准不同。见 §7 说明。）</p>
-<p>workflow 里 L0 被拆成 5 步，把"外部依赖"这件事显式化：</p>
-<ol>
-  <li><b>Runner 环境自检</b>：打印 <code>RUNNER_OS</code>/<code>ARCH</code>/workspace，并 <code>import fastapi, uvicorn, pydantic, pytest, httpx</code> —— <b>缺任何一个立刻失败</b>，不允许"静默跳过用例"。</li>
-  <li><b>记录真实库指纹（前）</b>。</li>
-  <li><b>跑测试</b>：<code>$LASTEXITCODE -ne 0</code> 即抛出。</li>
-  <li><b>校验 L0 未写真实库</b>：比对前后 MD5，不一致就抛错。</li>
+<h2 data-page-node-id="ydWNDvDkRFitqTGIiUztr4">5. L0 如何执行</h2>
+<pre data-page-node-id="UkSlxND4De8ADw4ULgglpe">python -m pytest backend/tests -q -o addopts=</pre>
+<p data-page-node-id="i8FeUFJ389UsKAfR5EBc97">（<b data-page-node-id="bVHHu5zaZsBVe2PVILBgFV">注意路径</b>：仓库根 = <code data-page-node-id="Q3qpresi2hrPNojAULgt3Y">platform/</code>，所以 CI 里是 <code data-page-node-id="gYdPV5ImIsyZ8mJ62o7dhj">backend/tests</code>，而不是你原文写的 <code data-page-node-id="neprON4m1UO71fAra8KcRG">platform/backend/tests</code> —— 二者指的是同一个目录，只是相对基准不同。见 §7 说明。）</p>
+<p data-page-node-id="vyrWxBWeWPiVQ4rbB0ZG29">workflow 里 L0 被拆成 5 步，把"外部依赖"这件事显式化：</p>
+<ol data-page-node-id="NW2HDQlKH1HrBUCUiZvjQL">
+  <li data-page-node-id="T8IxXEmjeueqj5qBI192GV"><b data-page-node-id="DRKpIFb7iMhdZXVsXcQSmz">Runner 环境自检</b>：打印 <code data-page-node-id="7lW0rjuUAYixEYBgDcB2Xt">RUNNER_OS</code>/<code data-page-node-id="jWtlvExuHXkgF0fbqHstAc">ARCH</code>/workspace，并 <code data-page-node-id="9AoSG53kUo4PIrF9yRK6zO">import fastapi, uvicorn, pydantic, pytest, httpx</code> —— <b data-page-node-id="xZ7a0eW8CSVGTe4tJvDaSI">缺任何一个立刻失败</b>，不允许"静默跳过用例"。</li>
+  <li data-page-node-id="9odhuX6rnvqfjURzoh9cAd"><b data-page-node-id="1mr2YdkWXTRR5DsJi8xy5C">记录真实库指纹（前）</b>。</li>
+  <li data-page-node-id="cvPbWc0eFPOWqrWZBpFMqH"><b data-page-node-id="KRvSqzLDXIbtNjRtBjhDXT">跑测试</b>：<code data-page-node-id="jgeLIeXwhAtWCaEAk09zfT">$LASTEXITCODE -ne 0</code> 即抛出。</li>
+  <li data-page-node-id="AMmL3YagZGsiNFhQwfMCZL"><b data-page-node-id="UlxlSCmWlCdMrj6ldfSF9z">校验 L0 未写真实库</b>：比对前后 MD5，不一致就抛错。</li>
 </ol>
-<div class="card note">
-  <b>实测结果：<code>94 passed, 1 warning in 11.10s</code></b>（原 90 条 + 新增 4 条 <code>/health</code>）。<b>0 skipped</b> —— 包括前端往返测试台也真跑了（说明 runner 上能找到 node）；若某机器没有 node，它会 skip 且不计为失败。<br>
-  <b>L0 不需要</b>：游戏服务 / MongoDB / Colyseus / 真实游戏素材 / 真实数据库 / 外网。全部用例走进程内 <code>TestClient</code> + 隔离临时 SQLite。<br>
-  <b>关于隐式外部依赖</b>：本轮<b>未发现</b>需要用 <code>continue-on-error</code> 掩盖的项 —— 也<b>没有</b>使用它。若将来出现，环境自检步骤会先失败，不会被掩盖成绿灯。
+<div class="card note" data-page-node-id="O9VYsuyxpfDZ35TT3wceQR">
+  <b data-page-node-id="enrgjGxpkRhWJ8K3lDEExB">实测结果：<code data-page-node-id="bn1ABF16ebE01vtgdqAaH5">94 passed, 1 warning in 11.10s</code></b>（原 90 条 + 新增 4 条 <code data-page-node-id="ODtflnXNa2ZsQGWhIMo9Io">/health</code>）。<b data-page-node-id="L2GDzSGLzHLOH5S37L5s3h">0 skipped</b> —— 包括前端往返测试台也真跑了（说明 runner 上能找到 node）；若某机器没有 node，它会 skip 且不计为失败。<br data-page-node-id="Lsejd4etLS28qup7zcAN53">
+  <b data-page-node-id="YLfHfTUsRTFwsAvJGlWOYM">L0 不需要</b>：游戏服务 / MongoDB / Colyseus / 真实游戏素材 / 真实数据库 / 外网。全部用例走进程内 <code data-page-node-id="UdqnsSssaQ4kYffFXdYbpB">TestClient</code> + 隔离临时 SQLite。<br data-page-node-id="TSlYnLvqJsfF2aLG8xBZKQ">
+  <b data-page-node-id="5BcuGNRSpkPh7q6hBjCLwn">关于隐式外部依赖</b>：本轮<b data-page-node-id="7AvbEvgCopY2qPJKA7AS1I">未发现</b>需要用 <code data-page-node-id="RfroLhSDTWrLnn2ljrbqYn">continue-on-error</code> 掩盖的项 —— 也<b data-page-node-id="kno2eiY69jpjNkrjb0pwRQ">没有</b>使用它。若将来出现，环境自检步骤会先失败，不会被掩盖成绿灯。
 </div>
 
-<h2>6. L1 如何执行</h2>
-<pre>python _ci/l1_smoke.py          # 或：python _ci/l1_smoke.py --keep（保留临时目录排障）</pre>
-<h3>7 个阶段</h3>
-<table>
-  <thead><tr><th>阶段</th><th>做什么</th><th>关键断言</th></tr></thead>
-  <tbody>
-    <tr><td>1 启动前检查</td><td><code>socket.bind(0)</code> 取空闲端口；建 <code>%TEMP%\platform_ci_l1_*</code>；取真实库基线</td><td>端口<b>启动前必须不可达</b>（证明是新起的，不是遗留实例）；<code>PORT != 8000</code></td></tr>
-    <tr><td>2 启动 + 等 <code>/health</code></td><td><code>Popen([python, backend/run.py, --host, --port, --data-dir, --db, --no-browser])</code>；轮询 <code>/health</code></td><td>120s 内 200 且载荷等于 <code>{"status":"ok"}</code>；期间<b>每个循环都检查子进程是否已死</b>（早死立刻失败并打印日志尾部）</td></tr>
-    <tr><td>3 身份自证</td><td>见下</td><td><b>PID ↔ 端口 ↔ 数据目录</b>三者一致</td></tr>
-    <tr><td>4 建 CI Demo Plan</td><td>找 <code>offline-eval</code> + 支持 pytest 的 Executor；<code>POST /api/plans</code></td><td>4 条预检断言：<code>ok=True</code>、<code>no_side_effects=True</code>、<code>missing</code> 为空、<code>ready=[True]</code></td></tr>
-    <tr><td>5 执行</td><td><code>POST /plans/{id}/run</code> → 轮询 <code>/api/runs/{id}</code></td><td>300s 内到终态；<code>PlanRun==success</code>；<b>1 个 Job</b>；<code>Job==success</code>、<code>exit_code==0</code>、<code>engine==pytest</code></td></tr>
-    <tr><td>6 报告</td><td>读 <code>report.json</code>；查 Report Center</td><td>文件存在、<b>路径落在本次临时目录内</b>（未写真实 data）、结构完整、<code>status==success</code>；索引 total≥1 且含本次 job</td></tr>
-    <tr><td>7 写入去向自证 + 收尾</td><td>临时库计数；真实库前后比对；强杀进程、扫残留、验端口释放、删临时目录</td><td>临时库 <code>plan_runs==1</code>；真实库 md5/mtime/文件数/计数<b>全等</b>；无残留；端口已释放</td></tr>
+<h2 data-page-node-id="SlmxkjR5opCV6Rdw7fqnGu">6. L1 如何执行</h2>
+<pre data-page-node-id="DP0mP7GRvzp0EsFQ6wynhS">python _ci/l1_smoke.py          # 或：python _ci/l1_smoke.py --keep（保留临时目录排障）</pre>
+<h3 data-page-node-id="WFKZIg81FgD02bDmSNbnsj">7 个阶段</h3>
+<table data-page-node-id="rXt7vhjoBfGxweZPDWAKDO">
+  <thead data-page-node-id="EFlQSXa7iBRR3TQMwj6xCS"><tr data-page-node-id="pjwuOFHBpGDTzOr1SxU5HM"><th data-page-node-id="dp0YT4OTDRgsDfiuNWo4PR">阶段</th><th data-page-node-id="3UPTCd6aHJbkNMfwWFLD0B">做什么</th><th data-page-node-id="uO5COOkh57ivNDxfG9cHxB">关键断言</th></tr></thead>
+  <tbody data-page-node-id="DwDLCpBjKbzBOUM9gdN3zP">
+    <tr data-page-node-id="ExCSI0mOGcFBcfsLuemX7k"><td data-page-node-id="NKGBYR0FXgL91gBrfiWpgw">1 启动前检查</td><td data-page-node-id="AnLEpLCsh509bITGWB3xBh"><code data-page-node-id="vo8XvL2TiEa0l2lDDmNCSY">socket.bind(0)</code> 取空闲端口；建 <code data-page-node-id="4q4PsfeztoFXGCWp2KAqyW">%TEMP%\platform_ci_l1_*</code>；取真实库基线</td><td data-page-node-id="nHhjyMKFT3XYh3yrdj0Q1g">端口<b data-page-node-id="EkdnMRFIS3BrjDDl1am5jF">启动前必须不可达</b>（证明是新起的，不是遗留实例）；<code data-page-node-id="tuJavrBNMALEoPVcRn3dWw">PORT != 8000</code></td></tr>
+    <tr data-page-node-id="7njPyxyDg3nvL5Zd2DYPE9"><td data-page-node-id="gPfsm7b6b5QINLI5y94Wpu">2 启动 + 等 <code data-page-node-id="PLNWiaJgiE008AQGNAz9Lz">/health</code></td><td data-page-node-id="XS2rmj05SkG8yfovHiCF6k"><code data-page-node-id="Mn5i3JikYhon619DWUKFHi">Popen([python, backend/run.py, --host, --port, --data-dir, --db, --no-browser])</code>；轮询 <code data-page-node-id="dksZPsMwIpHIRVMcFPOpx2">/health</code></td><td data-page-node-id="h3CMswsIipme1Sx1ESFptW">120s 内 200 且载荷等于 <code data-page-node-id="cqvQbtyvZu5Hd6pLhw6ltH">{"status":"ok"}</code>；期间<b data-page-node-id="QvrKTRA0hdMyPZ376k5TnE">每个循环都检查子进程是否已死</b>（早死立刻失败并打印日志尾部）</td></tr>
+    <tr data-page-node-id="3jjEp6G4HGjBuWfgzgQhNN"><td data-page-node-id="rXGKgAYQzGMVBKz1jLy9W3">3 身份自证</td><td data-page-node-id="PufVY5jXwTCLEVAC9fE0UF">见下</td><td data-page-node-id="l0yVskDl0fe6kLFJRlL5Mq"><b data-page-node-id="2GYme3ESfjU4gRK3e9DYJ6">PID ↔ 端口 ↔ 数据目录</b>三者一致</td></tr>
+    <tr data-page-node-id="SDDkRc8NNRSeEumRODfRnz"><td data-page-node-id="DC4hakY9rdbKkGEYHU5EaR">4 建 CI Demo Plan</td><td data-page-node-id="U3YE3294KjsFeU5ZdhJJ3C">找 <code data-page-node-id="4uIsCETjgdbhPJmLP1E12m">offline-eval</code> + 支持 pytest 的 Executor；<code data-page-node-id="Xq1Oep2yWfhDcCR1I4vFkC">POST /api/plans</code></td><td data-page-node-id="2A45kPhhbYCXaZiBjmd4Fq">4 条预检断言：<code data-page-node-id="C1Iij6G7P6nIqqVEhRuxtT">ok=True</code>、<code data-page-node-id="6zf2mUZSTM5mNyqhphPUWS">no_side_effects=True</code>、<code data-page-node-id="WX3RWmWldn8spBZah9UNUY">missing</code> 为空、<code data-page-node-id="Ax65ZYO1NKbOHDAq3XNwj3">ready=[True]</code></td></tr>
+    <tr data-page-node-id="cVUYTUCzuavwzBUNMYJMK2"><td data-page-node-id="djten1JxiTDZBL44PqDdRZ">5 执行</td><td data-page-node-id="T3ASaHZMutmlYq9vaKs5VL"><code data-page-node-id="COpjrREOWZHYDLmCyC15aa">POST /plans/{id}/run</code> → 轮询 <code data-page-node-id="55PwlWOWGKDO9YXF14aptd">/api/runs/{id}</code></td><td data-page-node-id="6DXf13AqSW7QircLizBMwR">300s 内到终态；<code data-page-node-id="uCmhMu11HH70dzp82e8X3J">PlanRun==success</code>；<b data-page-node-id="4m6ubZ3WoQEmvrig4ZEnpl">1 个 Job</b>；<code data-page-node-id="RzvhsRtAcF1zcmux0wwE6A">Job==success</code>、<code data-page-node-id="CR1rpMSkO14Vfr3Ktv2ry2">exit_code==0</code>、<code data-page-node-id="SHy4MrgUGWcWcMuYb0JcMw">engine==pytest</code></td></tr>
+    <tr data-page-node-id="faUTObhSgsvWjYTwTgLljW"><td data-page-node-id="g1hMfphjPsG9QasCygBaBE">6 报告</td><td data-page-node-id="FRMhsH4VDt3gojDAzgT52E">读 <code data-page-node-id="dejzRnfGn6AzUrU8kTEDtw">report.json</code>；查 Report Center</td><td data-page-node-id="0X0hG1R5Tgaz28BtqrA8EQ">文件存在、<b data-page-node-id="onZHe2ohBbdtgFtcAkGnYR">路径落在本次临时目录内</b>（未写真实 data）、结构完整、<code data-page-node-id="eCUsxZOPcA1p1Iqb47TBnH">status==success</code>；索引 total≥1 且含本次 job</td></tr>
+    <tr data-page-node-id="iVCUPeRglwucil0aa7wj1W"><td data-page-node-id="abQl5ZvMvIvvCP4rnV853D">7 写入去向自证 + 收尾</td><td data-page-node-id="Qc1kAMjh5nBqPoOIftzhOH">临时库计数；真实库前后比对；强杀进程、扫残留、验端口释放、删临时目录</td><td data-page-node-id="Z62pDMFvGn88ECcG5BkKJt">临时库 <code data-page-node-id="SkIKJJ5G5VIrDFpbj1g0n4">plan_runs==1</code>；真实库 md5/mtime/文件数/计数<b data-page-node-id="1PpBDAiBOjMASNGnmIODUy">全等</b>；无残留；端口已释放</td></tr>
   </tbody>
 </table>
 
-<h3>身份自证（你 §11 特别强调的那件事）</h3>
-<p>2026-10-01 曾因"只看端口 UP、把遗留实例误认成自己启动的实例"而把 9 条 PlanRun 写进真实库。为此 L1 用<b>五重、互相独立</b>的证据链，而不是单一信号：</p>
-<ol>
-  <li><b>启动前端口不可达</b> → 起完后可达 ⇒ 这个监听者只可能是本次新起的进程。</li>
-  <li><b>子进程自己 stdout 声明</b>了它绑定的 <code>http://127.0.0.1:&lt;port&gt;</code>、<code>数据库:</code>、<code>数据目录:</code> —— 读它的原话，不靠推测。（首版这里踩了坑：子进程 stdout 被块缓冲，横幅滞留在缓冲区读不到；已在子进程环境强制 <code>PYTHONUNBUFFERED=1</code> 解决。）</li>
-  <li><b>OS 报告的该 PID 命令行</b>同时含本次 <code>run.py</code>、本次端口、本次临时数据目录。</li>
-  <li><b>进程存活用 Windows API</b>（<code>OpenProcess</code> + <code>GetExitCodeProcess==STILL_ACTIVE</code>）判定 —— <b>不用 <code>tasklist</code></b>（本机 <code>tasklist</code> 与 <code>netstat</code> 一样会静默返回空）。</li>
-  <li><b>进程退出后端口再次不可达</b> ⇒ 闭合证明"监听者确为本次进程"。</li>
+<h3 data-page-node-id="X7JGWcCdfHW0QgRDvVLE0f">身份自证（你 §11 特别强调的那件事）</h3>
+<p data-page-node-id="ibYLWDtiyRc6P7F7AbapTW">2026-10-01 曾因"只看端口 UP、把遗留实例误认成自己启动的实例"而把 9 条 PlanRun 写进真实库。为此 L1 用<b data-page-node-id="J24P7VK5tKMx0dVNNEgyIC">五重、互相独立</b>的证据链，而不是单一信号：</p>
+<ol data-page-node-id="g9cpLwgh4yTM26tu0VuwBp">
+  <li data-page-node-id="8DecmCfLW091VbMx3DrcRb"><b data-page-node-id="dN3zMjvAJ8LdmG4BBwUxqG">启动前端口不可达</b> → 起完后可达 ⇒ 这个监听者只可能是本次新起的进程。</li>
+  <li data-page-node-id="5SCvwsVTr2rF5EA50MEypR"><b data-page-node-id="VA34UQfo4UoxJs5MKUhCeI">子进程自己 stdout 声明</b>了它绑定的 <code data-page-node-id="sSSLO8HzJgANnR6U4r0e9K">http://127.0.0.1:&lt;port&gt;</code>、<code data-page-node-id="J8iWpKyknuF2BdDn63jp37">数据库:</code>、<code data-page-node-id="DdrxymbcrAuUaH5iFsPRhZ">数据目录:</code> —— 读它的原话，不靠推测。（首版这里踩了坑：子进程 stdout 被块缓冲，横幅滞留在缓冲区读不到；已在子进程环境强制 <code data-page-node-id="YBMHQTxFBnHQgPNo04Jdmp">PYTHONUNBUFFERED=1</code> 解决。）</li>
+  <li data-page-node-id="7Y4uiPmsaBhI7r0YZ7oxhJ"><b data-page-node-id="1db7N6wngAgyuvAlAsWOsE">OS 报告的该 PID 命令行</b>同时含本次 <code data-page-node-id="w19KfjVHlqpG5cJvWDiW20">run.py</code>、本次端口、本次临时数据目录。</li>
+  <li data-page-node-id="pF1RBH9AVDdli1Yijqy2C0"><b data-page-node-id="soQFJYwVkM9qc6LszJPpRC">进程存活用 Windows API</b>（<code data-page-node-id="Lxi1iw631eymIj7dMZ1XPs">OpenProcess</code> + <code data-page-node-id="Bx6IPPkZBXNTGBqqZpAGbF">GetExitCodeProcess==STILL_ACTIVE</code>）判定 —— <b data-page-node-id="DHh8vItsD4F0iPFOQLNNGh">不用 <code data-page-node-id="0mUt1MUIsIagJaq7ZbXqIO">tasklist</code></b>（本机 <code data-page-node-id="J7zjHQVCdnFypal4JOnsDO">tasklist</code> 与 <code data-page-node-id="RisiTch4yECzi04Ub4LrLN">netstat</code> 一样会静默返回空）。</li>
+  <li data-page-node-id="0xHpHASiUYhTHrEH9KB4SY"><b data-page-node-id="9Yb58KVeXdq6WE2x5Viw2y">进程退出后端口再次不可达</b> ⇒ 闭合证明"监听者确为本次进程"。</li>
 </ol>
-<p>再叠加一条"写入去向"的硬证据：执行后<b>临时库有本次记录、真实库计数不变</b>。</p>
+<p data-page-node-id="OGk2zq10k3QaOMoUtpv3os">再叠加一条"写入去向"的硬证据：执行后<b data-page-node-id="NrdjupJBI8YZoOUamVz8di">临时库有本次记录、真实库计数不变</b>。</p>
 
-<h3>实测结果</h3>
-<pre>L1 结果：42 passed, 0 failed          EXIT=0
+<h3 data-page-node-id="07sw3GJK98stEBiczeCjTH">实测结果</h3>
+<pre data-page-node-id="CUuzzHkHvq0WLMUavBUh5M">L1 结果：42 passed, 0 failed          EXIT=0
   [隔离] 动态端口=59432（≠8000）· 数据目录=%TEMP%\platform_ci_l1_qisoozu5 · 唯一标记=platform_ci_l1_qisoozu5
   [PASS] 子进程自报绑定了本次端口 / 数据库 / 数据目录
   [PASS] PlanRun status == success（平台链路成功）  ·  Job status == success · exit_code == 0
@@ -238,21 +238,21 @@ fe_input.json 命中: 0   _v0.2_backup 命中: 0   __pycache__ 命中: 0   *.log
   [PASS] 临时库记录了本次 PlanRun / Job
   [PASS] 真实库 md5 未变 · mtime 未变 · data 文件数未变 · PlanRun 未新增（仍为 34）
   [PASS] OS 级确认该 PID 已消亡（非 tasklist）· 无残留 backend 进程 · 端口已释放 · 临时目录已删除</pre>
-<div class="card hl">
-  <b>L1 首版自身有两个缺陷，是在真跑中被抓出来并修掉的（不是"写完即宣布通过"）：</b>
-  <ol>
-    <li><b>子进程 stdout 块缓冲</b>：<code>run.py</code> 的启动横幅（端口/DB/数据目录）在重定向到文件时滞留缓冲区 → 身份自证读不到。修法：子进程环境注入 <code>PYTHONUNBUFFERED=1</code>。</li>
-    <li><b>残留扫描自匹配</b>：扫描命令自身是 <code>powershell.exe</code>，其命令行里含"唯一标记"，于是把自己也算成残留进程。修法：限定 <code>Name='python.exe'</code>。</li>
+<div class="card hl" data-page-node-id="kS9UJjoEHZlTYNs60TrFkN">
+  <b data-page-node-id="lACwuS41KBz7GD4uGhX3nq">L1 首版自身有两个缺陷，是在真跑中被抓出来并修掉的（不是"写完即宣布通过"）：</b>
+  <ol data-page-node-id="Y16Cgss7yTmSiWRId8dcaw">
+    <li data-page-node-id="qd6trmbNlFquw22UFirTAS"><b data-page-node-id="usYCwPHjmUiOI3xSqHCUTB">子进程 stdout 块缓冲</b>：<code data-page-node-id="GxmMpeFA6167wEhaiG4hWV">run.py</code> 的启动横幅（端口/DB/数据目录）在重定向到文件时滞留缓冲区 → 身份自证读不到。修法：子进程环境注入 <code data-page-node-id="tuCp9Jy9PLW3bCosaAasLp">PYTHONUNBUFFERED=1</code>。</li>
+    <li data-page-node-id="0kJtIPpDmC2EKpwv6w540X"><b data-page-node-id="PoaaMRxuyoTdOXqCswR3D0">残留扫描自匹配</b>：扫描命令自身是 <code data-page-node-id="rTIISHsxzA4NanWL1AXZoY">powershell.exe</code>，其命令行里含"唯一标记"，于是把自己也算成残留进程。修法：限定 <code data-page-node-id="0z5y7khwuVpW6yH4nb5bFB">Name='python.exe'</code>。</li>
   </ol>
 </div>
 
-<h2>7. CI workflow 如何执行</h2>
-<p>文件：<b>仓库根 = <code>platform/</code></b>，因此路径是 <code>platform/.github/workflows/platform-ci.yml</code>。</p>
-<pre>name: Platform CI (L0 + L1)
+<h2 data-page-node-id="0WC4aHkCTdnYVTuc8Gpo2G">7. CI workflow 如何执行</h2>
+<p data-page-node-id="6fZQDZ8NiEBAHlzjQgCHtD">文件：<b data-page-node-id="m7Fsih4Dj627cVqNDIgG8u">仓库根 = <code data-page-node-id="IrQmC19JWC8r0VyT7oRcBl">platform/</code></b>，因此路径是 <code data-page-node-id="wiakz7pLQx0XRM2NMsuK67">platform/.github/workflows/platform-ci.yml</code>。</p>
+<pre data-page-node-id="QQrUntd8TW8T7i2rXxL7kE">name: Unified Test Platform CI (L0 + L1)
 on:
   workflow_dispatch:              # 第一阶段只开手动触发，不加 push / pull_request
 concurrency:
-  group: platform-ci              # 平台是 SQLite + 进程内 scheduler + executor_locks，
+  group: unified-test-platform-ci              # 平台是 SQLite + 进程内 scheduler + executor_locks，
   cancel-in-progress: false       # 存在全局串行约束 → 整个 workflow 串行化
 permissions:
   contents: read
@@ -264,136 +264,137 @@ jobs:
   l1-platform-smoke:  runs-on: [self-hosted, Windows]   # needs: l0-unit
                       # 指纹(前) → python _ci/l1_smoke.py → 校验未写真实库
                       # → 残留进程检查(always) → 上传 _ci_out/ 为 artifact l1-smoke-logs(always)</pre>
-<h3>几个刻意的选择</h3>
-<table>
-  <thead><tr><th>选择</th><th>理由</th></tr></thead>
-  <tbody>
-    <tr><td><code>runs-on: [self-hosted, Windows]</code></td><td>平台依赖 Windows 本机 Python 与受控本地路径；托管 runner 看不到这些，跑不了 L1</td></tr>
-    <tr><td>只开 <code>workflow_dispatch</code></td><td>按你的要求：等它在当前 runner 上稳定通过后，再单独评估是否加 <code>push</code>/<code>pull_request</code></td></tr>
-    <tr><td>workflow 级 <code>concurrency</code></td><td>同一平台同时只允许一个实例；不通过 Worker/队列解决</td></tr>
-    <tr><td>残留进程检查只匹配"<code>run.py</code> 且带 <code>--data-dir</code>"</td><td>CI 启动的平台必然带 <code>--data-dir</code>；这样<b>不会误伤开发机自己起的</b> <code>python backend/run.py --no-browser</code>（否则该 job 会被无关进程搞红）</td></tr>
-    <tr><td>两个 job 各自记录真实库指纹并前后比对</td><td>把"CI 不得写真实库"做成 workflow 级断言，而不只是脚本内部的自我承诺</td></tr>
-    <tr><td>日志上传用 <code>if: always()</code></td><td>失败时更需要现场</td></tr>
+<h3 data-page-node-id="k9fvturqGizizu8YZcdqkJ">几个刻意的选择</h3>
+<table data-page-node-id="xU8GaOXFnywKqJ9ZOo6l47">
+  <thead data-page-node-id="LYzss4sWttWMkLRlwIitAO"><tr data-page-node-id="mRGaHOK0nNC0ipGc9UKcCO"><th data-page-node-id="rCaGGBdhZKwmUUAukvCWOF">选择</th><th data-page-node-id="ACCasNGsCaLo2ILxt0E8xB">理由</th></tr></thead>
+  <tbody data-page-node-id="v9xByPEBnnyr7kiINAHY1p">
+    <tr data-page-node-id="v9RFMOeYHrh2KH5S8ywwv0"><td data-page-node-id="UsLtz2HI3NLodMpwMiBjOI"><code data-page-node-id="m6sCVpG50dEmgLxFeVXnNb">runs-on: [self-hosted, Windows]</code></td><td data-page-node-id="qHBteP44tyupDtppfh7lSU">平台依赖 Windows 本机 Python 与受控本地路径；托管 runner 看不到这些，跑不了 L1</td></tr>
+    <tr data-page-node-id="k1bK9lHR1br0lU951xGrAw"><td data-page-node-id="N65eMCFpHFdAbUPSizCuin">只开 <code data-page-node-id="YDkLu7VG5fQOIAwoZ4NDB7">workflow_dispatch</code></td><td data-page-node-id="p5JtRs2TEkdOdeoswmFvge">按你的要求：等它在当前 runner 上稳定通过后，再单独评估是否加 <code data-page-node-id="8VgjGelLvEjuzB0TNsTbXO">push</code>/<code data-page-node-id="Zl1Cl3bNsQDzUYWU7OYDdD">pull_request</code></td></tr>
+    <tr data-page-node-id="hSyZufjgRzCHKHPL1WVRfs"><td data-page-node-id="xMGeQrqcJ0CtBUi7ruNHMe">workflow 级 <code data-page-node-id="SFHGDMbeY1AlaXGrrFYEYj">concurrency</code></td><td data-page-node-id="CTzmeVCE93q8nENFvD5ED9">同一平台同时只允许一个实例；不通过 Worker/队列解决</td></tr>
+    <tr data-page-node-id="7rtzccYKMwoYuV8jMhDeqw"><td data-page-node-id="FMrJ64tp9axNjzN7G61XGC">残留进程检查只匹配"<code data-page-node-id="A9MoYrj4ZipNBAIZOShN6g">run.py</code> 且带 <code data-page-node-id="sot0LrL4sKquykI7DIYtjY">--data-dir</code>"</td><td data-page-node-id="stTwpOW4q0YLDiuwR7CDli">CI 启动的平台必然带 <code data-page-node-id="e2XSf8gsKjxXutYmiDvC1s">--data-dir</code>；这样<b data-page-node-id="GosLnROebvhCAeP5HlYgJu">不会误伤开发机自己起的</b> <code data-page-node-id="IEu4UNUzcFVSHCo13huFx5">python backend/run.py --no-browser</code>（否则该 job 会被无关进程搞红）</td></tr>
+    <tr data-page-node-id="UFiVOWRdg1UB700roRFn9r"><td data-page-node-id="qn2yTvkiWLafScyXVoTh28">两个 job 各自记录真实库指纹并前后比对</td><td data-page-node-id="eKHCdt39suvpBVoyFZykBz">把"CI 不得写真实库"做成 workflow 级断言，而不只是脚本内部的自我承诺</td></tr>
+    <tr data-page-node-id="6DK6a1ShiOfmAYc010kl30"><td data-page-node-id="Vz39fr2RYFnLKJS0FmQ0wc">日志上传用 <code data-page-node-id="oDOFm1CwrcuP7BVtXLwDj3">if: always()</code></td><td data-page-node-id="87oqxOP0jJRl9rVhaV9nSW">失败时更需要现场</td></tr>
   </tbody>
 </table>
-<p><b>YAML 已做结构校验</b>：解析通过，并断言 <code>on</code> 仅 <code>workflow_dispatch</code>、两个 job 均为 <code>self-hosted + Windows</code>、<code>jobs</code> 中不含 <code>ubuntu</code>、<code>concurrency.group == platform-ci</code> 且 <code>cancel-in-progress == false</code>、<code>l1</code> 依赖 <code>l0</code>。</p>
+<p data-page-node-id="PFBzOjVEoA17NnbnouDQ85"><b data-page-node-id="bEGHDtDlBCOmzZtqSSBlgJ">YAML 已做结构校验</b>：解析通过，并断言 <code data-page-node-id="4dNM1aZeyhc93RdQpYqRQw">on</code> 仅 <code data-page-node-id="R5IE6FqzPsLONfLEtcaYHK">workflow_dispatch</code>、两个 job 均为 <code data-page-node-id="gMgBHmcaJfu3NZZjjbcaUc">self-hosted + Windows</code>、<code data-page-node-id="Du7mWKddtqcC6YKMopyWgw">jobs</code> 中不含 <code data-page-node-id="nWJpS2OhhD5QIa2LCOGciT">ubuntu</code>、<code data-page-node-id="jOUH3LLFRW2egXnmtgA33w">concurrency.group == unified-test-platform-ci</code> 且 <code data-page-node-id="3wKM9pnbwHX1DrqIV7praG">cancel-in-progress == false</code>、<code data-page-node-id="GBEvNrJVHEGFvZmEJFCRbR">l1</code> 依赖 <code data-page-node-id="XOkAAADtugxggAPFZW8Rvc">l0</code>。</p>
 
-<h2>8. self-hosted runner 要求</h2>
-<table>
-  <thead><tr><th>项</th><th>要求</th></tr></thead>
-  <tbody>
-    <tr><td>操作系统 / 标签</td><td>Windows；标签需同时含 <code>self-hosted</code> 与 <code>Windows</code></td></tr>
-    <tr><td>Python</td><td>PATH 上有 <code>python</code>，且装有 <code>fastapi</code> <code>uvicorn</code> <code>pydantic</code> <code>pytest</code> <code>httpx</code>；或设仓库变量 <code>PLATFORM_CI_PYTHON</code> 指向别的解释器</td></tr>
-    <tr><td>node</td><td><b>可选</b>；缺失时前端往返测试台自动 skip（不计为失败）；也可用 <code>PLATFORM_NODE</code> 指定</td></tr>
-    <tr><td>不需要</td><td>MongoDB / Colyseus / 游戏 / 真实游戏素材 —— L0/L1 都不依赖</td></tr>
-    <tr><td>网络</td><td>只需 <code>127.0.0.1</code>（本地回环）；建议设 <code>NO_PROXY=127.0.0.1,localhost</code></td></tr>
+<h2 data-page-node-id="HgVBodjDR8mLEm3HfJEwuh">8. self-hosted runner 要求</h2>
+<table data-page-node-id="AM6tiNnUBZmgIHtvQNUGnh">
+  <thead data-page-node-id="9daCDgx3e7FJLOVd77Y7DF"><tr data-page-node-id="GjiAQXFPsfOZGqKCJhKm6T"><th data-page-node-id="q5Nte073QOK2RjKSfEEKFa">项</th><th data-page-node-id="6OXNLmhCcoIwWiTQ3KZAJO">要求</th></tr></thead>
+  <tbody data-page-node-id="HcHTD8omt39i4xJByILlNS">
+    <tr data-page-node-id="M9wpgy3xKq9Q6535mtodKo"><td data-page-node-id="1adBSFrq7obb1yP5kBgwma">操作系统 / 标签</td><td data-page-node-id="xkuJiUw9osqVyRqRHMs4vk">Windows；标签需同时含 <code data-page-node-id="qCAWAa7CjBJraLz5ogSbLX">self-hosted</code> 与 <code data-page-node-id="X4mEnDecK1ANHVUj0pHuSb">Windows</code></td></tr>
+    <tr data-page-node-id="K1T2w1qMFND87SKtWs4eHc"><td data-page-node-id="IohYCNFvYvwiLR2qd5jw01">Python</td><td data-page-node-id="Pt5b5zMdyARqQbfiATmekg">PATH 上有 <code data-page-node-id="eIfKNpP1d2ikbomiFscDbV">python</code>，且装有 <code data-page-node-id="DJDdUxkC8crQ2w8wpi8PHL">fastapi</code> <code data-page-node-id="Y02cFeAWKQeCCovIrFwFi8">uvicorn</code> <code data-page-node-id="gHNjwJ3I7NQ1aSMmaPsrAV">pydantic</code> <code data-page-node-id="CmDaMOx3RKdO0jvq4SGO1D">pytest</code> <code data-page-node-id="iMh16jL5KbwMjndanOqEGv">httpx</code>；或设仓库变量 <code data-page-node-id="DqXMHMAU08jNYFTZgEuHMv">PLATFORM_CI_PYTHON</code> 指向别的解释器</td></tr>
+    <tr data-page-node-id="x1AIsEg6bBKV1BslBx4Nt9"><td data-page-node-id="r3UoKDaoOEgDnWJEdmeaBZ">node</td><td data-page-node-id="CnLiDdurpUSHwNZQRSNLp9"><b data-page-node-id="0cd4YpuZGrlePdXuhpwRnY">可选</b>；缺失时前端往返测试台自动 skip（不计为失败）；也可用 <code data-page-node-id="4o2H31PunY7Uh1OoKkdn4C">PLATFORM_NODE</code> 指定</td></tr>
+    <tr data-page-node-id="PrWcFh5icBoPpE5FCOtrw5"><td data-page-node-id="FQZGSEFyh93MFeQDB7AUnb">不需要</td><td data-page-node-id="7PBMID5ZrKGHRZHSIpNlO2">MongoDB / Colyseus / 游戏 / 真实游戏素材 —— L0/L1 都不依赖</td></tr>
+    <tr data-page-node-id="ClsMUJow2kkDcQYc9CEiO2"><td data-page-node-id="lhKLeF1j2qGlakQ5cHnYjE">网络</td><td data-page-node-id="5WjHel6FCzEvuh1N9tL67p">只需 <code data-page-node-id="k5tB83m7kpBDq1cOjcwSJo">127.0.0.1</code>（本地回环）；建议设 <code data-page-node-id="Nu9VWMsPrazXKKXvn2MZRt">NO_PROXY=127.0.0.1,localhost</code></td></tr>
   </tbody>
 </table>
 
-<h2>9. 真实 DB 是否保持不变</h2>
-<div class="card hl">
-  <b>是。逐字节未变 —— 且这是 L1 每次运行内部断言的，不只是我事后抽查。</b>
+<h2 data-page-node-id="XbLyFsXFNc8qPfzQD53qrN">9. 真实 DB 是否保持不变</h2>
+<div class="card hl" data-page-node-id="wgjakbl9i2givyuExmx60z">
+  <b data-page-node-id="KH8H3dJfjLPotNmKBtroBa">是。逐字节未变 —— 且这是 L1 每次运行内部断言的，不只是我事后抽查。</b>
 </div>
-<table>
-  <thead><tr><th>指标</th><th>基线（本轮开始前）</th><th>终态（全部验证结束后）</th></tr></thead>
-  <tbody>
-    <tr><td><code>data/db.sqlite</code> md5</td><td><code>9c191da86caaad20bac5d621a0142cae</code></td><td><code>9c191da86caaad20bac5d621a0142cae</code> <span class="ok">✓</span></td></tr>
-    <tr><td>mtime</td><td><code>2026-10-01 20:10:44</code></td><td><code>2026-10-01 20:10:44</code> <span class="ok">✓</span></td></tr>
-    <tr><td>文件大小 / data 文件数</td><td>278528 B / 236</td><td>278528 B / 236 <span class="ok">✓</span></td></tr>
-    <tr><td><code>plan_runs / jobs / plans</code></td><td>34 / 41 / 15</td><td>34 / 41 / 15 <span class="ok">✓</span></td></tr>
-    <tr><td><code>MAX(run_id) / MAX(job_id)</code></td><td>34 / 41</td><td>34 / 41 <span class="ok">✓</span></td></tr>
-    <tr><td>表数</td><td>10（<code>test_cases</code>/<code>test_suites</code> 仍未在真实库创建）</td><td>10 <span class="ok">✓</span></td></tr>
+<table data-page-node-id="iL5zCW0DyVopOHeWBLHSJa">
+  <thead data-page-node-id="XNb5kXWjfxMcA5sakvrkQ8"><tr data-page-node-id="L5HN3ccOuwBwc8d97LrfEM"><th data-page-node-id="jrXCGCl2jPLO3sAh1c04u1">指标</th><th data-page-node-id="izN0meyf4fWhfMp7n8o3kD">基线（本轮开始前）</th><th data-page-node-id="LruQBb1LglpGuLo3dW8t3B">终态（全部验证结束后）</th></tr></thead>
+  <tbody data-page-node-id="SlKvBTdvGT2Pe9jGBTAN8k">
+    <tr data-page-node-id="WLqP6UrKoTY1yVXu5gXCtY"><td data-page-node-id="lGNFKXsccCmgFSj9auSGah"><code data-page-node-id="pYHQr5aw30dK3QN8frf2yj">data/db.sqlite</code> md5</td><td data-page-node-id="3MVxrrYmeApiTS6bGedlwg"><code data-page-node-id="ZPy9yj8DlXrenlUhc4uBDn">9c191da86caaad20bac5d621a0142cae</code></td><td data-page-node-id="T6WM6syFWrqb5cmIqeVDy8"><code data-page-node-id="JNdNBchr2vok9kFuDkc2Wo">9c191da86caaad20bac5d621a0142cae</code> <span class="ok" data-page-node-id="955rKPhvImzDB5ooenPADW">✓</span></td></tr>
+    <tr data-page-node-id="ir90dFNLbwcliBDWoJMdAG"><td data-page-node-id="Rcd0RjLndNMtNMlTLq8NFc">mtime</td><td data-page-node-id="vWWF1Gu3KNSl5z6wWzfgk3"><code data-page-node-id="fgB4MBlVv1oLr8S5Rahao3">2026-10-01 20:10:44</code></td><td data-page-node-id="wCd1Wx3j0oT8cArWORoC1x"><code data-page-node-id="w3noQfRe6ZFjK0HiJegPuF">2026-10-01 20:10:44</code> <span class="ok" data-page-node-id="Qp5ygyBAgGVIMhBt5eoxx3">✓</span></td></tr>
+    <tr data-page-node-id="W3YwzfkvjhcK8gCc14i2Sv"><td data-page-node-id="b74X8KSxjizusFLz8Hk2Xg">文件大小 / data 文件数</td><td data-page-node-id="98s8pGziVCUp46X4D46otx">278528 B / 236</td><td data-page-node-id="MfuNu0AbJO43qhppXRrcYr">278528 B / 236 <span class="ok" data-page-node-id="46978tNlTcZas9691VlAix">✓</span></td></tr>
+    <tr data-page-node-id="nHmnfD0XApqErAsTtQJWa7"><td data-page-node-id="mg0acsfvOj6I7fdTnKib4T"><code data-page-node-id="NDuQiFDnozTgDnLWnphwCQ">plan_runs / jobs / plans</code></td><td data-page-node-id="Poz40qsKlCO6xkzxZepVxW">34 / 41 / 15</td><td data-page-node-id="QeQpP4wqCnB7gucS3wliOk">34 / 41 / 15 <span class="ok" data-page-node-id="YxmeHEYcDgUlWWdDjS8eyc">✓</span></td></tr>
+    <tr data-page-node-id="IcAZQ4a4MG7lBMqySThWoM"><td data-page-node-id="6uP9Sxr8Q9luKdsFuE6OAV"><code data-page-node-id="3jLJqqKo9XMrAGAfAdPGGL">MAX(run_id) / MAX(job_id)</code></td><td data-page-node-id="FdYP86K8cqN4FaJtF4Rhql">34 / 41</td><td data-page-node-id="rbh78jf40xnnjeX5yTY4Oy">34 / 41 <span class="ok" data-page-node-id="CQxarzAaeynWihOTC1lTZw">✓</span></td></tr>
+    <tr data-page-node-id="1jKQDEt3eN5E56ht7F9CE7"><td data-page-node-id="rDCzJUCZz6ITvszBCSfgYf">表数</td><td data-page-node-id="SdV7rJB4UydREa6BtaMBpX">10（<code data-page-node-id="akXnCgbTdoCAAxyDRCHoLy">test_cases</code>/<code data-page-node-id="gtF8TpwulMJUzouq5nh2XG">test_suites</code> 仍未在真实库创建）</td><td data-page-node-id="GJArTjW92b6oSgvjdsW6Fw">10 <span class="ok" data-page-node-id="KWxfby11rHnlpLE63QVm19">✓</span></td></tr>
   </tbody>
 </table>
-<p>隔离机制：CI/L1 全程用 <code>--data-dir &lt;%TEMP%\platform_ci_l1_*&gt;</code> + <code>--db &lt;该目录&gt;\db.sqlite</code>，<b>从不指向 <code>platform/data</code></b>。L1 实测中临时库 <code>plan_runs==1</code>、真实库仍为 34 —— 写入去向是双向自证的。</p>
+<p data-page-node-id="PTK8DGGlrqxp1l9WEPjvpY">隔离机制：CI/L1 全程用 <code data-page-node-id="IrWhyDOTogohXFw2BvojCK">--data-dir &lt;%TEMP%\platform_ci_l1_*&gt;</code> + <code data-page-node-id="aRTUbjPcPwaLAE147cmeh7">--db &lt;该目录&gt;\db.sqlite</code>，<b data-page-node-id="QEkJWxeVKehwqSQyTmsWFN">从不指向 <code data-page-node-id="SZp7vm7aS5kzGA63cO7Tqy">platform/data</code></b>。L1 实测中临时库 <code data-page-node-id="vvvqTsvEttqQArGyEHDb32">plan_runs==1</code>、真实库仍为 34 —— 写入去向是双向自证的。</p>
 
-<h2>10. 是否有残留进程</h2>
-<table>
-  <thead><tr><th>检查项</th><th>结果</th></tr></thead>
-  <tbody>
-    <tr><td>本次 CI 标记的 <code>run.py --data-dir</code> 进程</td><td><span class="ok">0 个</span>（PowerShell <code>Win32_Process</code> 精确匹配）</td></tr>
-    <tr><td>全部 <code>run.py</code> 进程</td><td><span class="ok">0 个</span>（连开发机自己的平台也没在跑）</td></tr>
-    <tr><td>残留临时数据目录 <code>%TEMP%\platform_ci_l1_*</code></td><td><span class="ok">0 个</span></td></tr>
-    <tr><td>端口 8000 / 8001 / 8002 / 8123 / 8199 / 以及本次用过的 59432、61109、60963</td><td><span class="ok">全部已释放</span></td></tr>
-    <tr><td>用过的 CI 平台 PID（多次运行）</td><td><span class="ok">均已消亡</span>（OS 级 <code>GetExitCodeProcess</code> 确认）</td></tr>
+<h2 data-page-node-id="tqsGn59UqGHbNtxyAH4rDO">10. 是否有残留进程</h2>
+<table data-page-node-id="1Lh8eHklB1AEzW1X0TuHyl">
+  <thead data-page-node-id="DDhW6ea4uyXClJdT15bASb"><tr data-page-node-id="vZNhBX6HFqOHLYXTl4uQdL"><th data-page-node-id="PNCfyrjrKt7nzC5Rq4QytZ">检查项</th><th data-page-node-id="jFwB9ebbzOaRW1FzOces0f">结果</th></tr></thead>
+  <tbody data-page-node-id="lqb76tjPhJ777v1Iq5yVB1">
+    <tr data-page-node-id="jrzeVurP6dkzYz0k3rdAdv"><td data-page-node-id="cPOKpv1VG9DTGrQN2inyyM">本次 CI 标记的 <code data-page-node-id="A5iBwpJ0gMokrWfiR78T94">run.py --data-dir</code> 进程</td><td data-page-node-id="QpqfXbADywZIdqahuGDW4n"><span class="ok" data-page-node-id="3KpqiT7r6ynxA2EttJKqyD">0 个</span>（PowerShell <code data-page-node-id="D7aAOVTRngGt7Ldjah8Bta">Win32_Process</code> 精确匹配）</td></tr>
+    <tr data-page-node-id="r9Gt501xfHAy5zRxEyf47c"><td data-page-node-id="XluscTR3EhEtfLfZbzV702">全部 <code data-page-node-id="s5d4ILLLdvahBi3eIbFQYz">run.py</code> 进程</td><td data-page-node-id="1FD16JWCYjGRNnIRdPXQ33"><span class="ok" data-page-node-id="MRKM8pGQ0W15x6D6W4Fn8h">0 个</span>（连开发机自己的平台也没在跑）</td></tr>
+    <tr data-page-node-id="TDMWwKdZz5YiFWch0nSFhZ"><td data-page-node-id="QPSx8aItGAluAVDTDXHH4B">残留临时数据目录 <code data-page-node-id="C64AKBBDNM4gDm6KtAgpM5">%TEMP%\platform_ci_l1_*</code></td><td data-page-node-id="im5w8imbgJdnsfClvWDD0c"><span class="ok" data-page-node-id="nCNZRWCZCQqTEZDeLRgbcd">0 个</span></td></tr>
+    <tr data-page-node-id="dXgqofhrnS1GJJM78so2EO"><td data-page-node-id="xixEVZcCnD1d5oDk1K6caQ">端口 8000 / 8001 / 8002 / 8123 / 8199 / 以及本次用过的 59432、61109、60963</td><td data-page-node-id="sIIN7FYkfZGO1T8t3DmZrR"><span class="ok" data-page-node-id="AU0CAUk7WsRRp9ogIJGxDy">全部已释放</span></td></tr>
+    <tr data-page-node-id="5KuaG2gEGyrtLTFqeR6XDp"><td data-page-node-id="IPCb2HA36q6spE1F1ivfeC">用过的 CI 平台 PID（多次运行）</td><td data-page-node-id="rQnRqzJRZeWZqhrXYTt3hN"><span class="ok" data-page-node-id="EetWuo0ZDXAfYTSjNJC3P6">均已消亡</span>（OS 级 <code data-page-node-id="40cUcxzl1xZeOosytzUtBk">GetExitCodeProcess</code> 确认）</td></tr>
   </tbody>
 </table>
-<p>期间<b>唯一一次</b>残留：L1 首版在 <code>finally</code> 里因 PowerShell 缺失抛异常，导致一个临时目录没删掉 —— 已定位、清理，并已修好脚本（PowerShell 变为可选、失败不再中断清理流程）。</p>
+<p data-page-node-id="G4SEy1hiXHLBdiSphrY27B">期间<b data-page-node-id="zvDsoJVMrKOzeKyNjgDSky">唯一一次</b>残留：L1 首版在 <code data-page-node-id="4s4LAIdLCE8xFlayRdzTk9">finally</code> 里因 PowerShell 缺失抛异常，导致一个临时目录没删掉 —— 已定位、清理，并已修好脚本（PowerShell 变为可选、失败不再中断清理流程）。</p>
 
-<h2>11. <code>workflow_dispatch</code> 实测结果</h2>
-<div class="card warnbox">
-  <b>无法在本轮实测 —— 两个前置条件都不满足，且都不由本轮授权范围覆盖：</b>
-  <ol>
-    <li><b>本机未注册 self-hosted runner</b>（已核查：无 <code>actions-runner</code> 目录）。没有 runner，GitHub 无处投递该 job。</li>
-    <li><b>workflow 文件必须先存在于 GitHub 远程仓库</b>才能被 <code>workflow_dispatch</code> 触发。而本轮明确<b>不 push、不建远程仓库</b>。</li>
+<h2 data-page-node-id="MTKUnGJPpljBErWniJHGGm">11. <code data-page-node-id="JnlrGDAgKw6RvTRQcJndQq">workflow_dispatch</code> 实测结果</h2>
+<div class="card warnbox" data-page-node-id="L4qot53d7ZXhgxNFy5HWUM">
+  <b data-page-node-id="KxX0TDSznrSfyELYlpfHdr">无法在本轮实测 —— 两个前置条件都不满足，且都不由本轮授权范围覆盖：</b>
+  <ol data-page-node-id="8a0G2CPmof0072TfHLBvGz">
+    <li data-page-node-id="PR35SgfTbpahTclj2AuOiD"><b data-page-node-id="pN3vN2aGNn0AHd8AyYqAK8">本机未注册 self-hosted runner</b>（已核查：无 <code data-page-node-id="kLzBX8dzXAZeiKo21mkBTm">actions-runner</code> 目录）。没有 runner，GitHub 无处投递该 job。</li>
+    <li data-page-node-id="fIqjEOYCCNhrwCkou6J9Lu"><b data-page-node-id="EiwdgNICnuTEjo6r7GKHI2">workflow 文件必须先存在于 GitHub 远程仓库</b>才能被 <code data-page-node-id="JWc3zo9bMtxEDJxbYWSq4w">workflow_dispatch</code> 触发。而本轮明确<b data-page-node-id="B37Q3BpBMmAyfd77q5ceYI">不 push、不建远程仓库</b>。</li>
   </ol>
-  <p>我不会用"看起来应该能过"来充当实测结果。本轮的替代证据是：<b>把 workflow 里每条命令原样在本机执行了一遍</b>。</p>
+  <p data-page-node-id="0jewAMBIiyDidOixvNLPF7">我不会用"看起来应该能过"来充当实测结果。本轮的替代证据是：<b data-page-node-id="LgbzcGbpxrToNKVXMR1AW1">把 workflow 里每条命令原样在本机执行了一遍</b>。</p>
 </div>
-<table>
-  <thead><tr><th>workflow 步骤</th><th>本轮本地等价执行</th><th>结果</th></tr></thead>
-  <tbody>
-    <tr><td>Runner 环境自检</td><td><code>python --version</code> + <code>import fastapi,uvicorn,pydantic,pytest,httpx</code></td><td><span class="ok">通过</span></td></tr>
-    <tr><td>L0：<code>pytest backend/tests -q -o addopts=</code></td><td>同命令原样执行</td><td><span class="ok">94 passed</span></td></tr>
-    <tr><td>L1：<code>python _ci/l1_smoke.py</code></td><td>同命令原样执行（3 次，含 2 轮修复后）</td><td><span class="ok">42 passed / 0 failed，exit 0</span></td></tr>
-    <tr><td>校验未写真实库（前后 MD5）</td><td>等价：脚本内 + 独立复核</td><td><span class="ok">md5 一致</span></td></tr>
-    <tr><td>残留进程检查</td><td>同查询条件在本机执行</td><td><span class="ok">0 个</span></td></tr>
-    <tr><td>上传 artifact <code>_ci_out/</code></td><td>产物已生成：<code>_ci_out/20261004-121609｜121655｜122134</code></td><td><span class="ok">可上传</span></td></tr>
-    <tr><td>YAML 语法 / 结构</td><td><code>yaml.safe_load</code> + 7 条结构断言</td><td><span class="ok">通过</span></td></tr>
+<table data-page-node-id="RWHBYs4Ia933r7vpXtCUtx">
+  <thead data-page-node-id="BWPb8w7iPCa4sXjixET2RD"><tr data-page-node-id="SVFsW3HeNl7JZ1hVxvckFP"><th data-page-node-id="jvls06h5kJmYTlg4Y3CRCV">workflow 步骤</th><th data-page-node-id="RMlBtTn18NeVuDeDd3DExR">本轮本地等价执行</th><th data-page-node-id="t1NHJC8zBrkS6IknphPycj">结果</th></tr></thead>
+  <tbody data-page-node-id="EEfG7p9Vo4NRtn5qjvRffg">
+    <tr data-page-node-id="tWIPfwwROcP5nDzeYtCcf4"><td data-page-node-id="mhcFM3041iss8s33JQch1t">Runner 环境自检</td><td data-page-node-id="GQVcLyO7dQxKHbIfh5HVDB"><code data-page-node-id="8VYyxK9Oi6jkNB9DEuYuDg">python --version</code> + <code data-page-node-id="DHvmRHoDO8YHlWAlt6NMZP">import fastapi,uvicorn,pydantic,pytest,httpx</code></td><td data-page-node-id="A4hjcqwswnKp62XhCos7Cx"><span class="ok" data-page-node-id="FP89uqSudKuvdmCMkXVkbq">通过</span></td></tr>
+    <tr data-page-node-id="H32nGWHAY2ntFUScFMEVRN"><td data-page-node-id="Z1EiMqzDl8wVkbJlkE8ZVO">L0：<code data-page-node-id="P36ABWHATxVFJNNe6xNq8U">pytest backend/tests -q -o addopts=</code></td><td data-page-node-id="GAKpXHWZzMF9doCKs5NDon">同命令原样执行</td><td data-page-node-id="i7aALFYduyH9a76nuksDW0"><span class="ok" data-page-node-id="mYxpxY5HQq8cbAZw4BmrTG">94 passed</span></td></tr>
+    <tr data-page-node-id="kiuyhpEv5OIZjxA6ZYBvgn"><td data-page-node-id="Agm9rJamjUsrKCm1hAtrjN">L1：<code data-page-node-id="ieiS1buDjwJn9mZgmvvwkD">python _ci/l1_smoke.py</code></td><td data-page-node-id="EKvWvyyDfzYzPK7xFhE5na">同命令原样执行（3 次，含 2 轮修复后）</td><td data-page-node-id="aNpFsQhFYTIWTBIAZN75RF"><span class="ok" data-page-node-id="cvxcGYxxAkVzbCkkcVBGN7">42 passed / 0 failed，exit 0</span></td></tr>
+    <tr data-page-node-id="RdeBT1BRVnGg6Xu1HHUbj5"><td data-page-node-id="xKkYQ8AEJmNPT3Fd8ySnws">校验未写真实库（前后 MD5）</td><td data-page-node-id="CJG6b4MZkJs6Ht6ACRSx86">等价：脚本内 + 独立复核</td><td data-page-node-id="hEkBjYxslHA1HUlWrfjEH9"><span class="ok" data-page-node-id="gyS5AP88nneXLgGFinOq5X">md5 一致</span></td></tr>
+    <tr data-page-node-id="6BwD9dKuFxU7lwFhLNVPEE"><td data-page-node-id="44X4dsVoOlk7xEMWIHTcGn">残留进程检查</td><td data-page-node-id="AtlwFG33fm9pY5V1j169U3">同查询条件在本机执行</td><td data-page-node-id="BI6HzBbftnAm5pah6cdAeQ"><span class="ok" data-page-node-id="6Zp21cCo9H8wKY54skysdO">0 个</span></td></tr>
+    <tr data-page-node-id="EQLVpJrNfFre1bZu8PVGnk"><td data-page-node-id="n3vQMTfTAuApvAFu3p0fj4">上传 artifact <code data-page-node-id="38lgBge89AbQpHwsCnOXJj">_ci_out/</code></td><td data-page-node-id="XjmIoDLx3xnVwCJ7LRxhrm">产物已生成：<code data-page-node-id="USfzQiCMM5rIF51KktArqi">_ci_out/20261004-121609｜121655｜122134</code></td><td data-page-node-id="HGXLva1wm5O0RprrjE9tTI"><span class="ok" data-page-node-id="uG8CulfqsWTxj7tu7cCRM8">可上传</span></td></tr>
+    <tr data-page-node-id="91AICZDlyHjwU6COWPcnWJ"><td data-page-node-id="oDIebtpZtqfLVmAfurcYlA">YAML 语法 / 结构</td><td data-page-node-id="Ltk5Ttj9sHxkAeZUXHhHYB"><code data-page-node-id="shJjrU4D1wA49uiY7Vq9JQ">yaml.safe_load</code> + 7 条结构断言</td><td data-page-node-id="wC2sgxaGOACRc6Ekc5nAGu"><span class="ok" data-page-node-id="nTM7BlOn0ANs8fD0QdG3eC">通过</span></td></tr>
   </tbody>
 </table>
-<p class="muted">另：仓库已 <code>git init</code> 并完成 1 次提交（分支已改为 <code>main</code>，commit <code>d7ca781</code>，91 files / 22214 insertions）。提交是本地行为，未 push。</p>
+<p class="muted" data-page-node-id="ABFxODAjW7sWeZ1P42EZjC">另：仓库已 <code data-page-node-id="cCkHUQGnEIsjM7zU3DSZvx">git init</code> 并完成 1 次提交（分支已改为 <code data-page-node-id="Xe5cxKzptJ7inP24EuwfBy">main</code>，commit <code data-page-node-id="8p3Am6RwzzbCzldlW0fBgG">d7ca781</code>，91 files / 22214 insertions）。提交是本地行为，未 push。</p>
 
-<h2>12. 当前 CI/CD 完成到什么程度</h2>
-<table>
-  <thead><tr><th>层</th><th>状态</th><th>说明</th></tr></thead>
-  <tbody>
-    <tr><td>Git 仓库卫生</td><td><span class="ok">完成并实测</span></td><td>.gitignore 先于 init；91 文件 / 2.5 MB；零大目录、零真实数据、零凭据入库</td></tr>
-    <tr><td><code>GET /health</code></td><td><span class="ok">完成并实测</span></td><td>零副作用；4 条测试</td></tr>
-    <tr><td>L0（平台代码级）</td><td><span class="ok">完成并实测</span></td><td>94 passed，零 skip，零外部依赖</td></tr>
-    <tr><td>L1（真实启动 + Demo Plan）</td><td><span class="ok">完成并实测</span></td><td>42 项断言，端到端 success，含身份自证与清理自证</td></tr>
-    <tr><td>CI 数据隔离</td><td><span class="ok">完成并实测</span></td><td>动态端口 + 临时数据目录；真实库逐字节未变</td></tr>
-    <tr><td>并发控制</td><td><span class="ok">已配置</span></td><td>workflow 级 <code>concurrency: platform-ci</code>，不自动取消</td></tr>
-    <tr><td>workflow 定义</td><td><span class="ok">已编写 + 结构校验</span></td><td>仅 <code>workflow_dispatch</code>，self-hosted Windows</td></tr>
-    <tr><td><b>workflow 端到端实跑</b></td><td><span class="warn">未验证（前置条件缺失）</span></td><td>需：注册 self-hosted runner + push 到 GitHub</td></tr>
+<h2 data-page-node-id="u2rUleRU3lIv3cvC2mK2IQ">12. 当前 CI/CD 完成到什么程度</h2>
+<table data-page-node-id="pATFS337ERYHTk2hgvZZ4s">
+  <thead data-page-node-id="k4FjlALlDlxBnzeqWtaop6"><tr data-page-node-id="EDNcgGkgtoVi2YEsMtQPqZ"><th data-page-node-id="28vTvl5ZREVNPT6I2Bhr77">层</th><th data-page-node-id="WYjrKoPYgufSGnNYHBNkNU">状态</th><th data-page-node-id="6gBbMxAoGGGBuuOjUvg5Ri">说明</th></tr></thead>
+  <tbody data-page-node-id="CedbLDgXsRHSNB5CJO2bHc">
+    <tr data-page-node-id="ZPNC17TdGJXg0Pjk0C1qDl"><td data-page-node-id="3ELTbCPgp7UBvDXsi7miee">Git 仓库卫生</td><td data-page-node-id="el0rYaueDQHIvGakxvEa3k"><span class="ok" data-page-node-id="oU0riGI6pTGcn6QLYlybm7">完成并实测</span></td><td data-page-node-id="uvekQ2Ib0Q9Tgkcksi8FOE">.gitignore 先于 init；91 文件 / 2.5 MB；零大目录、零真实数据、零凭据入库</td></tr>
+    <tr data-page-node-id="T67fvKRLEUmxyZWsIK45BH"><td data-page-node-id="fdXm1N5NtrxJLjckV5rpcj"><code data-page-node-id="p3vsuDCX71AmAi4vCPlqGm">GET /health</code></td><td data-page-node-id="kw0uCwAk5Da68gQSdE7F2x"><span class="ok" data-page-node-id="GVJGPVLNs9QcflXUg9Xwzb">完成并实测</span></td><td data-page-node-id="1Yx8jMQAB6Rd8AHvTEgenc">零副作用；4 条测试</td></tr>
+    <tr data-page-node-id="4Jw39pVWBrxuSkLPcGr7y8"><td data-page-node-id="eRil59nAbKhkhGVFlc3iLo">L0（平台代码级）</td><td data-page-node-id="1DOTM63Dhcm194OD9ocYiL"><span class="ok" data-page-node-id="8JWlBCAueamgf335R9CwFy">完成并实测</span></td><td data-page-node-id="J8jvaDAVqjFalLaxVkWODa">94 passed，零 skip，零外部依赖</td></tr>
+    <tr data-page-node-id="kT1q0HTcKqyVUZ49kTdzgc"><td data-page-node-id="bKSvJiAX9tFc9i9HjvgwkB">L1（真实启动 + Demo Plan）</td><td data-page-node-id="RKItj6zkO5hScCO8MAZ4eM"><span class="ok" data-page-node-id="AM8NcbG1RMns5hkHKUzenH">完成并实测</span></td><td data-page-node-id="gxokxLKdhTxcEgmLV6PEu2">42 项断言，端到端 success，含身份自证与清理自证</td></tr>
+    <tr data-page-node-id="YZWStNkpwFCNr4e2CuWDs7"><td data-page-node-id="IXnGRp1OhkBbZFmGQXBjPD">CI 数据隔离</td><td data-page-node-id="M3WFmBkPH8SIrN5ixRMMNL"><span class="ok" data-page-node-id="hCHaMcuuD6y9HSYbGAIUIj">完成并实测</span></td><td data-page-node-id="qKkOlPbDZBwRrvOssdT4Ag">动态端口 + 临时数据目录；真实库逐字节未变</td></tr>
+    <tr data-page-node-id="MVSem2H00rP4w4JU7nkHMQ"><td data-page-node-id="0aUs1MG92RecoRxr1So7a5">并发控制</td><td data-page-node-id="2Blrt55QDWtBtHWof8ynYo"><span class="ok" data-page-node-id="92wuI5A2PLnK4mLmzV2YbC">已配置</span></td><td data-page-node-id="tkpWvt7T48E1Ebs1gu6FMN">workflow 级 <code data-page-node-id="RKtygzDRuFaE48HUQj0lCO">concurrency: unified-test-platform-ci</code>，不自动取消</td></tr>
+    <tr data-page-node-id="NrAFg60Yf3HhzbF8DDFgRL"><td data-page-node-id="FIAv4RVP7Sj8dN3lzCAhmg">workflow 定义</td><td data-page-node-id="Wqcfk9e2Z38FgMkgeCG0Ql"><span class="ok" data-page-node-id="8QPgCacbzuS6XxAdtBTtsl">已编写 + 结构校验</span></td><td data-page-node-id="E8cjt69T0WfMU8VI6sgFJJ">仅 <code data-page-node-id="pwti9bZviLJHrm7KkQNEkV">workflow_dispatch</code>，self-hosted Windows</td></tr>
+    <tr data-page-node-id="U76WWMvuqjqLVDB3ljsr7j"><td data-page-node-id="f5ASS9pjaFRuQcXss8QGmZ"><b data-page-node-id="Pp1gPBUKh8itBcy9B7AZoV">workflow 端到端实跑</b></td><td data-page-node-id="UI2CcfD8lHvtUwQebFoHAD"><span class="warn" data-page-node-id="WbIvNhALS0NRAcP2vHegra">未验证（前置条件缺失）</span></td><td data-page-node-id="tFPAjnlbcdxsWdmlnqEwUn">需：注册 self-hosted runner + push 到 GitHub</td></tr>
   </tbody>
 </table>
-<p><b>一句话：平台侧"跑得起来、测得准、不污染真实数据"已经是可复现的事实；差的是把它交给 GitHub 调度这一步。</b></p>
+<p data-page-node-id="Rkx4U9v6BT4OYCEeS3UZzm"><b data-page-node-id="nfyKuDFhSoI5mWhkhDuGN2">一句话：平台侧"跑得起来、测得准、不污染真实数据"已经是可复现的事实；差的是把它交给 GitHub 调度这一步。</b></p>
 
-<h2>13. 后续可选、但本轮明确不做</h2>
-<ul>
-  <li><b>L2</b>：真实 PrivaHigh pytest（`privahigh-backend`）与 MatchEval（`privahigh-real`）—— 依赖本机磁盘资产。</li>
-  <li><b>L3</b>：Locust 打 <code>:2567</code> —— 需 MongoDB + Colyseus 服务端进程，建议 <code>workflow_dispatch</code> 或 <code>continue-on-error</code>，<b>不要挂 PR 关卡</b>。</li>
-  <li>启动 Colyseus / MongoDB、Worker、Job Queue、Jenkins、Webhook、CI Dashboard、RBAC、参数化矩阵、多仓库编排。</li>
-  <li>Suite execution、<code>suite_ref</code>、Run Diff、新测试引擎、DB 架构重构、<code>get_conn</code> P1 技术债修复。</li>
-  <li>给旧的两个游戏项目 workflow 换入口（Colyseus-Storm / GameAutoTest-Pro 本轮<b>未改、未删</b>）。</li>
+<h2 data-page-node-id="ir7bhXRkaoc260JoMDk918">13. 后续可选、但本轮明确不做</h2>
+<ul data-page-node-id="3X4TzgCDRXKJ9IVuZXWm0W">
+  <li data-page-node-id="eXk0Ik9UVFfH0QGHbXjxUe"><b data-page-node-id="wjGvDCAlt7PnkCtAahoKhX">L2</b>：真实 PrivaHigh pytest（`privahigh-backend`）与 MatchEval（`privahigh-real`）—— 依赖本机磁盘资产。</li>
+  <li data-page-node-id="J16tr4yTc0w0iPFLxoB3Yx"><b data-page-node-id="yhEDiXPIadZiD0YvErK0FJ">L3</b>：Locust 打 <code data-page-node-id="3QaAfzvT6OFfoTrrkxB4oS">:2567</code> —— 需 MongoDB + Colyseus 服务端进程，建议 <code data-page-node-id="AxdiszfgDxcVd4DJJ2V9qd">workflow_dispatch</code> 或 <code data-page-node-id="hVF1DHETBNrdbyO5Iwqm0y">continue-on-error</code>，<b data-page-node-id="tBb13Eqb0RpjPTY5pYPfee">不要挂 PR 关卡</b>。</li>
+  <li data-page-node-id="sj7sHU31Zw1Qv5QdavLrUO">启动 Colyseus / MongoDB、Worker、Job Queue、Jenkins、Webhook、CI Dashboard、RBAC、参数化矩阵、多仓库编排。</li>
+  <li data-page-node-id="FBQEtsB4Hqjt6sMiFpz0A5">Suite execution、<code data-page-node-id="vN95iHXnKoJgCs8k0dpjEA">suite_ref</code>、Run Diff、新测试引擎、DB 架构重构、<code data-page-node-id="95NJmwYIO5x2fdouCA9Yiy">get_conn</code> P1 技术债修复。</li>
+  <li data-page-node-id="eBaNZbCrGLHesHAF2Y6qU0">给旧的两个游戏项目 workflow 换入口（Colyseus-Storm / GameAutoTest-Pro 本轮<b data-page-node-id="VpCaw4GAzcKLM8AnntTmRj">未改、未删</b>）。</li>
 </ul>
 
-<h2>验收标准逐条核对</h2>
-<table>
-  <thead><tr><th>#</th><th>标准</th><th>结果</th><th>证据</th></tr></thead>
-  <tbody>
-    <tr><td>A</td><td>Git 卫生</td><td><span class="ok">通过</span></td><td><code>git status</code> 干净；<code>.venv-locust</code>/<code>data/</code>/真实报告/本机配置均未入库；未 push（remote 数 = 0）</td></tr>
-    <tr><td>B</td><td><code>GET /health</code> → 200 且 <code>status=ok</code></td><td><span class="ok">通过</span></td><td>L1 阶段 2 实测；<code>test_health.py</code> 4 条</td></tr>
-    <tr><td>C</td><td>L0 全通过</td><td><span class="ok">通过</span></td><td><code>94 passed</code>，0 skip</td></tr>
-    <tr><td>D</td><td>L1：真实进程启动 / health / Demo Plan / PlanRun / Job / Report 成功</td><td><span class="ok">通过</span></td><td><code>_ci/l1_smoke.py</code> 42/42，退出码 0</td></tr>
-    <tr><td>E</td><td>隔离：真实 <code>platform/data</code> md5 相同、mtime 不变、文件数不变</td><td><span class="ok">通过</span></td><td>三者实测全等（§9）</td></tr>
-    <tr><td>F</td><td>无残留 <code>backend/run.py</code> 进程</td><td><span class="ok">通过</span></td><td>残留数 0（且全部 run.py 数为 0）</td></tr>
-    <tr><td>G</td><td><code>concurrency</code> 配置存在</td><td><span class="ok">通过</span></td><td>YAML 结构断言 <code>group=platform-ci</code>、<code>cancel-in-progress=false</code></td></tr>
-    <tr><td>H</td><td>workflow 可在 self-hosted Windows runner 上通过 <code>workflow_dispatch</code> 成功执行</td><td><span class="warn">未验证</span></td><td><b>前置条件缺失</b>：无 self-hosted runner 注册；且未 push（workflow 必须先存在于远程）。已用"同命令本地全跑通"作为替代证据（§11）</td></tr>
+<h2 data-page-node-id="PUDNUkLk5gk93smzKimyGO">验收标准逐条核对</h2>
+<table data-page-node-id="OjcjYq2UcrV9MrmONmGsvF">
+  <thead data-page-node-id="jLNrAakBttEDBAt6AMMjk3"><tr data-page-node-id="7uuqyFoO89BiGD4qLNpV90"><th data-page-node-id="lIHGV7t8HGCtH4i57ciVUZ">#</th><th data-page-node-id="MgY56SWQnPRvp2FHgq0GIC">标准</th><th data-page-node-id="KhKnvHkvzWQaj5ckHZ8niM">结果</th><th data-page-node-id="jasfRE6zSv7szFPP5eVerQ">证据</th></tr></thead>
+  <tbody data-page-node-id="ykYvjzqXAuGYqdoT7t5RBY">
+    <tr data-page-node-id="GGOing1Gj1p88si9Q9cTyC"><td data-page-node-id="SbkufczIDbyt6kOIq9Xv0K">A</td><td data-page-node-id="58DW25cPftytrKUg1wpDxA">Git 卫生</td><td data-page-node-id="PMYi3SbbJrLrIlim74snaI"><span class="ok" data-page-node-id="sw38OgB915TWBn0SxRESEZ">通过</span></td><td data-page-node-id="pr5q9uh2fsTdbof0oqGLVr"><code data-page-node-id="ANdJ5xZgxqWhfH2pgrw0CC">git status</code> 干净；<code data-page-node-id="IfcMSBIWvd00Y2vfZHNHNq">.venv-locust</code>/<code data-page-node-id="NXZwXIt0BPAIbdPtUFNZIN">data/</code>/真实报告/本机配置均未入库；未 push（remote 数 = 0）</td></tr>
+    <tr data-page-node-id="o8MGgJI5ESVpBRN7kRd0tk"><td data-page-node-id="A6ny5jvHOkGWISPc7fvfoZ">B</td><td data-page-node-id="1ul2jNvnAdW2JU6AOrB2j2"><code data-page-node-id="ydKPkypyGeeeh6t3YiQNqC">GET /health</code> → 200 且 <code data-page-node-id="D9RFFl7Wg4dukgkQ4xijHh">status=ok</code></td><td data-page-node-id="vyXH6zNMCUHjnbejyDNMnu"><span class="ok" data-page-node-id="UCemB5fKRbxpjU1T2fI8RQ">通过</span></td><td data-page-node-id="VPnP4dD2FqHQqLu7xzOdxK">L1 阶段 2 实测；<code data-page-node-id="u7Wt8U5LIHMnrVN42slvlc">test_health.py</code> 4 条</td></tr>
+    <tr data-page-node-id="xoserkgJfWa4LYsAvfC4lI"><td data-page-node-id="bosfKLAF8As2TfZSzttiAt">C</td><td data-page-node-id="V4a8a9PKrMmEpZ9vGEKCAp">L0 全通过</td><td data-page-node-id="LiyArK6JJFNH3aWY9bFCXi"><span class="ok" data-page-node-id="0kjmFdGysHilqLJqX0Lo4q">通过</span></td><td data-page-node-id="2uEayey9CYzKrbd9MfroDm"><code data-page-node-id="KzCffbYPu3J0eU038LovL3">94 passed</code>，0 skip</td></tr>
+    <tr data-page-node-id="k6HnOqRbtclzB1mslHdpXT"><td data-page-node-id="TW3SSkch3IOOBpVT0J7H4G">D</td><td data-page-node-id="RdzZqVZXXZO8aKBQS2M2AG">L1：真实进程启动 / health / Demo Plan / PlanRun / Job / Report 成功</td><td data-page-node-id="mhcQtJ493cr2IwQPj9rzXw"><span class="ok" data-page-node-id="JkOeBFLSCkFQiFBLZGwrRG">通过</span></td><td data-page-node-id="OFeB98eY62ce6kXYwbM3sb"><code data-page-node-id="8iDkCQF3n3vW7cSiLAFSzI">_ci/l1_smoke.py</code> 42/42，退出码 0</td></tr>
+    <tr data-page-node-id="BEQP4OlMYpTtXwrOpzsnnw"><td data-page-node-id="Mb9Z9TGPg2mEypSlT8ow1j">E</td><td data-page-node-id="x3RaVAeBNECxXqSbJlbmLH">隔离：真实 <code data-page-node-id="PfK0suBOfOQMJNoMsOxanF">platform/data</code> md5 相同、mtime 不变、文件数不变</td><td data-page-node-id="f3UGbIAtG1Jjh0FuywAqhk"><span class="ok" data-page-node-id="Cuz1XNl2ZSEh44oGX7J4pE">通过</span></td><td data-page-node-id="lcinscr5unjda2K7EPRSa4">三者实测全等（§9）</td></tr>
+    <tr data-page-node-id="WYZMeYK3OplnHqCI2qC1Je"><td data-page-node-id="J8KDvb7XwwtRAGTrf118Fk">F</td><td data-page-node-id="C11OACcUrdXmPqXChxmqfB">无残留 <code data-page-node-id="YMgpwl6pJ0Y5zOwCk0CtwC">backend/run.py</code> 进程</td><td data-page-node-id="GP7AJAfoehKrsqLC6k8AFU"><span class="ok" data-page-node-id="vFiXwYwNNSDz6sDOuymppC">通过</span></td><td data-page-node-id="beKlvhwt8MNzUPQAPomXwU">残留数 0（且全部 run.py 数为 0）</td></tr>
+    <tr data-page-node-id="K6nc86c4ZX0KqMuuFuBDjp"><td data-page-node-id="v5qBNvcegLJinugP31hBFZ">G</td><td data-page-node-id="p1UWi95jzHC6NeWofZRout"><code data-page-node-id="T0uji6cja7OCHaUodtC6Uz">concurrency</code> 配置存在</td><td data-page-node-id="Iu91CjExzZ1n3FgiXGpDSO"><span class="ok" data-page-node-id="IUQ9qX2hW6IpDen9avXDlL">通过</span></td><td data-page-node-id="QV2aHoA9KjqnmSd1ZVIPmc">YAML 结构断言 <code data-page-node-id="JRj7AmwNw3I4HFLJ68HhN6">group=unified-test-platform-ci</code>、<code data-page-node-id="0rq5xLoKlr6XDLtHhs0RHv">cancel-in-progress=false</code></td></tr>
+    <tr data-page-node-id="wzfuFCjqrPrTQ5e7IRz09L"><td data-page-node-id="UJabAew2s3dATvccUPBvAU">H</td><td data-page-node-id="d3lK98dBGFNzdKfT9Xs37l">workflow 可在 self-hosted Windows runner 上通过 <code data-page-node-id="ZmT2HrPECtyUAFaOS1GAVz">workflow_dispatch</code> 成功执行</td><td data-page-node-id="GJ66MWrjJOw6Znzr02Go6A"><span class="warn" data-page-node-id="ElZ2DyVV7IL2kk3pKNS4TC">未验证</span></td><td data-page-node-id="nZVmbhsY4CRnUwFERM3OD1"><b data-page-node-id="QDwyl3FgdoIBqLSkmWP8s6">前置条件缺失</b>：无 self-hosted runner 注册；且未 push（workflow 必须先存在于远程）。已用"同命令本地全跑通"作为替代证据（§11）</td></tr>
   </tbody>
 </table>
 
-<div class="card hl">
-  <b>最终判定：CI/CD 第一阶段 —— 代码与脚本层面验收通过（A–G 全绿）；整体交付状态为"就差一步上跑步机"。</b><br><br>
-  唯一未闭环的是 <b>H</b>，且它<b>不是实现缺陷</b>，而是环境前置条件：需要①在本机注册 self-hosted runner、②把仓库 push 到 GitHub。<br>
-  这两件事本轮都不在你的授权范围内（"不要自动 git push、不要创建远程仓库"），因此我停在这里等你决定。<br><br>
-  <b>要真正闭环 H，请先做这两步，然后我可以立刻用 <code>workflow_dispatch</code> 跑一次并汇报真实结果。</b>
+<div class="card hl" data-page-node-id="JFyS7YWmNF8USA6HsM3ykE">
+  <b data-page-node-id="QoDx6Orbs6bDMzzYvW58hX">最终判定：CI/CD 第一阶段 —— 代码与脚本层面验收通过（A–G 全绿）；整体交付状态为"就差一步上跑步机"。</b><br data-page-node-id="PwiebPsUK2wvxA6kYZk0W7"><br data-page-node-id="TibjFhOtrnCzN3P4d7vBkX">
+  唯一未闭环的是 <b data-page-node-id="AJdVNHyZRWBMDyFaX3l1hB">H</b>，且它<b data-page-node-id="rztnQCTlzvj5KjyckswtXK">不是实现缺陷</b>，而是环境前置条件：需要①在本机注册 self-hosted runner、②把仓库 push 到 GitHub。<br data-page-node-id="UJo1bGWaFQRoH3czn6Bouc">
+  这两件事本轮都不在你的授权范围内（"不要自动 git push、不要创建远程仓库"），因此我停在这里等你决定。<br data-page-node-id="2puIv9GngCRcAaUDwKEwdO"><br data-page-node-id="nBeDdTE5FHGYKXaOp7nQl1">
+  <b data-page-node-id="5TrMw5y4fgP6bI6KUY1Y5v">要真正闭环 H，请先做这两步，然后我可以立刻用 <code data-page-node-id="apaEXPsATuR8Lm97xenR8e">workflow_dispatch</code> 跑一次并汇报真实结果。</b>
 </div>
 
-<footer>
+<footer data-page-node-id="j5Go5G6l2Jw1Wq6NXctzCJ">
   统一游戏测试平台 · CI/CD 第一阶段实施报告 · 生成于 2026-10-04 ·
   本轮未修改旧的两个游戏项目 workflow、未启动任何被测服务、未执行 Locust / MatchEval / 真实 PrivaHigh 测试、
-  未扩展 TestSuite。真实运行库 md5 <code>9c191da86caaad20bac5d621a0142cae</code> 全程未变。
+  未扩展 TestSuite。真实运行库 md5 <code data-page-node-id="DOsqyUGfvsxPszPdZIpYgo">9c191da86caaad20bac5d621a0142cae</code> 全程未变。
+  <p>命名变更（2026-10-04）：仓库定名 <code>unified-test-platform</code> 后，workflow 的 <code>name</code> 与 <code>concurrency.group</code> 已同步改名（纯标识，行为不变）；workflow 文件仍为 <code>.github/workflows/platform-ci.yml</code>。本报告正文已同步，<b>全部测量数据未改动</b>。</p>
 </footer>
 </div>
 </body>

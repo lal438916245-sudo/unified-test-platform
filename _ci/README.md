@@ -1,6 +1,7 @@
 # CI 第一阶段（L0 + L1）
 
-本目录只放 **CI 专用**脚本。GitHub Actions 定义在 `.github/workflows/platform-ci.yml`。
+本目录只放 **CI 专用**脚本。仓库：**`unified-test-platform`**。
+GitHub Actions 定义在 `.github/workflows/platform-ci.yml`。
 
 ## 目标（本阶段只做这些）
 

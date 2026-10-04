@@ -8,7 +8,7 @@
 #   等它在当前 Windows self-hosted runner 上稳定通过后，再单独评估是否加
 #   push / pull_request。不要一上来就挂 PR 关卡，否则天天红。
 
-name: Platform CI (L0 + L1)
+name: Unified Test Platform CI (L0 + L1)
 
 on:
   workflow_dispatch:
@@ -16,8 +16,9 @@ on:
 # 平台为 SQLite + 进程内 scheduler + executor_locks 表，存在**全局串行**约束：
 # 同一平台同时只允许一个实例执行。这里用 workflow 级 concurrency 串行化，
 # 而不是引入 Worker / 队列（本轮明确不做）。
+# group 与仓库名一致（concurrency group 本身按仓库隔离，这里只是保持可读性）。
 concurrency:
-  group: platform-ci
+  group: unified-test-platform-ci
   cancel-in-progress: false
 
 permissions:
