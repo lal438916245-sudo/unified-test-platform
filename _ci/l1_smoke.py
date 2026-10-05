@@ -41,6 +41,17 @@ import time
 import urllib.error
 import urllib.request
 
+# 本脚本正文含中文以及 `⇒`(U+21D2)、`↔`(U+2194) 等符号。CI 里 stdout 是管道，
+# Python 会退回系统 locale 编码（中文 Windows = cp936/GBK），而 **GBK 编不出这两个符号**
+# → print 抛 UnicodeEncodeError、脚本崩在收尾那一步（CI 上真实发生过，本机用
+# PYTHONIOENCODING=gbk 可一比一复现）。这里显式把自身两个流设成 UTF-8：
+# 无论控制台/父进程是什么代码页都不会再崩。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:  # noqa: BLE001  reconfigure 需 3.7+，极老解释器忽略即可
+        pass
+
 _HERE = os.path.dirname(os.path.abspath(__file__))
 PLATFORM = os.path.dirname(_HERE)                                   # platform
 RUN_PY = os.path.join(PLATFORM, "backend", "run.py")
@@ -53,6 +64,10 @@ PYTHON = os.environ.get("PLATFORM_CI_PYTHON") or sys.executable
 PASS = 0
 FAIL = 0
 FAILED: list[str] = []
+
+# 命令行开关。定义在模块级（而非只在 __main__ 里赋值），这样 import 本模块后
+# 直接调用 main() 也能工作 —— 便于把「全新签出」等分支写成自动化测试。
+KEEP = False
 
 # 平台自身可能处于 http_proxy 之后：显式禁用代理，否则 127.0.0.1 会被送去代理（502）
 _OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -252,7 +267,13 @@ def main() -> int:
     # ---------------- 1) 启动前：端口必须不可达 ----------------
     print("--- 1. 启动前环境检查 ---")
     ck(f"端口 {PORT} 启动前不可达（证明是新起的，不是遗留实例）", not reachable(PORT))
-    ck("真实库存在（用于前后比对）", os.path.isfile(REAL_DB), REAL_DB)
+    if before is not None:
+        ck("真实库存在（用于前后比对）", os.path.isfile(REAL_DB), REAL_DB)
+    else:
+        # 全新 runner / 新签出：仓库里没有 data/（已 gitignore），本就不该有真实库。
+        # 这里必须[跳过]而不是[FAIL] —— 否则 CI 上这条恒红，且掩盖真正的断言。
+        print("  [跳过] 全新签出：workspace 内无 data/db.sqlite，本轮不做真实库前后比对"
+              "（与启动前快照 = None 一致）")
 
     child_env = os.environ.copy()
     # 让子进程自己就把"执行机解释器"预置成当前解释器 —— CI 不依赖任何本机绝对路径

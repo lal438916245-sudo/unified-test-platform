@@ -49,6 +49,11 @@ env:
   #    大小写不敏感，Python 的 urllib 也能正常读到 NO_PROXY，无需再写小写形式。
   NO_PROXY: 127.0.0.1,localhost
   PYTHONUNBUFFERED: "1"
+  # CI 里 Python 的 stdout 是管道，默认退回系统 locale 编码（中文 Windows = cp936/GBK）。
+  # l1_smoke.py 要打印 `⇒`(U+21D2)、`↔`(U+2194) 这类 **GBK 编不出**的符号 →
+  # UnicodeEncodeError 崩在收尾步骤（2026-10-05 真实发生）。统一强制 UTF-8：
+  # 既不会再崩，步骤日志里的中文也不再是乱码。
+  PYTHONIOENCODING: "utf-8"
 
 jobs:
   # ============================================================
