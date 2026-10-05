@@ -70,7 +70,7 @@ jobs:
           Write-Host "workspace        = $env:GITHUB_WORKSPACE"
           Write-Host "python           = $env:PYTHON_EXE"
           & $env:PYTHON_EXE --version
-          # L0 只依赖这些包，缺任何一个都应立刻失败（而不是悄悄跳过用例）
+          # L0 only needs these packages; a missing one must fail right here (never skip silently).
           & $env:PYTHON_EXE -c "import fastapi, uvicorn, pydantic, pytest, httpx; print('L0 deps OK')"
 
       - name: 记录真实库指纹（L0 前）
@@ -78,25 +78,25 @@ jobs:
         run: |
           $db = "data\db.sqlite"
           $out = Join-Path $env:RUNNER_TEMP "db_before.txt"
-          if (Test-Path $db) { (Get-FileHash $db -Algorithm MD5).Hash } else { "ABSENT" } |
-            Out-File -FilePath $out -Encoding utf8
-          Write-Host "L0 前真实库指纹: $(Get-Content $out)"
-          Write-Host "说明：L0 全部使用隔离临时库；真实库指纹在 L0 后必须一致"
+          $before = if (Test-Path $db) { (Get-FileHash $db -Algorithm MD5).Hash } else { "ABSENT" }
+          $before | Out-File -FilePath $out -Encoding ascii
+          Write-Host "real db md5 (before L0): $before"
+          Write-Host "note: L0 only uses isolated temp DBs; this md5 must be identical afterwards"
 
       - name: L0 - 运行平台测试套件
         shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
         run: |
           & $env:PYTHON_EXE -m pytest backend/tests -q -o addopts=
-          if ($LASTEXITCODE -ne 0) { throw "L0 失败：pytest 退出码 $LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw "L0 failed: pytest exit code $LASTEXITCODE" }
 
       - name: 校验 L0 未写真实库
         shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
         run: |
           $db = "data\db.sqlite"
-          $before = Get-Content (Join-Path $env:RUNNER_TEMP "db_before.txt")
+          $before = (Get-Content (Join-Path $env:RUNNER_TEMP "db_before.txt")).Trim()
           $after = if (Test-Path $db) { (Get-FileHash $db -Algorithm MD5).Hash } else { "ABSENT" }
-          Write-Host "L0 后真实库指纹: $after"
-          if ($before -ne $after) { throw "L0 改动了真实运行库！before=$before after=$after" }
+          Write-Host "real db md5 (after L0): $after"
+          if ($before -ne $after) { throw "L0 modified the real run DB! before=$before after=$after" }
 
   # ============================================================
   # L1：平台真实启动 + Demo Plan 执行 → Report
@@ -114,40 +114,42 @@ jobs:
         shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
         run: |
           $db = "data\db.sqlite"
-          if (Test-Path $db) { (Get-FileHash $db -Algorithm MD5).Hash } else { "ABSENT" } |
-            Out-File -FilePath (Join-Path $env:RUNNER_TEMP "db_before_l1.txt") -Encoding utf8
-          Write-Host "L1 前真实库指纹: $(Get-Content (Join-Path $env:RUNNER_TEMP 'db_before_l1.txt'))"
+          $out = Join-Path $env:RUNNER_TEMP "db_before_l1.txt"
+          $before = if (Test-Path $db) { (Get-FileHash $db -Algorithm MD5).Hash } else { "ABSENT" }
+          $before | Out-File -FilePath $out -Encoding ascii
+          Write-Host "real db md5 (before L1): $before"
 
       - name: L1 - 隔离实例端到端冒烟
         shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
-        # 该脚本自带完整隔离与自证：动态空闲端口 / 临时数据目录 / 自记 PID，
-        # 并断言 真实库 md5+mtime+文件数不变、无残留进程、端口已释放。
+        # l1_smoke.py carries its own isolation proof: dynamic free port, temp data dir,
+        # recorded PID; it asserts the real DB md5+mtime+file count are unchanged,
+        # no leftover process and the port is released.
         run: |
           & $env:PYTHON_EXE _ci/l1_smoke.py
-          if ($LASTEXITCODE -ne 0) { throw "L1 失败：l1_smoke.py 退出码 $LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw "L1 failed: l1_smoke.py exit code $LASTEXITCODE" }
 
       - name: 校验 L1 未写真实库
         shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
         run: |
           $db = "data\db.sqlite"
-          $before = Get-Content (Join-Path $env:RUNNER_TEMP "db_before_l1.txt")
+          $before = (Get-Content (Join-Path $env:RUNNER_TEMP "db_before_l1.txt")).Trim()
           $after = if (Test-Path $db) { (Get-FileHash $db -Algorithm MD5).Hash } else { "ABSENT" }
-          Write-Host "L1 后真实库指纹: $after"
-          if ($before -ne $after) { throw "L1 改动了真实运行库！before=$before after=$after" }
+          Write-Host "real db md5 (after L1): $after"
+          if ($before -ne $after) { throw "L1 modified the real run DB! before=$before after=$after" }
 
       - name: 残留进程检查
         if: always()
         shell: 'powershell -NoProfile -ExecutionPolicy Bypass -File "{0}"'
-        # 只匹配"由 CI 启动"的平台进程：它们必然带 --data-dir（L1 脚本总是显式传）。
-        # 这样不会误伤开发机自己起的 `python backend/run.py --no-browser`。
+        # Only match CI-started platform processes: they always carry --data-dir (l1_smoke passes it).
+        # A `python backend/run.py --no-browser` started by the developer is never matched.
         run: |
-          $left = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-                  Where-Object { $_.CommandLine -like '*run.py*' -and $_.CommandLine -like '*--data-dir*' }
+          $left = Get-CimInstance Win32_Process -Filter "Name='python.exe'"
+          $left = $left | Where-Object { $_.CommandLine -like '*run.py*' -and $_.CommandLine -like '*--data-dir*' }
           if ($left) {
             $left | Select-Object ProcessId, CommandLine | Format-List
-            throw "存在残留的 CI 平台进程，必须清理"
+            throw "leftover CI platform process found; it must be cleaned up"
           }
-          Write-Host "无残留 CI 平台进程"
+          Write-Host "no leftover CI platform process"
 
       - name: 上传 CI 日志与产物
         if: always()
