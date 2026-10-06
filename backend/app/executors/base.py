@@ -34,6 +34,26 @@ RunnerCtx = Callable[[], bool]
 RegisterProc = Callable[[Any], None]
 
 
+def child_env(*extra: dict) -> dict:
+    """构造被测子进程的环境变量：继承本进程 + 统一强制 UTF-8 输出。
+
+    为什么必须注入 ``PYTHONIOENCODING=utf-8``：
+      Windows 上 Python 子进程的标准流出到**管道**时，默认用 locale 编码（简中即 cp936/GBK），
+      而三个 Runner 都按 UTF-8 解码（``encoding="utf-8", errors="replace"``）。
+      GBK 字节被 UTF-8 解出来就是 U+FFFD 替换字符，**一旦写进日志文件就不可逆**——
+      日志与报告里的中文会永久变成 `����ƽ̨` 这种乱码（子进程输出 utf-8 才是对的）。
+
+    只影响子进程的 stdio 编码，不改文件系统编码（故不用 PYTHONUTF8=1，避免影响被测项目的读文件行为）。
+    """
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    for d in extra:
+        if d:
+            env.update(d)
+    return env
+
+
+
 @dataclass
 class RunnerResult:
     status: str                       # success | failed | cancelled | timedout

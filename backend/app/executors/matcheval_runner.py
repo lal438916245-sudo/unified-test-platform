@@ -13,7 +13,7 @@ import shutil
 import subprocess
 from typing import Callable, Optional
 
-from .base import BaseRunner, RunnerResult, kill_proc_tree
+from .base import BaseRunner, RunnerResult, child_env as build_child_env, kill_proc_tree
 
 # __file__ 位于 platform/backend/app/executors/，上溯 3 级得 backend，再上溯 1 级得 platform，
 # 再上溯 1 级得工作区根（match_eval.py 所在目录）。
@@ -117,11 +117,12 @@ class MatchEvalRunner(BaseRunner):
                "--png"]
         log_sink(f"$ {_shell(cmd)}\n$ cwd={rdir}\n")
 
-        child_env = dict(os.environ)
-        child_env["PYTHONDONTWRITEBYTECODE"] = "1"  # 避免向只读的 Airtest 源码目录写 .pyc
+        # 统一注入 PYTHONIOENCODING=utf-8（否则中文日志会乱码）+
+        # 避免向只读的 Airtest 源码目录写 .pyc
+        run_env = build_child_env({"PYTHONDONTWRITEBYTECODE": "1"})
 
         proc = subprocess.Popen(
-            cmd, cwd=rdir, env=child_env,
+            cmd, cwd=rdir, env=run_env,
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL, text=True, encoding="utf-8",
             errors="replace", bufsize=1,

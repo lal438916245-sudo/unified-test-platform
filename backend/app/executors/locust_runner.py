@@ -11,7 +11,7 @@ import subprocess
 import time
 from typing import Callable, Optional
 
-from .base import BaseRunner, RunnerResult, kill_proc_tree
+from .base import BaseRunner, RunnerResult, child_env, kill_proc_tree
 from ..config_center import LOCUST_SCENARIOS, resolve_asset_ref
 
 # 受白名单保护的 locustfile：Job 只能引用受控场景 key，不能填任意本地路径。
@@ -69,7 +69,7 @@ class LocustRunner(BaseRunner):
         log_sink(f"$ {_shell(cmd)}\n$ cwd={os.path.dirname(locustfile)}\n")
 
         proc = subprocess.Popen(
-            cmd, cwd=os.path.dirname(locustfile),
+            cmd, cwd=os.path.dirname(locustfile), env=child_env(),
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL, text=True, encoding="utf-8",
             errors="replace", bufsize=1,

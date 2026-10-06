@@ -6,7 +6,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 from typing import Callable
 
-from .base import BaseRunner, RunnerResult, kill_proc_tree
+from .base import BaseRunner, RunnerResult, child_env, kill_proc_tree
 
 
 class PytestRunner(BaseRunner):
@@ -22,7 +22,8 @@ class PytestRunner(BaseRunner):
         log_sink(f"$ {_shell(cmd)}\n$ cwd={cwd}\n")
 
         proc = subprocess.Popen(
-            cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            cmd, cwd=cwd, env=child_env(),
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
             bufsize=1,
         )
