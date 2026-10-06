@@ -80,7 +80,7 @@ async function j(path,opt){const r=await fetch(API+path,opt);if(!r.ok)throw new 
 function chip(s){return `<span class="chip c-${s}">${s}</span>`;}
 function esc(s){s=String(s==null?'':s);return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function term(status){return ['success','failed','cancelled','timedout','skipped'].includes(status);}
-let timer=null;
+let timer=null, pollBusy=false;
 // ---------- 报告对比选择（基线/候选，存会话，跨页保持） ----------
 function pickBaseline(jobId){sessionStorage.setItem('rc_base',String(jobId));alert('已设为基线报告 #'+jobId);}
 function pickCandidate(jobId){sessionStorage.setItem('rc_cand',String(jobId));alert('已设为候选报告 #'+jobId);}
@@ -163,17 +163,17 @@ async function trigger(id){
 }
 
 // ---------- 执行详情 ----------
-async function renderRun(runId){
+async function renderRun(runId,silent){
   const app=$('app');
   const keepLogs=$('logsl')?$('logsl').innerHTML:'';   // 轮询重绘时保留已打开的日志面板
-  app.innerHTML='<h1>执行详情</h1><div class="card"><p class="muted">加载中…</p></div>';
+  if(!silent) app.innerHTML='<h1>执行详情</h1><div class="card"><p class="muted">加载中…</p></div>';
   try{
     const {run,jobs}=await j(`/api/runs/${runId}`);
     ready(jobs);
     const snap=run.plan_snapshot||null;
     const planName=(snap&&snap.name)||('plan#'+run.plan_id);
     const rev=run.plan_revision!=null?run.plan_revision:(snap?snap.revision:null);
-    app.innerHTML=`<h1>执行详情 <span class="muted">#${runId}</span></h1>
+    const html=`<h1>执行详情 <span class="muted">#${runId}</span></h1>
       <div class="card">
         <div class="row"><span class="muted">计划</span><strong>${esc(planName)}</strong>
           <span class="muted">版本</span>${rev!=null?`<span class="chip c-queued">rev ${rev}</span>`:'<span class="muted">-</span>'}
@@ -198,8 +198,9 @@ async function renderRun(runId){
           </tr>`).join('')}</tbody></table>
         <div id="logsl">${keepLogs}</div>
       </div>`;
+    if(app.innerHTML!==html) app.innerHTML=html;   // 内容没变就不重绘：轮询刷新不再整页闪烁
     pollRun(runId,jobs);
-  }catch(e){app.innerHTML=`<div class="card err">加载执行失败：${esc(e.message)}</div>`;}
+  }catch(e){if(!silent)app.innerHTML=`<div class="card err">加载执行失败：${esc(e.message)}</div>`;}
 }
 async function showLogs(jobId){
   const host=$('logsl');const data=await j(`/api/jobs/${jobId}/logs`);
@@ -209,13 +210,18 @@ async function cancel(jobId){await j(`/api/jobs/${jobId}/cancel`,{method:'POST'}
 async function retry(jobId){const out=await j(`/api/jobs/${jobId}/retry`,{method:'POST'});alert('已创建重试 Job #'+out.new_job_id);router();}
 function pollRun(runId,jobs){
   if(jobs.every(x=>term(x.status)))return;
+  // 关键：已有轮询在跑就不要再新建 —— 否则每次 renderRun 都会再挂一个 setInterval，
+  // 而 timer 只能记住最后一个，旧的全部变成"孤儿定时器"永不清理 → 整页被反复重绘（屏闪）。
+  if(timer)return;
   timer=setInterval(async()=>{
+    if(pollBusy)return;                       // 上一次请求还没回来 → 跳过本轮，避免重绘堆积
+    pollBusy=true;
     try{
       const{run,jobs:js}=await j(`/api/runs/${runId}`);
       // 运行到达终态后立刻停止轮询：否则整页会被反复整体重绘，日志面板会被周期性清空
       if(term(run.status)){clearInterval(timer);timer=null;}
-      renderRun(runId);
-    }catch(e){}
+      renderRun(runId,true);                  // 静默刷新：不闪「加载中」，内容没变则不重绘
+    }catch(e){}finally{pollBusy=false;}
   },1200);
 }
 function ready(jobs){return jobs;}
