@@ -25,6 +25,42 @@ CI Pass / Fail
 Colyseus / MongoDB 启动、Worker、队列、CI Dashboard、RBAC、参数化矩阵、
 Suite 执行、`get_conn` 技术债修复。
 
+## 验收结果（CI Phase 1 · 2026-10-06 收口）
+
+| 项 | 值 |
+|---|---|
+| Run | **#8**（`workflow_dispatch`，手动触发） |
+| commit | **`caf85bf`** |
+| Runner | **`lenovo-win11-dev`** · Windows self-hosted（标签 `self-hosted, Windows, X64`） |
+| workflow 结论 | **Success** |
+| L0 Job | 8/8 steps success |
+| L1 Job | 9/9 steps success |
+| **L0 结果** | **94 passed / 0 failed** |
+| **L1 结果（CI 实际）** | **36 passed / 0 failed** |
+| **L1 结果（本机完整）** | **42 passed / 0 failed** |
+| 产物 | `l1-smoke-logs` 上传成功 |
+| Runner 清理 | 无残留 `run.py --data-dir` 进程 · 无残留 CI 临时目录 |
+| 真实库 | 全程未变：md5 `9c191da86caaad20bac5d621a0142cae` · 278528 B · mtime `2026-10-01 20:10:44` · plans=15 / plan_runs=34 / jobs=41 |
+
+### 为什么 CI 是 36、本机是 42
+
+差的 **6 项**是**针对开发机真实 `data/db.sqlite` 的保护性断言**：
+执行前后必须不变的有——真实库 **md5**、**mtime**、**数据目录文件数**、**`plan_runs` 计数**等。
+
+`data/` 被 `.gitignore` 排除，**不进入 CI workspace** → CI 侧**没有真实库基线可比**，
+这 6 项走脚本里的 `[跳过]` 分支（打印 `[跳过] 全新签出…`，不计为失败，也不算通过）。
+
+因此：
+
+- **本机（有真实库，完整比对）= 42 passed / 0 failed**
+- **CI（全新签出、无真实库）= 36 passed / 0 failed**
+
+两者都正确，只是**口径不同**。**禁止为了让数字统一而把 CI 的 36 写成 42。**
+
+> 同理，workflow 里那两步「校验 L0/L1 未写真实库」在 CI 里比的是 `ABSENT vs ABSENT`，
+> 属**平凡成立**；"真实库确实没被写"这点的真实守卫在**本机**（就是上表最后一行）。
+> 这点必须如实记录，不可含糊。
+
 ## L0 与 L1 的分工
 
 | 层 | 内容 | 外部依赖 | 入口 |
@@ -65,7 +101,7 @@ python _ci/l1_smoke.py --keep
 4. node 可选；缺失时前端往返测试台会自动 skip（不计为失败）。
 5. 不需要 `pwsh`（PowerShell 7）：workflow 全部步骤用 `shell: powershell`（5.1，Windows 自带）。
 
-## 本机 runner 实况（2026-10-05 注册，H 项前置条件已就绪）
+## 本机 runner 实况（2026-10-05 注册 · 2026-10-06 Run #8 实跑通过）
 
 | 项 | 值 |
 |---|---|
@@ -74,6 +110,7 @@ python _ci/l1_smoke.py --keep
 | 标签 | `self-hosted, Windows, X64` —— 即默认标签集，命中 `runs-on: [self-hosted, Windows]` |
 | 服务 | `actions.runner.lal438916245-sudo-unified-test-platform.lenovo-win11-dev` · `Auto` 启动 · 账户 `NT AUTHORITY\NETWORK SERVICE` |
 | 状态 | `Running`；`_diag` 日志显示 `Listening for Jobs` |
+| 实跑验证 | **Run #8（`caf85bf`）Success** —— L0 8/8、L1 9/9 步骤全绿（见上「验收结果」） |
 
 安装命令（管理员权限一次性完成注册 + 装服务，本版本已无 `svc.cmd`，改用 `--runasservice`）：
 

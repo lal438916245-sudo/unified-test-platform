@@ -119,6 +119,7 @@ F:\Anaconda3\python.exe backend\run.py            # 默认 127.0.0.1:8000
 | **pytest 平台执行链路** | PlanRun #20：`Job#24` pytest 真实子进程执行，junit + `report.json` 归档，`exit_code=1` 如实记录；`fail_fast` 正确把后续步骤置 `skipped` |
 | **PrivaHigh pytest 真实功能测试** | `PrivaHigh\backend\tests\` **49 passed / 0 failed / 0 errors / 0 skipped**（1.62s，本地直跑，2026-09-29 修复后） |
 | **PrivaHigh MatchEval 真实资产链路** | PlanRun #21 / `Job#26`：`success`、`exit_code=0`、30s；**TP=23 / FP=0 / FN=0 / TN=92，Precision=Recall=F1=1.00**，与旁路冻结基线**零差异**；CSV 690 行、热力图 23 张、产物 114 个 |
+| **Locust 真实执行链路** | `Job#29` / `Job#30`（基于 **Colyseus-Storm 真实服务**）：每次 **6 局 complete games**、**0 个 `WinError 10053`**、**0 个 Locust failures**。用于验证 **Locust → WebSocket → Colyseus 游戏服务 → 游戏完成 → 测试结果回传** 这一**真实执行链路**；**不作为容量压测 / 性能基准（benchmark）** |
 | **报告生成** | `report.json` 版本化 schema，通过 `validate_report()`；`data/reports/run_{id}/job_{id}/` 归档 |
 | **Report Center** | `report_index` 派生索引：筛选、分页、趋势、两次报告对比；计划名取执行时快照 |
 | **配置中心** | 三类实体 CRUD + 预检 + 启停；`privahigh-real` 资产源预检 6/6 通过；执行机预检含依赖探测 |
@@ -130,10 +131,13 @@ F:\Anaconda3\python.exe backend\run.py            # 默认 127.0.0.1:8000
 
 ## 4. 未完成真实验收（不要当成已完成）
 
-- **Locust 真实压测链路尚未完成真实验收**：现有 `colyseus-bot` 场景从未在真实服务上跑过；
-  且 `Colyseus-Storm/locustfile.py` 第 84 行的 WebSocket 地址**硬编码**为 `ws://localhost:2567`
-  （平台的 `--host` 覆盖不到 WS 段），脚本也不读任何环境变量 →
-  **若真实服务不在本机 2567，必须先授权改造为读取受控配置，否则压测结果不可信**。
+- **Locust 容量压测 / 性能基准尚未做**：Locust 的**真实执行链路已完成验收**（见 §3，`Job#29` / `Job#30`：基于
+  **Colyseus-Storm 真实服务**，每次 **6 局 complete games**、**0 个 `WinError 10053`**、**0 个 Locust failures**）。
+  但请严格区分口径：该验收**只验证** `Locust → WebSocket → Colyseus 游戏服务 → 游戏完成 → 测试结果回传`
+  这条**真实执行链路**是否打通，**不作为容量压测结论，也不作为性能基准（benchmark）**。
+- **Locust WS 地址仍需改造**：`Colyseus-Storm/locustfile.py` 第 84 行的 WebSocket 地址**硬编码**为
+  `ws://localhost:2567`（平台的 `--host` 覆盖不到 WS 段，脚本也不读任何环境变量）→
+  **若真实服务不在本机 2567，必须先授权改造为读取受控配置，否则结果不可信**。
 - **尚未完成同一被测系统的 pytest + Locust + MatchEval 三引擎闭环**：
   当前三类资产分属两个被测系统（PrivaHigh 有功能 + 视觉、Colyseus 有联机脚本），
   PrivaHigh 缺「压测场景」这一环。
@@ -148,7 +152,7 @@ F:\Anaconda3\python.exe backend\run.py            # 默认 127.0.0.1:8000
 | 项 | 说明 |
 |---|---|
 | 运行历史入口 | 「最近执行记录」默认 8 条、可点「加载更多」逐批展开；无筛选。**没有报告的运行**（skipped/cancelled）只能在执行记录里看到 |
-| Locust 真实服务 | 见 §4；WS 地址改造与真实压测需单独授权 |
+| Locust 真实服务 | 真实执行链路**已验收**（§3）；WS 地址仍硬编码 `ws://localhost:2567`，容量 / 性能基准未做（见 §4） |
 | verify 脚本不随仓库发布 | 7 个 `verify*.py` 是**开发期自验收脚本，不在本仓库内**（依赖本机真实服务/资产，不宜作为产品交付物）：其中 `verify.py` / `verify_control.py` 假定 **:8000 已有服务**，`verify_locust.py` / `verify_matcheval.py` 假定**非 8000 端口的隔离实例**已运行，其余 3 个自包含 |
 | 环境依赖 | 平台默认解释器与真实项目根是本机路径，可通过环境变量覆盖（见下表） |
 | 解释器依赖缺口 | 无 `pytest-html`（跑 GameAutoTest-Pro 用例必须加 `-o addopts=`，预置选择器已带）；无 `pymongo`（其账号清理夹具会静默跳过） |
@@ -220,17 +224,40 @@ node _v0.3_baseline\fe_roundtrip_test.js                                # 前端
 > 它们依赖本机真实服务 / 真实资产 / 真实项目根，**按设计不随仓库发布**，
 > 因此上述命令在本仓库内不可直接执行（对应证据已归档在平台报告里，不在本仓库）。
 
-## 10. CI（GitHub Actions）
+## 10. CI（GitHub Actions）· **CI Phase 1 已完成**
 
 ```powershell
 # 与 CI 完全相同的本地命令
-F:\Anaconda3\python.exe -m pytest backend\tests -q -o addopts=   # L0：平台代码级测试
-F:\Anaconda3\python.exe _ci\l1_smoke.py                          # L1：真实启动 + Demo Plan 冒烟
+F:\Anaconda3\python.exe -m pytest backend\tests -q -o addopts=   # L0：平台代码级测试（94 passed）
+F:\Anaconda3\python.exe _ci\l1_smoke.py                          # L1：真实启动 + Demo Plan 冒烟（本机 42 passed）
 ```
 
-- 定义：`.github/workflows/platform-ci.yml`，**仅 `workflow_dispatch`**，
+**状态：CI Phase 1 已通过真实 GitHub Actions 执行验收。**
+
+| 项 | 值 |
+|---|---|
+| Run / commit | **#8** · **`caf85bf`** |
+| Runner | `lenovo-win11-dev` · Windows self-hosted |
+| 最终结论 | **Success**（L0 Job 8/8、L1 Job 9/9 步骤全绿） |
+| **L0** | `pytest backend/tests` → **94 passed / 0 failed** |
+| **L1（CI 实际）** | **36 passed / 0 failed** |
+| **L1（本机完整）** | **42 passed / 0 failed** |
+| 产物 | `l1-smoke-logs` 上传成功 |
+
+**L0（平台代码级测试）**：`pytest backend/tests` → 94 passed。
+
+**L1（平台真实启动 + Demo Plan 冒烟）**：Windows self-hosted runner → **动态端口** → **隔离临时数据库**
+→ 启动**真实 FastAPI** → `GET /health` → **Demo Plan** → **PlanRun** → **Job** → **Report**
+→ **清理进程** → **释放端口** → **清理临时目录**。
+
+- 定义：`.github/workflows/platform-ci.yml`，**仅 `workflow_dispatch`**（当前触发方式），
   `runs-on: [self-hosted, Windows]`（不使用 `ubuntu-22.04`），workflow 级 `concurrency` 串行化。
-- L0 = 平台代码级测试；L1 = 真实启动平台（**动态空闲端口 + 临时数据目录**）→ 执行自包含 Demo Plan
-  → 断言 PlanRun / Job / `report.json` / Report Center，并自证真实库与残留进程均未受影响。
 - 探测端点：`GET /health` → `{"status": "ok"}`（零副作用，仅表示 HTTP 服务已就绪）。
-- 详见 [`_ci/README.md`](_ci/README.md)（含 self-hosted runner 要求、隔离契约、环境变量）。
+- 隔离保证：L1 每次执行都自证**真实库 md5/mtime/文件数/`plan_runs` 计数未变**、无残留进程。详见 [`_ci/README.md`](_ci/README.md)。
+
+> ⚠️ **口径**：`data/` 被 `.gitignore` 排除，不进入 CI workspace → CI 中那 6 项"真实库不变"断言走 `[跳过]`，
+> 所以 **CI 的 L1 是 36 passed，本机完整跑是 42 passed**。两者口径不同但都对，**不可混写**。
+
+**为什么暂不把 PrivaHigh / Locust 加为 PR Gate**：真实 PrivaHigh pytest/MatchEval（L2）与 Locust 打 `:2567`（L3）
+**依赖真实游戏服务、真实资产与本地环境**（游戏客户端、`localhost:2567` 的 Colyseus 服务端、实机采集的视觉素材等），
+在 CI 上无法稳定复现，因此**不作为 CI 第一阶段自动门禁**——它们仍可在本机通过平台按需执行（验收证据见 §3）。
