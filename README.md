@@ -33,7 +33,7 @@
 |---|---|---|
 | **PrivaHigh**《私立高中校长》 | pytest + matcheval | Unity 6 客户端 + 自带 FastAPI 后端（随机端口，游戏启动时自动拉起）；后端 `tests/` 49 条；实机采集 5 场景 / 23 模板 |
 | **GameAutoTest-Pro** | pytest | 纯 API 冒烟测试；**需要被测服务端在跑**，否则诚实归档为 `failed` |
-| **Colyseus-Storm** | locust | Colyseus 联机压测脚本；**需要 `localhost:2567` 服务端** |
+| **Colyseus-Storm** | locust | Colyseus 联机压测脚本；**需要 Colyseus 服务端**（预设 `Environment` 指向 `localhost:2567`，HTTP 与 WebSocket 地址均随该配置，脚本内不再写死） |
 
 > ⚠️ **口径硬约束**：`PrivaHigh` 与 `ColyseusTechDemo-MMO` 是**两个不同的被测系统**，
 > 不得表述为「同一产品的真实三引擎验收」。两者各自建立独立计划；

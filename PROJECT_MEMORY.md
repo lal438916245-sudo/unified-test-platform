@@ -1,6 +1,6 @@
 # 统一游戏测试平台：项目记忆
 
-仓库名：**`unified-test-platform`**（分支 `main`）· 最后更新：2026-10-04
+仓库名：**`unified-test-platform`**（分支 `main`）· 最后更新：2026-10-08
 
 ## 已确认的产品边界
 
@@ -35,7 +35,7 @@
 - **该 3 条失败已修复**（仅改 `PrivaHigh\backend\tests\test_simulation.py`：改为按 `dismiss_teacher` 语义沿真实结算路径定位事件，不依赖事件 index / 池长度 / 特定 seed），本地实测 **49 passed / 0 failed / 0 errors / 0 skipped（1.62s）**。**尚未经平台链路留档**（平台侧最新记录仍是 #20 的 46 passed / 3 failed）。
 - **PlanRun #21**（单步 matcheval）：`success`，30s。`Job#26` 读取真实 PrivaHigh 资产（`template_count=23`、`scene_count=5`、CSV 690 行、热力图 23 张、产物 114 个），**TP=23 / FP=0 / FN=0 / TN=92，Precision=Recall=F1=1.00**，与旁路冻结基线零差异；`report.json` 通过 `validate_report()`，报告中心索引 `job_id=26`。
 - 历史不变性：`plan_runs#1–19` / `jobs#1–23` 与执行前备份**逐行一致**；真实资产未被修改。
-- **尚未做**：Locust 真实压测；同一被测系统的三引擎闭环；真实数据上的报告 A/B 对比。
+- **尚未做**：同一被测系统的三引擎闭环；真实数据上的报告 A/B 对比。（Locust 的**真实执行链路**已于 2026-10-01 验收，见下文「关键架构决策」。）
 
 ## 当前被测系统（3 个）
 
@@ -43,7 +43,7 @@
 |---|---|---|
 | PrivaHigh | pytest + matcheval | 两类真实链路均已跑通（见上） |
 | GameAutoTest-Pro | pytest | 需被测服务端；服务不可达时诚实归档为 `failed` |
-| Colyseus-Storm | locust | 需 `localhost:2567`；**尚未真实验收** |
+| Colyseus-Storm | locust | 需 Colyseus 服务端（预设 `Environment` 指向 `localhost:2567`，实际地址随配置）；真实**执行链路已验收**（`Job#29` / `#30`） |
 
 ## MVP 状态（2026-09-29 收尾盘点）
 
@@ -58,8 +58,15 @@
   - PrivaHigh 适合功能/UI 与视觉识别评估；
   - ColyseusTechDemo 适合现有 `Colyseus-Storm` Locust 压测。
   它们不得被表述为同一产品的真实三引擎验收。当前应分别建立真实计划，除非获得同一被测系统的三类资产。
-- `Colyseus-Storm/locustfile.py` 的 WebSocket 地址硬编码为 `ws://localhost:2567`；若真实服务不在本机 2567，必须在获得用户授权后改为读取受控环境配置，否则压测结果不可信。
-- 真实 Locust 压测仍缺：可达的 `:2567` 服务端、受控 WS 地址改造授权、保守并发授权。真实 MatchEval 数据集与 Airtest 目录已登记并实测通过（见上文真实验收进展）。
+- ✅ **`Colyseus-Storm/locustfile.py` 的 WebSocket 地址已改造完毕（2026-10-08）**：原先硬编码为
+  `ws://localhost:2567`，而 locust 的 `--host`（平台由 `Environment(host, port)` 注入）覆盖不到 WS 段 ——
+  服务端不在本机时会「REST 打对了、WS 连错地方」。现由 locust **实际生效的 host** 推导
+  （`http→ws` / `https→wss`，见脚本内新增的 `_ws_base()`），脚本不再需要读取环境变量，平台也无需新增配置项。
+  依据：locust `runners.py` 执行 `user_class.host = environment.host`，故 `self.host` 即受控配置值。
+  ⚠️ 该脚本位于**独立私有仓库** `Colyseus-Storm`（分支 `master`），**不由本仓库版本化**；
+  平台只在 `config_center.LOCUST_SCENARIOS` 登记其**路径**，因此「地址随配置走」取决于那份脚本的版本。
+- 真实 Locust 压测仍缺：可达的 Colyseus 服务端（`Environment` 指向即可）、保守并发授权。
+  真实 MatchEval 数据集与 Airtest 目录已登记并实测通过（见上文真实验收进展）。
 
 ## 使用原则
 
