@@ -7,16 +7,22 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 import subprocess
 import time
 from typing import Callable, Optional
 
-from .base import BaseRunner, RunnerResult, child_env, kill_proc_tree
+from .base import (BaseRunner, RunnerResult, child_env, drain_proc, reap_proc,
+                   shell_cmd)
 from ..config_center import LOCUST_SCENARIOS, resolve_asset_ref
 
 # 受白名单保护的 locustfile：Job 只能引用受控场景 key，不能填任意本地路径。
 # **唯一来源是登记层 config_center.LOCUST_SCENARIOS**：本文件不再持有第二份路径事实（避免双源漂移）。
 _SCENARIO_KEYS = tuple(LOCUST_SCENARIOS)   # 受控场景 key 列表；绝对路径由登记层解析
+
+# 并发参数上限（防御性；登记层 validate_step_params 已做前置校验并回 400）
+_USERS_MAX = 1000
+_RUN_TIME_RE = re.compile(r"^\d{1,6}[smh]?$")
 
 
 def _locustfile_path(key: str) -> str:
@@ -47,9 +53,22 @@ class LocustRunner(BaseRunner):
             return RunnerResult(status="failed", exit_code=-1,
                                 error=f"非白名单 locustfile 场景: {scen!r}")
         locustfile = _locustfile_path(scen)
-        users = max(1, int(params.get("users", 10)))
-        spawn_rate = max(1, int(params.get("spawn_rate", 2)))
-        run_time = str(params.get("run_time", "20s"))
+        try:
+            users = int(params.get("users", 10))
+            spawn_rate = int(params.get("spawn_rate", 2))
+        except (TypeError, ValueError):
+            return RunnerResult(status="failed", exit_code=-1,
+                                error="locust users/spawn_rate 必须是整数")
+        if not (1 <= users <= _USERS_MAX) or not (1 <= spawn_rate <= _USERS_MAX):
+            return RunnerResult(
+                status="failed", exit_code=-1,
+                error=f"locust users/spawn_rate 必须在 1..{_USERS_MAX} 之间"
+                      f"（当前 users={users}, spawn_rate={spawn_rate}）")
+        run_time = str(params.get("run_time", "20s")).strip()
+        if not _RUN_TIME_RE.match(run_time):
+            return RunnerResult(
+                status="failed", exit_code=-1,
+                error=f"locust run_time 格式非法：{run_time!r}（应为 <数字><s|m|h>，如 30s / 2m / 1h）")
         csv_full_history = bool(params.get("csv_full_history", True))
         python = executor["python_executable"]
         host = f"http://{env['host']}:{env['port']}"
@@ -66,7 +85,7 @@ class LocustRunner(BaseRunner):
                "--html", html_path, "--csv", csv_prefix]
         if csv_full_history:
             cmd.append("--csv-full-history")
-        log_sink(f"$ {_shell(cmd)}\n$ cwd={os.path.dirname(locustfile)}\n")
+        log_sink(f"$ {shell_cmd(cmd)}\n$ cwd={os.path.dirname(locustfile)}\n")
 
         proc = subprocess.Popen(
             cmd, cwd=os.path.dirname(locustfile), env=child_env(),
@@ -77,22 +96,11 @@ class LocustRunner(BaseRunner):
         if register_proc:
             register_proc(proc)
 
-        line = proc.stdout.readline()
-        while line:
-            if is_cancelled():
-                log_sink("\n[cancel] 收到取消请求，终止 locust 进程树\n")
-                kill_proc_tree(proc)
-                try:
-                    proc.wait(timeout=6)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    proc.wait(timeout=6)
-                log_sink("[cancel] locust 进程树已回收\n")
-                return RunnerResult(status="cancelled", exit_code=130,
-                                    error="cancelled by user")
-            log_sink(line)
-            line = proc.stdout.readline()
-        proc.wait()
+        outcome = drain_proc(proc, log_sink, is_cancelled,
+                             "\n[cancel] 收到取消请求，终止 locust 进程树\n")
+        if outcome == "cancelled":
+            return RunnerResult(status="cancelled", exit_code=130, error="cancelled by user")
+        reap_proc(proc)
         return self._finalize(proc.returncode, rdir, host, env)
 
     # ---------- 结果构建 ----------
@@ -108,12 +116,22 @@ class LocustRunner(BaseRunner):
         n_failures = sum(r["failures"] for r in per_request)
         requests = sum(r["requests"] for r in per_request)
 
+        # 时长：由 locust_stats_history.csv 的 Timestamp（epoch 秒）跨度推出。
+        # 此前硬编码 0，导致报告中心里 locust 的「耗时」恒为 0。
+        ts_nums: list[float] = []
+        for point in timeseries:
+            try:
+                ts_nums.append(float(point.get("ts")))
+            except (TypeError, ValueError):
+                continue
+        duration_ms = int((max(ts_nums) - min(ts_nums)) * 1000) if len(ts_nums) >= 2 else 0
+
         summary = {
             "requests": requests,
             "failures": n_failures,
             "failure_rate": round(n_failures / requests, 6) if requests else 1.0,
             "users": sum(r.get("users", 0) for r in timeseries[-1:]) if timeseries else 0,
-            "duration_ms": 0,
+            "duration_ms": duration_ms,
         }
         # 加权全局时延
         total_w = sum(r["requests"] for r in per_request) or 1
@@ -232,6 +250,3 @@ class LocustRunner(BaseRunner):
                              "size": os.path.getsize(path)})
         return arts
 
-
-def _shell(parts: list[str]) -> str:
-    return " ".join(f'"{p}"' if " " in p else p for p in parts)

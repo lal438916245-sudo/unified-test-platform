@@ -13,7 +13,8 @@ import shutil
 import subprocess
 from typing import Callable, Optional
 
-from .base import BaseRunner, RunnerResult, child_env as build_child_env, kill_proc_tree
+from .base import (BaseRunner, RunnerResult, child_env as build_child_env,
+                   drain_proc, reap_proc, shell_cmd)
 
 # __file__ 位于 platform/backend/app/executors/，上溯 3 级得 backend，再上溯 1 级得 platform，
 # 再上溯 1 级得工作区根（match_eval.py 所在目录）。
@@ -115,7 +116,7 @@ class MatchEvalRunner(BaseRunner):
                "--thresholds", ",".join(f"{t:g}" for t in _THRESHOLDS),
                "--algorithms", ",".join(algorithms),
                "--png"]
-        log_sink(f"$ {_shell(cmd)}\n$ cwd={rdir}\n")
+        log_sink(f"$ {shell_cmd(cmd)}\n$ cwd={rdir}\n")
 
         # 统一注入 PYTHONIOENCODING=utf-8（否则中文日志会乱码）+
         # 避免向只读的 Airtest 源码目录写 .pyc
@@ -130,20 +131,11 @@ class MatchEvalRunner(BaseRunner):
         if register_proc:
             register_proc(proc)
 
-        for line in proc.stdout:
-            if is_cancelled():
-                log_sink("\n[cancel] 收到取消请求，终止 match_eval 进程树\n")
-                kill_proc_tree(proc)
-                try:
-                    proc.wait(timeout=6)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    proc.wait(timeout=6)
-                log_sink("[cancel] match_eval 进程树已回收\n")
-                return RunnerResult(status="cancelled", exit_code=130,
-                                    error="cancelled by user")
-            log_sink(line)
-        proc.wait()
+        outcome = drain_proc(proc, log_sink, is_cancelled,
+                             "\n[cancel] 收到取消请求，终止 match_eval 进程树\n")
+        if outcome == "cancelled":
+            return RunnerResult(status="cancelled", exit_code=130, error="cancelled by user")
+        reap_proc(proc)
         return self._finalize(proc.returncode, rdir, csv_path, tpl_dir, scenes_dir,
                               dkey, ds, algorithms, focus_th, output_level)
 
@@ -302,7 +294,3 @@ class MatchEvalRunner(BaseRunner):
                 return list(csv.DictReader(f))
         except Exception:  # noqa: BLE001
             return []
-
-
-def _shell(parts: list[str]) -> str:
-    return " ".join(f'"{p}"' if " " in p else p for p in parts)

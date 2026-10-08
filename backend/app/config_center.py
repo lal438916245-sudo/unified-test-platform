@@ -1040,6 +1040,19 @@ _ARG_META_RE = re.compile(r"[;|&$`<>\\]")
 _DRIVE_RE = re.compile(r"^[A-Za-z]:")
 _EXE_RE = re.compile(r"\.exe\b", re.I)
 
+# pytest 的「不执行用例」开关：这些开关下 pytest 退出码为 0，但一个用例都不会跑。
+# 平台据 exit_code==0 判 success，若放行就等于「测试没跑却归档成功」——
+# 与平台「诚实归档」的立身之本冲突，故直接拒绝（与 pytest_runner 的 tests==0 兜底互为双保险）。
+_PYTEST_NO_RUN_FLAGS = {
+    "--collect-only", "--co", "--fixtures", "--fixtures-per-test",
+    "--setup-only", "--setup-plan", "--help", "-h", "--version", "-V",
+    "--markers", "--trace-config",
+}
+
+# locust 并发 / 时长约束（与 locust_runner 的防御性检查保持同一口径）
+_LOCUST_USERS_MAX = 1000
+_RUN_TIME_RE = re.compile(r"^\d{1,6}[smh]?$")
+
 
 def validate_step_params(engine: str, params: dict) -> list[str]:
     """校验 Plan 步骤参数：仅白名单键；拒绝任意命令、绝对路径、解释器与素材目录。"""
@@ -1060,6 +1073,11 @@ def validate_step_params(engine: str, params: dict) -> list[str]:
                 if (not s.strip() or _ABS_PATH_RE.match(s) or _DRIVE_RE.match(s)
                         or ".." in s or _ARG_META_RE.search(s) or _EXE_RE.search(s)):
                     errors.append(f"[pytest] args 仅允许相对测试选择器/开关：{s!r}")
+                    continue
+                if s.split("=", 1)[0].strip().lower() in _PYTEST_NO_RUN_FLAGS:
+                    errors.append(
+                        f"[pytest] 不允许「不执行用例」的开关：{s!r} —— 它会让 pytest "
+                        f"退出码为 0 但一个用例都不跑，平台无法据此判断测试是否真的通过")
         elif k == "threshold":
             try:
                 t = float(v)
@@ -1085,7 +1103,19 @@ def validate_step_params(engine: str, params: dict) -> list[str]:
         elif k == "output_level":
             if str(v) not in ("full", "summary"):
                 errors.append("output_level 只能是 full / summary")
-        elif k in ("users", "spawn_rate", "timeout_sec", "asset_source_id"):
+        elif k in ("users", "spawn_rate"):
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                errors.append(f"{k} 必须是整数")
+            else:
+                if not (1 <= n <= _LOCUST_USERS_MAX):
+                    errors.append(f"{k} 必须在 1..{_LOCUST_USERS_MAX} 之间（当前 {n}）")
+        elif k == "run_time":
+            s = str(v or "").strip()
+            if not _RUN_TIME_RE.match(s):
+                errors.append(f"run_time 格式非法：{s!r}（应为 <数字><s|m|h>，如 30s / 2m / 1h）")
+        elif k in ("timeout_sec", "asset_source_id"):
             try:
                 int(v)
             except (TypeError, ValueError):

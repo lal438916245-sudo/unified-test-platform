@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import os
+import queue
 import subprocess
+import threading
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
@@ -51,6 +54,102 @@ def child_env(*extra: dict) -> dict:
         if d:
             env.update(d)
     return env
+
+
+def shell_cmd(parts: list[str]) -> str:
+    """把命令列表渲染成一行可读文本（**只用于日志**，绝不用于执行）。"""
+    return " ".join(f'"{p}"' if " " in p else p for p in parts)
+
+
+def reap_proc(proc: subprocess.Popen, timeout: float = 6.0) -> None:
+    """有界回收子进程：先 wait(timeout)，超时才 kill 再 wait。**绝不无限等待**。"""
+    if proc is None:
+        return
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            proc.kill()
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            proc.wait(timeout=timeout)
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def _close_stdout(proc: subprocess.Popen) -> None:
+    """尽力关闭本端读句柄，让后台读线程摆脱阻塞。
+
+    ⚠️ 必须**异步**执行：若读线程正阻塞在 readline（管道写端被孤儿孙进程持有），
+    直接 ``proc.stdout.close()`` 会等读线程释放锁而**同样卡住**（实测可卡到孤儿退出为止，
+    那就白改了）。因此把它丢进守护线程，主流程绝不为它等待。
+    """
+    def _do() -> None:
+        try:
+            if proc.stdout:
+                proc.stdout.close()
+        except Exception:  # noqa: BLE001
+            pass
+
+    threading.Thread(target=_do, daemon=True).start()
+
+
+def drain_proc(proc: subprocess.Popen, log_sink: Callable[[str], None],
+               is_cancelled: Callable[[], bool], cancel_note: str,
+               eof_grace: float = 5.0, poll: float = 0.3) -> str:
+    """把子进程输出逐行喂给 log_sink，直到 EOF。返回 ``'eof' | 'cancelled' | 'stalled'``。
+
+    为什么不能简单写 ``while line: readline()``：
+      Windows 上 ``taskkill /T /F`` 之后，若有**脱离进程树的孙进程**仍继承着 stdout 管道的写端，
+      ``readline()`` 就永远等不到 EOF —— 整个编排线程会**永久卡死在这个 Job**，
+      后续 Job 全部不执行（README 里「Job#24 约 69s 退出延迟、根因未确证」高度吻合此模式）。
+      所以把「读」放到后台线程，主循环只做三件事：转发日志、响应取消、识别"孤儿管道"。
+
+    约定：
+      · 返回 ``'eof'``       → 正常读完，调用方 reap 后按产物归档；
+      · 返回 ``'cancelled'`` → 收到取消请求，进程树已强杀，调用方应直接归 cancelled；
+      · 返回 ``'stalled'``   → **进程已退出**但管道迟迟没有 EOF（孤儿持有写端）；
+                              此时不再等，调用方仍可按**已落盘的产物**归档（数据是完整的）。
+    """
+    q: "queue.Queue" = queue.Queue()
+
+    def _reader() -> None:
+        try:
+            for line in proc.stdout:
+                q.put(line)
+        except Exception:  # noqa: BLE001 —— 强杀进程时管道读取会抛，属预期
+            pass
+        finally:
+            q.put(None)                      # EOF 哨兵
+
+    threading.Thread(target=_reader, daemon=True).start()
+
+    exited_at: Optional[float] = None
+    while True:
+        try:
+            item = q.get(timeout=poll)
+        except queue.Empty:
+            item = ""                        # 超时：仅用于做取消/存活检查，不是数据
+        if item is None:
+            return "eof"
+        if item:
+            log_sink(item)
+        if is_cancelled():
+            log_sink(cancel_note)
+            kill_proc_tree(proc)
+            _close_stdout(proc)
+            reap_proc(proc)
+            return "cancelled"
+        if proc.poll() is not None:
+            if exited_at is None:
+                exited_at = time.monotonic()
+            elif time.monotonic() - exited_at > eof_grace:
+                log_sink("\n[warn] 子进程已退出但输出管道未收到 EOF（疑似孤儿孙进程仍持有写端），"
+                         "已跳过等待并按已落盘产物归档。\n")
+                kill_proc_tree(proc)
+                _close_stdout(proc)
+                return "stalled"
 
 
 

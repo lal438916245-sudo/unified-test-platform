@@ -4,9 +4,10 @@ from __future__ import annotations
 import os
 import subprocess
 import xml.etree.ElementTree as ET
-from typing import Callable
+from typing import Callable, Optional
 
-from .base import BaseRunner, RunnerResult, child_env, kill_proc_tree
+from .base import (BaseRunner, RunnerResult, child_env, drain_proc, reap_proc,
+                   shell_cmd)
 
 
 class PytestRunner(BaseRunner):
@@ -19,7 +20,7 @@ class PytestRunner(BaseRunner):
         args = params.get("args") or ["demo/test_platform_demo.py", "-o", "addopts=", "--tb=short"]
 
         cmd = [python, "-m", "pytest", *args, "--junitxml=" + junit_path]
-        log_sink(f"$ {_shell(cmd)}\n$ cwd={cwd}\n")
+        log_sink(f"$ {shell_cmd(cmd)}\n$ cwd={cwd}\n")
 
         proc = subprocess.Popen(
             cmd, cwd=cwd, env=child_env(),
@@ -30,35 +31,31 @@ class PytestRunner(BaseRunner):
         if register_proc:
             register_proc(proc)
 
-        line = proc.stdout.readline()
-        while line:
-            if is_cancelled():
-                log_sink("\n[cancel] 收到取消请求，终止子进程树\n")
-                kill_proc_tree(proc)
-                try:
-                    proc.wait(timeout=6)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    proc.wait(timeout=6)
-                return RunnerResult(status="cancelled", exit_code=130,
-                                    error="cancelled by user")
-            log_sink(line)
-            line = proc.stdout.readline()
-
-        proc.wait()
-
-        exit_code = proc.returncode
-        return self._finalize(exit_code, junit_path)
+        outcome = drain_proc(proc, log_sink, is_cancelled,
+                             "\n[cancel] 收到取消请求，终止 pytest 进程树\n")
+        if outcome == "cancelled":
+            return RunnerResult(status="cancelled", exit_code=130, error="cancelled by user")
+        reap_proc(proc)
+        return self._finalize(proc.returncode, junit_path)
 
 
     def _finalize(self, exit_code: int, junit_path: str) -> RunnerResult:
         summary = {"tests": 0, "passed": 0, "failed": 0, "errors": 0, "skipped": 0,
                    "duration_ms": 0}
         status = "success" if exit_code == 0 else "failed"
+        err: Optional[str] = None
         try:
             summary = self._parse_junit(junit_path)
         except Exception as e:  # noqa: BLE001 —— 报告解析失败不能中断流程
             summary["_parse_error"] = str(e)
+
+        # 诚实归档兜底：退出码 0 但**一个用例都没执行**（如 --collect-only / --fixtures /
+        # --help），绝不能判 success —— 那等于「测试没跑却归档成功」，是平台立身之本的反面。
+        # 注意：正常"零用例"时 pytest 退出码是 5，不是 0，所以这里不会误伤。
+        if status == "success" and int(summary.get("tests") or 0) == 0:
+            status = "failed"
+            err = ("pytest 退出码 0 但未执行任何用例（tests==0）；"
+                   "疑似传入 --collect-only / --fixtures / --help 等不执行用例的开关")
 
         metrics = {
             "tests": summary["tests"],
@@ -71,7 +68,8 @@ class PytestRunner(BaseRunner):
         return RunnerResult(status=status, exit_code=exit_code, summary=summary,
                             metrics=metrics, artifacts=artifacts,
                             engine_data={"exit_code": exit_code},
-                            engine_data_schema="pytest/1.0")
+                            engine_data_schema="pytest/1.0",
+                            error=err)
 
 
     def _junit_artifact(self, junit_path: str) -> list[dict]:
@@ -105,7 +103,3 @@ class PytestRunner(BaseRunner):
             summary["duration_ms"] += int(time_s * 1000)
         summary["passed"] = max(0, summary["tests"] - summary["failed"] - summary["errors"] - summary["skipped"])
         return summary
-
-
-def _shell(parts: list[str]) -> str:
-    return " ".join(f'"{p}"' if " " in p else p for p in parts)
