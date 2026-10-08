@@ -135,9 +135,12 @@ F:\Anaconda3\python.exe backend\run.py            # 默认 127.0.0.1:8000
   **Colyseus-Storm 真实服务**，每次 **6 局 complete games**、**0 个 `WinError 10053`**、**0 个 Locust failures**）。
   但请严格区分口径：该验收**只验证** `Locust → WebSocket → Colyseus 游戏服务 → 游戏完成 → 测试结果回传`
   这条**真实执行链路**是否打通，**不作为容量压测结论，也不作为性能基准（benchmark）**。
-- **Locust WS 地址仍需改造**：`Colyseus-Storm/locustfile.py` 第 84 行的 WebSocket 地址**硬编码**为
-  `ws://localhost:2567`（平台的 `--host` 覆盖不到 WS 段，脚本也不读任何环境变量）→
-  **若真实服务不在本机 2567，必须先授权改造为读取受控配置，否则结果不可信**。
+- ✅ **Locust WS 地址已改为随受控配置推导**（2026-10-08）：此前 `Colyseus-Storm/locustfile.py` 把 WS 地址
+  写死为 `ws://localhost:2567` —— REST 走 `--host`、WS 却不走，服务端不在本机时会出现
+  「REST 打对了、WS 连错地方」。现由 locust **实际生效的 host** 推导：
+  `Environment(host, port)` → `--host` → `ws://`（`https` 则 `wss://`），脚本不再读环境变量、平台无需新增配置项。
+  ⚠️ **仍存的边界**：该脚本位于**独立仓库** `Colyseus-Storm`、**不由本仓库版本化**；
+  平台只在 `config_center.LOCUST_SCENARIOS` 登记其**路径**，故「地址随配置走」取决于那份脚本的版本。
 - **尚未完成同一被测系统的 pytest + Locust + MatchEval 三引擎闭环**：
   当前三类资产分属两个被测系统（PrivaHigh 有功能 + 视觉、Colyseus 有联机脚本），
   PrivaHigh 缺「压测场景」这一环。
@@ -152,7 +155,7 @@ F:\Anaconda3\python.exe backend\run.py            # 默认 127.0.0.1:8000
 | 项 | 说明 |
 |---|---|
 | 运行历史入口 | 「最近执行记录」默认 8 条、可点「加载更多」逐批展开；无筛选。**没有报告的运行**（skipped/cancelled）只能在执行记录里看到 |
-| Locust 真实服务 | 真实执行链路**已验收**（§3）；WS 地址仍硬编码 `ws://localhost:2567`，容量 / 性能基准未做（见 §4） |
+| Locust 真实服务 | 真实执行链路**已验收**（§3）；WS 地址已改为随受控 host 推导（不再是硬编码，见 §4）；容量 / 性能基准未做 |
 | verify 脚本不随仓库发布 | 7 个 `verify*.py` 是**开发期自验收脚本，不在本仓库内**（依赖本机真实服务/资产，不宜作为产品交付物）：其中 `verify.py` / `verify_control.py` 假定 **:8000 已有服务**，`verify_locust.py` / `verify_matcheval.py` 假定**非 8000 端口的隔离实例**已运行，其余 3 个自包含 |
 | 环境依赖 | 平台默认解释器与真实项目根是本机路径，可通过环境变量覆盖（见下表） |
 | 解释器依赖缺口 | 无 `pytest-html`（跑 GameAutoTest-Pro 用例必须加 `-o addopts=`，预置选择器已带）；无 `pymongo`（其账号清理夹具会静默跳过） |

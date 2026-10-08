@@ -143,7 +143,7 @@ AIRTEXT_DIRS: dict[str, dict] = {
 LOCUST_SCENARIOS: dict[str, dict] = {
     "http-fixture": {"label": "平台自身 API（隔离 fixture）",
                      "path": os.path.join(_BACKEND, "demo", "locust_http_probe.py")},
-    "colyseus-bot": {"label": "Colyseus-Storm 联机底稿（需 localhost:2567）",
+    "colyseus-bot": {"label": "Colyseus-Storm 联机压测（WS 地址随 Environment 的 host:port 推导）",
                      "path": os.path.join(_WORKSPACE, "Colyseus-Storm", "locustfile.py")},
 }
 
