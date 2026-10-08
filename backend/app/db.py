@@ -7,7 +7,7 @@ import threading
 import time
 from typing import Any, Optional
 
-from .domain import Plan, STATUS_QUEUED
+from .domain import Plan, RUN_TERMINAL, STATUS_QUEUED
 
 _LOCK = threading.Lock()
 
@@ -16,8 +16,24 @@ def _now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%S")
 
 
+class _ClosingConnection(sqlite3.Connection):
+    """让 `with get_conn(...)` **既管事务、也管关闭连接**。
+
+    sqlite3 的 Connection 上下文管理器只提交/回滚事务，**不会 close()**；
+    于是连接只能靠引用计数回收，在 Windows 上句柄释放滞后会锁住库文件
+    （测试里不得不写 `_rmtree_retry` 规避）。这里在 `__exit__` 里补一次 close，
+    语义与 `contextlib.closing()` 等价，但**无需改动 50 余处既有调用点**。
+    """
+
+    def __exit__(self, exc_type, exc, tb):  # type: ignore[override]
+        try:
+            return super().__exit__(exc_type, exc, tb)
+        finally:
+            self.close()
+
+
 def get_conn(db_path: str) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, factory=_ClosingConnection)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -851,9 +867,19 @@ def has_running_job(db_path: str) -> bool:
 
 
 def any_non_terminal_run(db_path: str) -> bool:
+    """是否存在未到终态的 PlanRun。
+
+    ⚠️ 终态集合以 `domain.RUN_TERMINAL` 为**唯一来源**，不要手写枚举：
+    此前这里写的是 ('success','failed','cancelled')，**漏了 timedout / partial** →
+    历史上一旦出现过超时或部分成功的运行，预检里的 `concurrency.run_in_progress`
+    就恒为 true（README §5 记录的"预检因历史 timedout 误报"的根因即此）。
+    """
+    terminal = sorted(RUN_TERMINAL)
+    placeholders = ",".join("?" * len(terminal))
     with _LOCK, get_conn(db_path) as c:
         r = c.execute(
-            "SELECT id FROM plan_runs WHERE status NOT IN ('success','failed','cancelled') LIMIT 1"
+            f"SELECT id FROM plan_runs WHERE status NOT IN ({placeholders}) LIMIT 1",
+            tuple(terminal),
         ).fetchone()
         return r is not None
 
