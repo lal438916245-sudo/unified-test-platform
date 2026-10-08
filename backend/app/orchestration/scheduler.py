@@ -12,7 +12,7 @@ from .. import db
 from ..config_center import (build_config_snapshot, resolve_runtime_env,
                              resolve_runtime_executor, snapshot_env_view)
 from ..domain import (TERMINAL, STATUS_CANCELLING, STATUS_CANCELLED, STATUS_TIMEDOUT,
-                      aggregate_run_status, latest_attempt_statuses)
+                      STATUS_FAILED, aggregate_run_status, latest_attempt_statuses)
 from ..executors import get_runner
 from ..executors.base import RunnerResult, kill_proc_tree
 from ..schemas import build_report, validate_report, write_report
@@ -179,10 +179,11 @@ class Orchestrator(threading.Thread):
                 self._proc = proc
 
         started = time.monotonic()
-        self._job_id = job_id
-        self._job_started = started
-        self._job_timeout = float(job.get("timeout_sec", 300))
-        self._timedout = False
+        with self._lock:            # 与看门狗线程共享的状态一律在锁内写入（此前部分在锁外）
+            self._job_id = job_id
+            self._job_started = started
+            self._job_timeout = float(job.get("timeout_sec", 300))
+            self._timedout = False
 
         try:
             pre_errors = self._config_errors(job, executor)
@@ -204,17 +205,17 @@ class Orchestrator(threading.Thread):
                 self._job_id = None
                 self._cancel_pending.discard(job_id)
 
-        # 终态裁决：超时 / 取消 / Runner异常 三者互斥区分。
-        #   看门狗超时置 _timedout => timedout；请求取消置 cancelling => cancelled；
-        #   其余按 Runner 结果（failed / success）；Runner 异常由上面归为 failed。
-        if self._timedout:
-            status = STATUS_TIMEDOUT
-            result.error = result.error or "run hit timeout (watchdog)"
-        elif db.get_job(self.db_path, job_id).get("status") == STATUS_CANCELLING:
-            status = STATUS_CANCELLED
-            result.error = result.error or "cancelled by user"
-        else:
-            status = result.status if result.status in TERMINAL else "failed"
+        # 终态裁决：**用户显式取消优先**，其次看门狗超时，最后按 Runner 结果。
+        #   顺序不能反：看门狗到点就置 _timedout，若同时用户已请求取消，
+        #   先判 _timedout 会把"用户主动取消"记成 timedout（意图被吞掉）。
+        job_status_now = db.get_job(self.db_path, job_id).get("status")
+        with self._lock:
+            hit_timeout = self._timedout
+        status = decide_terminal_status(job_status_now, hit_timeout, result.status)
+        if status == STATUS_CANCELLED and not result.error:
+            result.error = "cancelled by user"
+        elif status == STATUS_TIMEDOUT and not result.error:
+            result.error = "run hit timeout (watchdog)"
 
         db.set_job_terminal(self.db_path, job_id, status, result.exit_code, result.error)
 
@@ -318,7 +319,10 @@ class Orchestrator(threading.Thread):
                     kill_proc_tree(proc)
                 except Exception:  # noqa: BLE001
                     pass
-                self._timedout = True
+                with self._lock:
+                    # 已请求取消的，不把终态翻成 timedout —— 用户意图优先（见上方裁决顺序）
+                    if job_id not in self._cancel_pending:
+                        self._timedout = True
             time.sleep(POLL)
 
     # ---------- 日志 ----------
@@ -330,6 +334,20 @@ class Orchestrator(threading.Thread):
                 with open(job["log_path"], "r", encoding="utf-8", errors="replace") as f:
                     lines = f.readlines()
         return lines[-tail:]
+
+
+def decide_terminal_status(job_status_now: str, hit_timeout: bool, runner_status: str) -> str:
+    """Job 终态裁决（抽成纯函数，便于回归）。
+    优先级：**用户显式取消 > 看门狗超时 > Runner 结果**。
+
+    ⚠️ 顺序不可颠倒：看门狗到点即置 ``_timedout``，若用户同时也请求了取消，
+    先判超时就会把"用户主动取消"记成 ``timedout`` —— 用户意图被吞掉。
+    """
+    if job_status_now == STATUS_CANCELLING:
+        return STATUS_CANCELLED
+    if hit_timeout:
+        return STATUS_TIMEDOUT
+    return runner_status if runner_status in TERMINAL else STATUS_FAILED
 
 
 def now_ts() -> str:
