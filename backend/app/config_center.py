@@ -2,15 +2,18 @@
 数据集/资产目录与目标服务地址，收敛为平台内受控、可校验、可版本化引用的配置实体。
 
 安全原则（与规格冻结约束一致）：
-- 前端与 Plan 只提交 ID/key，绝不提交任意命令、路径、Python 可执行文件或素材目录；
-  所有路径类输入一律是"服务端受控目录"里的 key。
+- 用例与 Plan 只提交登记后的 ID/key，不接受任意命令、路径或可执行文件；
+  本机项目配置接口允许登记路径，测试入口和资产路径必须处于登记项目范围内。
 - 只保存环境变量名或外部 secret reference，不保存明文密钥；
   对 secret reference 只校验"可用/不可用"，绝不返回值。
-- 一切对外响应（API / 日志 / report.json / report_index / 比较元数据）必须脱敏：
-  不返回明文绝对路径、Token、账号或密码。
+- 执行快照 / 报告 / 日志脱敏；本机配置编辑接口展示用户登记的路径。
+  不返回 Token、账号或密码。
 
 本模块只做只读派生、受控解析与输入校验，不改写任何引擎算法逻辑。
+改地址找 Environment（界面即可）；换项目目录 / 脚本找 Executor 的 cwd_root 和 AssetSource 的 scenario/dataset ref；
+新项目通过本机“项目与测试入口”登记；内置映射保留为兼容默认值。
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -19,32 +22,45 @@ import os
 import re
 import socket
 import subprocess
-import time
+import sys
+from datetime import datetime, timezone
 from typing import Any, Optional
 
+from . import machine_paths, project_registry as registry
+from .ui_config import (
+    UI_SUITES,
+    device_catalog,
+    device_fingerprint,
+    pytest_ui_errors,
+    ui_precheck,
+    validate_ui_params,
+)
+
 # ---------- 基础路径（与既有 preset / runner 对齐，避免重复定义） ----------
-_BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # backend
-_ROOT = os.path.dirname(_BACKEND)                                        # platform
-_WORKSPACE = os.path.dirname(_ROOT)                                      # 测试平台（工作区根）
+_BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # backend
+_ROOT = os.path.dirname(_BACKEND)  # platform
+_WORKSPACE = os.path.dirname(_ROOT)  # 测试平台（工作区根）
 
 LOCUST_VENV_PY = os.path.join(_ROOT, ".venv-locust", "Scripts", "python.exe")
-TRAE_PY = os.path.join(os.environ.get("APPDATA", ""), "TRAE SOLO CN", "ModularData",
-                       "ai-agent", "vm", "tools", "python", "python.exe")
+TRAE_PY = ""  # Legacy reference remains configurable; no vendor-specific user directory.
 # ---- 环境相关常量：集中在此，且允许用环境变量覆盖（换机器 / 隔离实例时不必改代码）----
-DEFAULT_PYTHON = os.environ.get("PLATFORM_DEFAULT_PYTHON") or r"F:\Anaconda3\python.exe"
+DEFAULT_PYTHON = os.environ.get("PLATFORM_DEFAULT_PYTHON") or sys.executable
 
 GAME_PROJ = os.path.join(_WORKSPACE, "GameAutoTest-Pro")
 
-# 真实 SDET 项目根：PrivaHigh 游戏工程与 Airtest 源码所在（本机固定路径，与 DEFAULT_PYTHON 同风格）。
-# 仅用作受控目录根的解析基准；绝不返回前端，也不落日志 / 快照。
-SDET_PROJ = os.environ.get("PLATFORM_SDET_PROJ") or r"F:\Colyseus_SDET_Project"
+# 旧环境变量只作无数据库上下文时的兼容默认；实际安装由 machine_paths 绑定。
+SDET_PROJ = os.environ.get("PLATFORM_SDET_PROJ") or ""
 # 已采集并实测验证的真实 PrivaHigh 素材（5 场景 / 23 模板，阈值 0.8 起 P=R=F1=1.00）
 PRIVAHIGH_ASSETS = os.path.join(_WORKSPACE, "real_assets", "privahigh")
 
 # 弃用环境变量登记（过渡兼容层：仍读取，但标注弃用并提示迁移到配置实体）
-_DEPRECATED_ENV = ("PLATFORM_PYTHON", "PLATFORM_LOCUST_PYTHON",
-                   "PLATFORM_MATCHEVAL_PYTHON", "PLATFORM_MATCHEVAL_SCRIPT",
-                   "PLATFORM_AIRTEXT_DIR")
+_DEPRECATED_ENV = (
+    "PLATFORM_PYTHON",
+    "PLATFORM_LOCUST_PYTHON",
+    "PLATFORM_MATCHEVAL_PYTHON",
+    "PLATFORM_MATCHEVAL_SCRIPT",
+    "PLATFORM_AIRTEXT_DIR",
+)
 _seen_deprecated: set[str] = set()
 
 
@@ -81,37 +97,55 @@ def _json_list(v) -> list:
 
 # ---------- 受控目录：key -> 解析（仅服务端使用，绝不返回前端） ----------
 INTERPRETER_PROFILES: dict[str, dict] = {
+    "airtest-venv": {"label": "UI 隔离 Python", "deps": {"airtest": ["pytest", "airtest", "poco"]}},
     "anaconda": {"label": "Anaconda 主解释器", "deps": {"pytest": ["pytest"]}},
     "locust-venv": {"label": "Locust 隔离 venv", "deps": {"locust": ["locust"]}},
-    "matcheval": {"label": "MatchEval 解释器（cv2/numpy）",
-                  "deps": {"matcheval": ["cv2", "numpy"]}},
+    "matcheval": {
+        "label": "MatchEval 解释器（cv2/numpy）",
+        "deps": {"matcheval": ["cv2", "numpy"]},
+    },
     "trae-py": {"label": "内置工具 Python", "deps": {}},
 }
 
 WORKDIR_ROOTS: dict[str, dict] = {
+    "ui-smoke": {"label": "UI 冒烟（仅 airtest）", "path": os.path.join(_BACKEND, "demo", "ui")},
     "backend-demo": {"label": "平台 demo（backend）", "path": _BACKEND},
     "platform": {"label": "平台根目录", "path": _ROOT},
     "gameautotest": {"label": "GameAutoTest-Pro（需服务端）", "path": GAME_PROJ},
-    "privahigh-backend": {"label": "PrivaHigh 后端（功能评估）",
-                          "path": os.path.join(SDET_PROJ, "PrivaHigh", "backend")},
+    "privahigh-backend": {
+        "label": "PrivaHigh 后端（功能评估）",
+        "path": os.path.join(SDET_PROJ, "PrivaHigh", "backend") if SDET_PROJ else "",
+    },
 }
 
 # 底层素材目录（key -> 绝对路径）。Job/Plan 只能引用 key，不能提交任意目录。
 TPL_DIRS: dict[str, dict] = {
-    "matcheval-fixture-tpl": {"label": "隔离 fixture 模板",
-                              "path": os.path.join(_BACKEND, "demo", "matcheval_fixture", "tpl")},
-    "matcheval-empty-tpl": {"label": "空模板（失败归档验证）",
-                            "path": os.path.join(_BACKEND, "demo", "matcheval_fixture", "empty", "tpl")},
-    "privahigh-real-tpl": {"label": "PrivaHigh 真实模板小图（23 张，1920×1080 采集）",
-                           "path": os.path.join(PRIVAHIGH_ASSETS, "tpl")},
+    "matcheval-fixture-tpl": {
+        "label": "隔离 fixture 模板",
+        "path": os.path.join(_BACKEND, "demo", "matcheval_fixture", "tpl"),
+    },
+    "matcheval-empty-tpl": {
+        "label": "空模板（失败归档验证）",
+        "path": os.path.join(_BACKEND, "demo", "matcheval_fixture", "empty", "tpl"),
+    },
+    "privahigh-real-tpl": {
+        "label": "PrivaHigh 真实模板小图（23 张，1920×1080 采集）",
+        "path": os.path.join(PRIVAHIGH_ASSETS, "tpl"),
+    },
 }
 SCENES_DIRS: dict[str, dict] = {
-    "matcheval-fixture-scenes": {"label": "隔离 fixture 场景",
-                                 "path": os.path.join(_BACKEND, "demo", "matcheval_fixture", "scenes")},
-    "matcheval-empty-scenes": {"label": "空场景（失败归档验证）",
-                               "path": os.path.join(_BACKEND, "demo", "matcheval_fixture", "empty", "scenes")},
-    "privahigh-real-scenes": {"label": "PrivaHigh 真实整屏截图（5 张，1920×1080 采集）",
-                              "path": os.path.join(PRIVAHIGH_ASSETS, "scenes")},
+    "matcheval-fixture-scenes": {
+        "label": "隔离 fixture 场景",
+        "path": os.path.join(_BACKEND, "demo", "matcheval_fixture", "scenes"),
+    },
+    "matcheval-empty-scenes": {
+        "label": "空场景（失败归档验证）",
+        "path": os.path.join(_BACKEND, "demo", "matcheval_fixture", "empty", "scenes"),
+    },
+    "privahigh-real-scenes": {
+        "label": "PrivaHigh 真实整屏截图（5 张，1920×1080 采集）",
+        "path": os.path.join(PRIVAHIGH_ASSETS, "scenes"),
+    },
 }
 GROUND_TRUTH_REFS: dict[str, dict] = {
     "fixture-filename": {"label": "文件名约定真值（tpl_{id}_{scene}.png）"},
@@ -119,56 +153,85 @@ GROUND_TRUTH_REFS: dict[str, dict] = {
 }
 # 受控 dataset：与 matcheval_runner 的白名单一致（key -> 底层目录 key + 真值约定）。
 DATASET_REFS: dict[str, dict] = {
-    "fixture-small": {"label": "隔离合成 fixture（小样本）",
-                      "tpl_dir": "matcheval-fixture-tpl",
-                      "scenes_dir": "matcheval-fixture-scenes",
-                      "ground_truth": "fixture-filename"},
-    "fixture-empty": {"label": "空素材（失败归档验证）",
-                      "tpl_dir": "matcheval-empty-tpl",
-                      "scenes_dir": "matcheval-empty-scenes",
-                      "ground_truth": "none"},
-    "privahigh-real": {"label": "PrivaHigh 真实游戏素材（5 场景 / 23 模板）",
-                       "tpl_dir": "privahigh-real-tpl",
-                       "scenes_dir": "privahigh-real-scenes",
-                       "ground_truth": "fixture-filename"},
+    "fixture-small": {
+        "label": "隔离合成 fixture（小样本）",
+        "tpl_dir": "matcheval-fixture-tpl",
+        "scenes_dir": "matcheval-fixture-scenes",
+        "ground_truth": "fixture-filename",
+    },
+    "fixture-empty": {
+        "label": "空素材（失败归档验证）",
+        "tpl_dir": "matcheval-empty-tpl",
+        "scenes_dir": "matcheval-empty-scenes",
+        "ground_truth": "none",
+    },
+    "privahigh-real": {
+        "label": "PrivaHigh 真实游戏素材（5 场景 / 23 模板）",
+        "tpl_dir": "privahigh-real-tpl",
+        "scenes_dir": "privahigh-real-scenes",
+        "ground_truth": "fixture-filename",
+    },
 }
 # Airtest 资产目录：真实目录须由用户录入后经配置/环境变量登记，MVP 不擅自指向真实资产。
 # 默认基准指向真实 SDET 项目根下的 Airtest 源码（= match_eval.py 内置 AIRTEST_SRC 的同一目录）。
 AIRTEXT_DIRS: dict[str, dict] = {
-    "airtest-master": {"label": "Airtest-master（真实源码目录）",
-                       "path": _env_legacy("PLATFORM_AIRTEXT_DIR")
-                       or os.path.join(SDET_PROJ, "Airtest-master")},
+    "airtest-master": {
+        "label": "Airtest-master（真实源码目录）",
+        "path": _env_legacy("PLATFORM_AIRTEXT_DIR")
+        or (os.path.join(SDET_PROJ, "Airtest-master") if SDET_PROJ else ""),
+    },
 }
 # Locust 场景：与 locust_runner 白名单一致（key 引用，不落绝对路径）。
 LOCUST_SCENARIOS: dict[str, dict] = {
-    "http-fixture": {"label": "平台自身 API（隔离 fixture）",
-                     "path": os.path.join(_BACKEND, "demo", "locust_http_probe.py")},
-    "colyseus-bot": {"label": "Colyseus-Storm 联机压测（WS 地址随 Environment 的 host:port 推导）",
-                     "path": os.path.join(_WORKSPACE, "Colyseus-Storm", "locustfile.py")},
+    "http-fixture": {
+        "label": "平台自身 API（隔离 fixture）",
+        "path": os.path.join(_BACKEND, "demo", "locust_http_probe.py"),
+    },
+    "colyseus-bot": {
+        "label": "Colyseus-Storm 联机压测（WS 地址随 Environment 的 host:port 推导）",
+        "path": os.path.join(_WORKSPACE, "Colyseus-Storm", "locustfile.py"),
+    },
 }
 
-ENGINES = ("pytest", "locust", "matcheval")
+# Dynamic references are scoped to the request / scheduler database; built-ins stay intact.
+INTERPRETER_PROFILES = registry.RegisteredMap(INTERPRETER_PROFILES, "interpreters")
+WORKDIR_ROOTS = registry.RegisteredMap(WORKDIR_ROOTS, "workdirs")
+TPL_DIRS = registry.RegisteredMap(TPL_DIRS, "templates")
+SCENES_DIRS = registry.RegisteredMap(SCENES_DIRS, "scenes")
+DATASET_REFS = registry.RegisteredMap(DATASET_REFS, "datasets")
+LOCUST_SCENARIOS = registry.RegisteredMap(LOCUST_SCENARIOS, "locust")
+AIRTEXT_DIRS = registry.RegisteredMap(AIRTEXT_DIRS, "airtest_dirs")
+
+ENGINES = ("pytest", "locust", "matcheval", "airtest")
 ENV_KINDS = ("http", "colyseus", "offline")
 ENV_PROTOCOLS = ("http", "https")
 SECRET_KINDS = ("env_var", "external_ref")
-ASSET_KINDS = ("matcheval", "locust")
+ASSET_KINDS = ("matcheval", "locust", "airtest")
 
 # 引擎 -> 关键依赖模块（预检用）
 _ENGINE_DEPS: dict[str, list[str]] = {
+    "airtest": ["pytest", "airtest", "poco"],
     "pytest": ["pytest"],
     "locust": ["locust"],
     "matcheval": ["cv2", "numpy"],
 }
 
 
-def public_catalog() -> dict:
+@registry.scoped
+def public_catalog(db_path=None) -> dict:
     """对外目录：只暴露 key + label，绝不暴露任何绝对路径或密钥。"""
+
     def keys(d: dict) -> list[dict]:
         return [{"key": k, "label": v.get("label", k)} for k, v in d.items()]
 
+    from .runtime_requirements import MODULES, catalog
+
     return {
+        "runtime_requirements": catalog(db_path),
+        "runtime_modules": list(MODULES),
         "interpreters": keys(INTERPRETER_PROFILES),
         "workdir_roots": keys(WORKDIR_ROOTS),
+        "pytest_entries": [{"key": k, **v} for k, v in registry.catalog("pytest").items()],
         "engines": list(ENGINES),
         "env_kinds": list(ENV_KINDS),
         "env_protocols": list(ENV_PROTOCOLS),
@@ -181,11 +244,14 @@ def public_catalog() -> dict:
             "ground_truths": keys(GROUND_TRUTH_REFS),
             "airtest_dirs": keys(AIRTEXT_DIRS),
             "locust_scenarios": keys(LOCUST_SCENARIOS),
+            "ui_suites": keys(UI_SUITES),
+            "ui_devices": device_catalog(db_path),
+            "ui_cases": {k: v["cases"] for k, v in UI_SUITES.items()},
         },
         "deprecated_env": {
             "names": list(_DEPRECATED_ENV),
             "seen": deprecation_notices(),
-            "note": "以上环境变量为过渡兼容层，已弃用；请迁移为 Environment/Executor/AssetSource 配置实体。",
+            "note": "以上环境变量为过渡兼容层；本机路径配置一旦保存即优先，请在项目与测试入口页面维护。",
         },
     }
 
@@ -195,8 +261,9 @@ def _can_import(py: str, mods: list[str], timeout: float = 10.0) -> bool:
     if not mods:
         return True
     try:
-        p = subprocess.run([py, "-c", f"import {', '.join(mods)}"],
-                           capture_output=True, timeout=timeout)
+        p = subprocess.run(
+            [py, "-c", f"import {', '.join(mods)}"], capture_output=True, timeout=timeout
+        )
         return p.returncode == 0
     except Exception:  # noqa: BLE001
         return False
@@ -210,8 +277,7 @@ def _resolve_matcheval_python() -> str:
     若无候选满足，仍返回首个存在者，交由预检给出可行动提示（不掩盖配置缺失）。"""
     if "v" in _MATCHEVAL_PY_CACHE:
         return _MATCHEVAL_PY_CACHE["v"]
-    cands = [_env_legacy("PLATFORM_MATCHEVAL_PYTHON"), DEFAULT_PYTHON,
-             LOCUST_VENV_PY, TRAE_PY]
+    cands = [_env_legacy("PLATFORM_MATCHEVAL_PYTHON"), DEFAULT_PYTHON, LOCUST_VENV_PY, TRAE_PY]
     existing = [c for c in cands if c and os.path.exists(c)]
     chosen = next((c for c in existing if _can_import(c, ["cv2", "numpy"])), "")
     _MATCHEVAL_PY_CACHE["v"] = chosen or (existing[0] if existing else "")
@@ -221,11 +287,24 @@ def _resolve_matcheval_python() -> str:
 def resolve_interpreter(ref: str) -> str:
     """受控解释器引用 -> 绝对路径。ref 非法/不可用返回 ''。"""
     ref = (ref or "").strip()
+    if "python." + ref in machine_paths.DEFINITIONS:
+        bound = machine_paths.resolve("python." + ref, None)
+        if bound is not None:
+            return bound if bound and os.path.isfile(bound) else ""
+    if ref.startswith("runtime-"):
+        p = INTERPRETER_PROFILES.get(ref, {}).get("path", "")
+        return p if p and os.path.isfile(p) else ""
+    if ref == "airtest-venv":
+        p = os.environ.get("PLATFORM_UI_PYTHON") or os.path.join(
+            _ROOT, ".venv-ui", "Scripts", "python.exe"
+        )
+        return p if os.path.isfile(p) else ""
     if ref == "anaconda":
         return _env_legacy("PLATFORM_PYTHON") or DEFAULT_PYTHON
     if ref == "locust-venv":
         return _env_legacy("PLATFORM_LOCUST_PYTHON") or (
-            LOCUST_VENV_PY if os.path.exists(LOCUST_VENV_PY) else "")
+            LOCUST_VENV_PY if os.path.exists(LOCUST_VENV_PY) else ""
+        )
     if ref == "matcheval":
         return _resolve_matcheval_python()
     if ref == "trae-py":
@@ -235,9 +314,10 @@ def resolve_interpreter(ref: str) -> str:
 
 def resolve_executor_python(executor: dict) -> str:
     """执行机解释器：优先受控引用；旧记录（迁移前直接存绝对路径）回退到 legacy 列。"""
-    p = resolve_interpreter(executor.get("python_ref") or "")
-    if p:
-        return p
+    ref = executor.get("python_ref") or ""
+    p = resolve_interpreter(ref)
+    if ref:
+        return p  # Explicit unavailable/cleared bindings must never fall back to an old path.
     legacy = str(executor.get("python_executable") or "")
     return legacy if legacy and os.path.exists(legacy) else ""
 
@@ -246,9 +326,24 @@ def resolve_workdir(root_key: str) -> str:
     return (WORKDIR_ROOTS.get(root_key or "") or {}).get("path", "")
 
 
+def resolve_pytest_workdir(params: dict, executor: dict) -> str:
+    if params.get("cwd_root"):
+        return resolve_workdir(params["cwd_root"])
+    if params.get("cwd"):
+        return resolve_workdir(params["cwd"]) or params["cwd"]  # Historical materialized jobs.
+    if executor.get("cwd_root"):
+        return resolve_workdir(executor["cwd_root"])
+    return executor.get("cwd") or _BACKEND
+
+
 def resolve_asset_ref(kind: str, ref: str) -> str:
-    table = {"tpl_dir": TPL_DIRS, "scenes_dir": SCENES_DIRS, "ground_truth": GROUND_TRUTH_REFS,
-             "airtest_dir": AIRTEXT_DIRS, "locust_scenario": LOCUST_SCENARIOS}.get(kind, {})
+    table = {
+        "tpl_dir": TPL_DIRS,
+        "scenes_dir": SCENES_DIRS,
+        "ground_truth": GROUND_TRUTH_REFS,
+        "airtest_dir": AIRTEXT_DIRS,
+        "locust_scenario": LOCUST_SCENARIOS,
+    }.get(kind, {})
     return (table.get(ref or "") or {}).get("path", "")
 
 
@@ -261,6 +356,21 @@ def resolve_dataset(dataset_ref: str) -> dict:
         "tpl_dir": resolve_asset_ref("tpl_dir", d.get("tpl_dir")),
         "scenes_dir": resolve_asset_ref("scenes_dir", d.get("scenes_dir")),
         "ground_truth": d.get("ground_truth"),
+        **({"script": d["script"]} if d.get("script") else {}),
+        **(
+            {
+                "script": machine_paths.resolve(
+                    "script.matcheval",
+                    os.environ.get("PLATFORM_MATCHEVAL_SCRIPT")
+                    or os.path.join(_WORKSPACE, "match_eval.py"),
+                ),
+                "airtest_source": resolve_asset_ref("airtest_dir", "airtest-master"),
+            }
+            if not str(dataset_ref).startswith("entry-")
+            else {"airtest_source": d.get("airtest_source", "")}
+        ),
+        "note": ("网页登记的项目数据集 · " if str(dataset_ref).startswith("entry-") else "")
+        + d.get("label", dataset_ref),
     }
 
 
@@ -268,7 +378,8 @@ def resolve_runtime_executor(executor: dict) -> dict:
     """把执行机配置解析为运行时可用视图（含明文路径，仅限后端内部使用，绝不外泄）。"""
     x = dict(executor or {})
     x["python_executable"] = resolve_executor_python(executor or {})
-    x["cwd"] = resolve_workdir((executor or {}).get("cwd_root") or "") or (executor or {}).get("cwd") or ""
+    root = (executor or {}).get("cwd_root")
+    x["cwd"] = resolve_workdir(root) if root else (executor or {}).get("cwd") or ""
     x["allowed_runners"] = _json_list((executor or {}).get("allowed_runners")) or list(ENGINES)
     return x
 
@@ -319,9 +430,10 @@ def mask_executor(executor: dict) -> dict:
     resolved = resolve_executor_python(executor)
     d["python_masked"] = mask_path(resolved)
     d["python_available"] = bool(resolved)
-    d["python_executable"] = ""          # 绝不外泄明文路径
-    d["cwd_masked"] = mask_path(resolve_workdir(executor.get("cwd_root") or "")
-                                or executor.get("cwd") or "")
+    d["python_executable"] = ""  # 绝不外泄明文路径
+    d["cwd_masked"] = mask_path(
+        resolve_workdir(executor.get("cwd_root") or "") or executor.get("cwd") or ""
+    )
     d["cwd"] = ""
     d["allowed_runners"] = _json_list(executor.get("allowed_runners")) or list(ENGINES)
     return d
@@ -330,16 +442,25 @@ def mask_executor(executor: dict) -> dict:
 def mask_environment(env: dict) -> dict:
     """环境对外视图：只暴露 secret 引用名与可用性，绝不返回值。"""
     d = dict(env)
+    # labels 在库中是 **JSON 文本**（`labels TEXT DEFAULT '[]'`，由 db._json_col 写入），
+    # 读出来是字符串而非 list —— 必须在这里归一化后外发，否则前端那句
+    # `(e.labels||[]).join(',')` 会对字符串调 join 抛 TypeError，
+    # 而 renderEnv 是整页一个 try，结果整页「资源与环境」变成「加载配置失败」。
+    # 与 mask_executor 处理 allowed_runners 完全同款（唯一归一化点 = 脱敏层）。
+    d["labels"] = _json_list(env.get("labels"))
     st = secret_status(env.get("secret_ref") or "", env.get("secret_kind") or "")
-    d["secret_ref"] = env.get("secret_ref") or ""     # 引用名本身可展示（非密钥值）
+    d["secret_ref"] = env.get("secret_ref") or ""  # 引用名本身可展示（非密钥值）
     d["secret_available"] = st["available"]
     d["secret_detail"] = st["detail"]
     return d
 
 
 _ASSET_REF_KEYS = {
-    "dataset_ref": "dataset", "tpl_ref": "tpl_dir", "scenes_ref": "scenes_dir",
-    "ground_truth_ref": "ground_truth", "airtest_ref": "airtest_dir",
+    "dataset_ref": "dataset",
+    "tpl_ref": "tpl_dir",
+    "scenes_ref": "scenes_dir",
+    "ground_truth_ref": "ground_truth",
+    "airtest_ref": "airtest_dir",
     "scenario_ref": "locust_scenario",
 }
 
@@ -363,31 +484,55 @@ def secret_status(secret_ref: str, secret_kind: str) -> dict:
         return {"configured": False, "available": False, "detail": "未配置 secret 引用"}
     if secret_kind == "env_var":
         ok = bool(os.environ.get(ref))
-        return {"configured": True, "available": ok,
-                "detail": f"环境变量 {ref} " + ("已设置（可用）" if ok else "未设置（不可用）")}
+        return {
+            "configured": True,
+            "available": ok,
+            "detail": f"环境变量 {ref} " + ("已设置（可用）" if ok else "未设置（不可用）"),
+        }
     if secret_kind == "external_ref":
-        return {"configured": True, "available": None,
-                "detail": f"外部 secret 引用 {ref} 已登记，由部署侧解析（平台不持有其值）"}
+        return {
+            "configured": True,
+            "available": None,
+            "detail": f"外部 secret 引用 {ref} 已登记，由部署侧解析（平台不持有其值）",
+        }
     return {"configured": True, "available": False, "detail": "未知 secret 类型"}
 
 
 # ---------- 指纹（非敏感） ----------
 def environment_fingerprint(env: dict) -> str:
-    return _h("env", env.get("name"), env.get("kind"), env.get("protocol"),
-              env.get("host"), env.get("port"))
+    return _h(
+        "env",
+        env.get("name"),
+        env.get("kind"),
+        env.get("protocol"),
+        env.get("host"),
+        env.get("port"),
+    )
 
 
 def executor_fingerprint(executor: dict) -> str:
-    return _h("exec", executor.get("name"), executor.get("python_ref"),
-              executor.get("cwd_root"), _json_list(executor.get("allowed_runners")))
+    return _h(
+        "exec",
+        executor.get("name"),
+        executor.get("python_ref"),
+        executor.get("cwd_root"),
+        _json_list(executor.get("allowed_runners")),
+    )
 
 
 def asset_fingerprint(kind: str, src: dict) -> str:
     """资产指纹：仅对受控 key 组合取哈希（不含绝对路径）。"""
-    if kind == "locust":
-        return _h("asset", "locust", src.get("scenario_ref"))
-    return _h("asset", "matcheval", src.get("dataset_ref"), src.get("tpl_ref"),
-              src.get("scenes_ref"), src.get("ground_truth_ref"), src.get("airtest_ref"))
+    if kind in ("airtest", "locust"):
+        return _h("asset", kind, src.get("scenario_ref"))
+    return _h(
+        "asset",
+        "matcheval",
+        src.get("dataset_ref"),
+        src.get("tpl_ref"),
+        src.get("scenes_ref"),
+        src.get("ground_truth_ref"),
+        src.get("airtest_ref"),
+    )
 
 
 def path_basename_only(p: str) -> str:
@@ -425,8 +570,9 @@ CONTENT_DIR_LIMIT = 4000
 _CONTENT_FP_CACHE: dict[str, dict] = {}
 
 
-def test_case_fingerprint(name: str, engine: str, params, requires_exclusive=False,
-                          asset_kind: str = "") -> str:
+def test_case_fingerprint(
+    name: str, engine: str, params, requires_exclusive=False, asset_kind: str = ""
+) -> str:
     """TestCase **定义指纹**：表示"这个测试定义本身是什么"。
 
     参与：name / engine / params（规范序 JSON）/ requires_exclusive / asset_kind
@@ -436,16 +582,21 @@ def test_case_fingerprint(name: str, engine: str, params, requires_exclusive=Fal
     复用项目统一的 _h()（sha256 截断 12 位），不另造哈希规则。
     注意：**不把 revision 拼进指纹** —— 二者职责不同（revision 是版本号，指纹是内容标识）。
     """
-    return _h("case", name, engine,
-              json.dumps(params or {}, sort_keys=True, ensure_ascii=False),
-              int(bool(requires_exclusive)), asset_kind or "")
+    return _h(
+        "case",
+        name,
+        engine,
+        json.dumps(params or {}, sort_keys=True, ensure_ascii=False),
+        int(bool(requires_exclusive)),
+        asset_kind or "",
+    )
 
 
 def suite_fingerprint(name: str, cases: list) -> str:
     """TestSuite **定义指纹**：表示"这个**有序**用例集合是什么"。
 
     参与：name / cases（有序的 {id, revision, fingerprint} 列表）。
-      ⚠️ **顺序参与指纹** —— 故对整个 list 直接 json.dumps（sort_keys 只规范元素内键序、
+       **顺序参与指纹** —— 故对整个 list 直接 json.dumps（sort_keys 只规范元素内键序、
          不重排列表本身）。顺序变化会改变执行语义，因此必须改变指纹。
     不参与：id / description / tags / enabled / owner / revision / created_at / updated_at
       —— 与 test_case_fingerprint 完全一致的理由：改描述、标签、启停、负责人或 revision
@@ -455,8 +606,9 @@ def suite_fingerprint(name: str, cases: list) -> str:
     规范化只有那一份实现）。本函数刻意不再做一次"投影"，以免出现两份等价实现而悄悄漂移；
     唯一生产调用方（router）在提交前先规范化。复用项目统一的 _h()，不另造哈希规则。
     """
-    return _h("suite", name or "",
-              json.dumps(list(cases or []), sort_keys=True, ensure_ascii=False))
+    return _h(
+        "suite", name or "", json.dumps(list(cases or []), sort_keys=True, ensure_ascii=False)
+    )
 
 
 def file_content_fingerprint(path: str) -> dict:
@@ -467,10 +619,12 @@ def file_content_fingerprint(path: str) -> dict:
         size = os.path.getsize(path)
         with open(path, "rb") as f:
             data = f.read(MAX_CONTENT_FILE_BYTES)
-        return {"exists": True,
-                "fp": _h("file", path_basename_only(path), size,
-                         hashlib.sha256(data).hexdigest()),
-                "bytes": len(data), "partial": size > MAX_CONTENT_FILE_BYTES}
+        return {
+            "exists": True,
+            "fp": _h("file", path_basename_only(path), size, hashlib.sha256(data).hexdigest()),
+            "bytes": len(data),
+            "partial": size > MAX_CONTENT_FILE_BYTES,
+        }
     except OSError:
         return {"exists": False, "fp": "", "bytes": 0, "partial": False}
 
@@ -494,18 +648,26 @@ def dir_content_fingerprint(path: str) -> dict:
                 if os.path.isfile(full):
                     size = os.path.getsize(full)
                     if size > MAX_CONTENT_FILE_BYTES:
-                        entries.append(f"{name}:{size}:big"); partial = True
+                        entries.append(f"{name}:{size}:big")
+                        partial = True
                     else:
                         with open(full, "rb") as f:
-                            entries.append(f"{name}:{size}:{hashlib.sha256(f.read()).hexdigest()[:16]}")
+                            entries.append(
+                                f"{name}:{size}:{hashlib.sha256(f.read()).hexdigest()[:16]}"
+                            )
                 else:
                     entries.append(f"{name}:d")
             except OSError:
-                entries.append(f"{name}:?"); partial = True
+                entries.append(f"{name}:?")
+                partial = True
     except OSError:
         return {"exists": False, "fp": "", "files": 0, "partial": False}
-    return {"exists": True, "fp": _h(path_basename_only(path), *entries),
-            "files": len(entries), "partial": partial}
+    return {
+        "exists": True,
+        "fp": _h(path_basename_only(path), *entries),
+        "files": len(entries),
+        "partial": partial,
+    }
 
 
 def _dir_signature(path: str) -> str:
@@ -533,7 +695,8 @@ def _cached_content(key: str, builder) -> dict:
     return val
 
 
-def build_content_fingerprint(engine: str, params: dict) -> dict:
+@registry.scoped
+def build_content_fingerprint(engine: str, params: dict, db_path=None, device=None) -> dict:
     """本次执行实际面对的"受控脚本 / 素材内容"指纹（**不是** TestCase 定义的一部分）。
 
     v0.2 冻结范围：
@@ -549,14 +712,50 @@ def build_content_fingerprint(engine: str, params: dict) -> dict:
     out: dict = {"engine": engine, "sources": {}, "fingerprint": ""}
     parts: list = ["content", engine]
     try:
-        if engine == "locust":
+        if engine == "airtest":
+            suite = UI_SUITES.get(p.get("suite"), {})
+            root = suite.get("root", "")
+            # Include Python fixtures/helpers and templates; exclude runtime output.
+            from pathlib import Path
+
+            entries = []
+            for f in sorted(Path(root).rglob("*")) if root else []:
+                if (
+                    f.is_file()
+                    and f.suffix.lower() in (".py", ".png", ".jpg", ".json")
+                    and not any(
+                        x in f.parts
+                        for x in ("reports", "__pycache__", ".git", ".venv", ".pytest_cache")
+                    )
+                ):
+                    entries.append(
+                        (f.relative_to(root).as_posix(), file_content_fingerprint(str(f)))
+                    )
+            info = {
+                "key": p.get("suite"),
+                "fp": _h(json.dumps(entries, sort_keys=True)),
+                "files": len(entries),
+            }
+            out["sources"]["ui_suite"] = info
+            device_fp = device_fingerprint(p.get("device"), db_path, device)
+            out["sources"]["ui_device"] = {"key": p.get("device"), "fp": device_fp}
+            parts += [info["fp"], device_fp]
+            from .runtime_requirements import mongo_environment_fingerprint, resolve_requirement
+
+            req = resolve_requirement(p, db_path)
+            out["sources"]["runtime_requirements"] = {"key": req["key"], "fp": req["fingerprint"]}
+            parts.append(req["fingerprint"])
+            if req["mongo_ref"]:
+                parts.append(mongo_environment_fingerprint())
+        elif engine == "locust":
             key = str(p.get("locustfile") or "")
             if key:
                 path = LOCUST_SCENARIOS.get(key, {}).get("path", "")
                 if path and os.path.isfile(path):
                     sig = f"{os.path.getsize(path)}:{os.path.getmtime(path)}"
-                    info = _cached_content(f"file:{path}:{sig}",
-                                           lambda: file_content_fingerprint(path))
+                    info = _cached_content(
+                        f"file:{path}:{sig}", lambda: file_content_fingerprint(path)
+                    )
                 else:
                     info = {"exists": False, "fp": "", "bytes": 0, "partial": False}
                 out["sources"]["locust_script"] = {"key": key, **info}
@@ -564,12 +763,17 @@ def build_content_fingerprint(engine: str, params: dict) -> dict:
         elif engine == "matcheval":
             key = str(p.get("dataset") or "")
             ds = resolve_dataset(key) if key else {}
+            if ds.get("script"):
+                script_info = file_content_fingerprint(ds["script"])
+                out["sources"]["evaluation_script"] = script_info
+                parts.append(script_info["fp"])
             for label, fld in (("tpl_dir", "tpl_dir"), ("scenes_dir", "scenes_dir")):
                 path = ds.get(fld) or ""
                 if path and os.path.isdir(path):
                     sig = _dir_signature(path)
-                    info = _cached_content(f"dir:{path}:{sig}",
-                                           lambda path=path: dir_content_fingerprint(path))
+                    info = _cached_content(
+                        f"dir:{path}:{sig}", lambda path=path: dir_content_fingerprint(path)
+                    )
                 else:
                     info = {"exists": False, "fp": "", "files": 0, "partial": False}
                 out["sources"][label] = {"key": key, **info}
@@ -577,6 +781,10 @@ def build_content_fingerprint(engine: str, params: dict) -> dict:
     except Exception as e:  # noqa: BLE001
         # 内容指纹失败绝不影响执行：如实标记，不伪造
         out["error"] = f"{type(e).__name__}: {e}"
+    bindings = registry.snapshot(p, {})
+    if bindings:
+        out["sources"]["registration"] = bindings
+        parts.append(json.dumps(bindings, sort_keys=True))
     out["fingerprint"] = _h(*parts)
     return out
 
@@ -597,7 +805,9 @@ def _reject_pathlike(field: str, value: str, errors: list[str]) -> None:
 def validate_environment_input(data: dict, partial: bool = False) -> list[str]:
     """校验 Environment 输入。partial=True 时（编辑）只校验出现的字段。"""
     errors: list[str] = []
-    def has(k): return (k in data) or not partial
+
+    def has(k):
+        return (k in data) or not partial
 
     if has("name") and not str(data.get("name") or "").strip():
         errors.append("name 必填")
@@ -645,7 +855,9 @@ def validate_environment_input(data: dict, partial: bool = False) -> list[str]:
 
 def validate_executor_input(data: dict, partial: bool = False) -> list[str]:
     errors: list[str] = []
-    def has(k): return (k in data) or not partial
+
+    def has(k):
+        return (k in data) or not partial
 
     if has("name") and not str(data.get("name") or "").strip():
         errors.append("name 必填")
@@ -673,13 +885,18 @@ def validate_executor_input(data: dict, partial: bool = False) -> list[str]:
 
 def validate_asset_input(data: dict, partial: bool = False) -> list[str]:
     errors: list[str] = []
-    def has(k): return (k in data) or not partial
+
+    def has(k):
+        return (k in data) or not partial
 
     if has("name") and not str(data.get("name") or "").strip():
         errors.append("name 必填")
     kind = str(data.get("kind") or "")
     if has("kind") and kind not in ASSET_KINDS:
         errors.append(f"kind 必须是 {list(ASSET_KINDS)} 之一")
+    if kind == "airtest" and has("scenario_ref"):
+        if data.get("scenario_ref") not in UI_SUITES:
+            errors.append("airtest scenario_ref 必须是受控 UI 套件")
     if kind == "locust" or (not kind and not partial):
         if has("scenario_ref"):
             ref = str(data.get("scenario_ref") or "")
@@ -711,13 +928,17 @@ def _check(name: str, ok: Optional[bool], detail: str = "") -> dict:
     return {"name": name, "ok": ok, "detail": detail}
 
 
-def _result(entity: str, ident: dict, checks: list[dict],
-            missing: list[str], next_steps: list[str]) -> dict:
+def _result(
+    entity: str, ident: dict, checks: list[dict], missing: list[str], next_steps: list[str]
+) -> dict:
     real = [c for c in checks if c["ok"] is not None]
     return {
-        "entity": entity, **ident,
+        "entity": entity,
+        **ident,
         "ok": all(c["ok"] for c in real) if real else None,
-        "checks": checks, "missing": missing, "next_steps": next_steps,
+        "checks": checks,
+        "missing": missing,
+        "next_steps": next_steps,
     }
 
 
@@ -729,17 +950,27 @@ def precheck_environment(env: dict, timeout: float = 2.0) -> dict:
     ident = {"id": env.get("id"), "name": env.get("name")}
     if kind == "offline":
         # offline 环境无运行时依赖可探测：预检为"不适用"（ok=None），绝不做任何连接尝试
-        return {"entity": "environment", **ident, "ok": None,
-                "checks": [_check("连通性", None, "offline 环境：离线评估，无需连通性检查")],
-                "missing": [], "next_steps": []}
+        return {
+            "entity": "environment",
+            **ident,
+            "ok": None,
+            "checks": [_check("连通性", None, "offline 环境：离线评估，无需连通性检查")],
+            "missing": [],
+            "next_steps": [],
+        }
 
     checks = [_check("类型受控", kind in ENV_KINDS, f"kind={kind}")]
-    checks.append(_check("地址已配置", bool(host and port),
-                         f"{host}:{port}" if host and port else "缺 host/port"))
+    checks.append(
+        _check(
+            "地址已配置", bool(host and port), f"{host}:{port}" if host and port else "缺 host/port"
+        )
+    )
     if host and port:
         try:
             with socket.create_connection((host, port), timeout=timeout):
-                checks.append(_check("TCP 连通性", True, f"{host}:{port} 可连接（仅探测，未发业务报文）"))
+                checks.append(
+                    _check("TCP 连通性", True, f"{host}:{port} 可连接（仅探测，未发业务报文）")
+                )
         except Exception as e:  # noqa: BLE001
             checks.append(_check("TCP 连通性", False, f"{host}:{port} 不可达：{type(e).__name__}"))
     st = secret_status(env.get("secret_ref") or "", env.get("secret_kind") or "")
@@ -757,8 +988,14 @@ def precheck_environment(env: dict, timeout: float = 2.0) -> dict:
 
 def _run_py(py: str, args: list[str], timeout: float = 6.0) -> tuple[int, str]:
     try:
-        p = subprocess.run([py, *args], capture_output=True, text=True, timeout=timeout,
-                           encoding="utf-8", errors="replace")
+        p = subprocess.run(
+            [py, *args],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            encoding="utf-8",
+            errors="replace",
+        )
         return p.returncode, (p.stdout or p.stderr or "").strip()
     except Exception as e:  # noqa: BLE001
         return -1, f"{type(e).__name__}"
@@ -772,8 +1009,15 @@ def precheck_executor(executor: dict, timeout: float = 6.0) -> dict:
     checks = [_check("解释器引用受控", bool(ref) or bool(py), f"ref={ref or '(legacy 路径)'}")]
     if not py:
         checks.append(_check("解释器存在", False, "未解析到可用解释器（引用不可用或文件不存在）"))
-        return _result("executor", ident, checks, ["解释器存在"],
-                       ["在 Executor 中选择一个可用的受控解释器引用（如 anaconda / locust-venv / matcheval）。"])
+        return _result(
+            "executor",
+            ident,
+            checks,
+            ["解释器存在"],
+            [
+                "在 Executor 中选择一个可用的受控解释器引用（如 anaconda / locust-venv / matcheval）。"
+            ],
+        )
     checks.append(_check("解释器存在", os.path.exists(py), f"{mask_path(py)} 存在"))
     rc, ver = _run_py(py, ["--version"], timeout)
     checks.append(_check("版本可读", rc == 0, ver or "无法读取版本"))
@@ -784,15 +1028,33 @@ def precheck_executor(executor: dict, timeout: float = 6.0) -> dict:
         if not mods:
             continue
         rc2, out = _run_py(py, ["-c", f"import {', '.join(mods)}"], timeout)
-        checks.append(_check(f"{eng} 依赖可用", rc2 == 0,
-                             "、".join(mods) + (" 可导入" if rc2 == 0 else f" 不可用：{out[:120]}")))
+        checks.append(
+            _check(
+                f"{eng} 依赖可用",
+                rc2 == 0,
+                "、".join(mods) + (" 可导入" if rc2 == 0 else f" 不可用：{out[:120]}"),
+            )
+        )
 
+    modules = INTERPRETER_PROFILES.get(ref, {}).get("modules", [])
+    if modules:
+        code = "import importlib; [importlib.import_module(m) for m in " + json.dumps(modules) + "]"
+        rc3, _ = _run_py(py, ["-c", code], timeout)
+        checks.append(
+            _check(
+                "运行环境补充依赖",
+                rc3 == 0,
+                "、".join(modules) + (" 可导入" if rc3 == 0 else " 不可导入"),
+            )
+        )
     missing = [c["name"] for c in checks if c["ok"] is False]
     steps = []
     if "版本可读" in missing:
         steps.append("解释器无法执行，请检查该引用指向的 Python 是否可用。")
     if any("依赖可用" in m for m in missing):
-        steps.append("为对应 Runner 安装缺失依赖（如 locust / opencv-python + numpy），或改用已装好依赖的解释器引用。")
+        steps.append(
+            "为对应 Runner 安装缺失依赖（如 locust / opencv-python + numpy），或改用已装好依赖的解释器引用。"
+        )
     return _result("executor", ident, checks, missing, steps)
 
 
@@ -801,12 +1063,35 @@ def precheck_asset_source(src: dict) -> dict:
     ident = {"id": src.get("id"), "name": src.get("name")}
     kind = src.get("kind") or "matcheval"
     checks = [_check("类型受控", kind in ASSET_KINDS, f"kind={kind}")]
+    if kind == "airtest":
+        suite = UI_SUITES.get(src.get("scenario_ref"), {})
+        checks.append(_check("UI 套件引用受控", bool(suite)))
+        checks.append(
+            _check(
+                "UI 用例文件存在",
+                bool(suite)
+                and all(os.path.isfile(os.path.join(suite["root"], c)) for c in suite["cases"]),
+            )
+        )
+        missing = [c["name"] for c in checks if c["ok"] is False]
+        out = _result(
+            "asset_source", ident, checks, missing, ["登记并部署 UI 套件"] if missing else []
+        )
+        out["fingerprint"] = asset_fingerprint("airtest", src)
+        return out
     if kind == "locust":
         ref = src.get("scenario_ref") or ""
         p = resolve_asset_ref("locust_scenario", ref)
-        checks.append(_check("场景引用受控", ref in LOCUST_SCENARIOS, f"scenario_ref={ref or '(空)'}"))
-        checks.append(_check("场景文件存在", bool(p) and os.path.isfile(p),
-                             f"{mask_path(p)} " + ("存在" if p and os.path.isfile(p) else "缺失")))
+        checks.append(
+            _check("场景引用受控", ref in LOCUST_SCENARIOS, f"scenario_ref={ref or '(空)'}")
+        )
+        checks.append(
+            _check(
+                "场景文件存在",
+                bool(p) and os.path.isfile(p),
+                f"{mask_path(p)} " + ("存在" if p and os.path.isfile(p) else "缺失"),
+            )
+        )
         missing = [c["name"] for c in checks if c["ok"] is False]
         steps = ["选择受控 Locust 场景引用；真实场景文件须由用户录入后再启用。"] if missing else []
         out = _result("asset_source", ident, checks, missing, steps)
@@ -818,29 +1103,90 @@ def precheck_asset_source(src: dict) -> dict:
         ds = resolve_dataset(ds_ref)
         tpl, scenes = ds.get("tpl_dir", ""), ds.get("scenes_dir", "")
         checks.append(_check("dataset 引用受控", ds_ref in DATASET_REFS, f"dataset_ref={ds_ref}"))
-        checks.append(_check("真值约定可用", bool(ds.get("ground_truth")),
-                             f"ground_truth={ds.get('ground_truth') or '(缺)'}"))
+        checks.append(
+            _check(
+                "真值约定可用",
+                bool(ds.get("ground_truth")),
+                f"ground_truth={ds.get('ground_truth') or '(缺)'}",
+            )
+        )
     else:
         tpl_ref = src.get("tpl_ref") or ""
         sc_ref = src.get("scenes_ref") or ""
         tpl = resolve_asset_ref("tpl_dir", tpl_ref)
         scenes = resolve_asset_ref("scenes_dir", sc_ref)
         checks.append(_check("模板引用受控", tpl_ref in TPL_DIRS, f"tpl_ref={tpl_ref or '(空)'}"))
-        checks.append(_check("场景引用受控", sc_ref in SCENES_DIRS, f"scenes_ref={sc_ref or '(空)'}"))
+        checks.append(
+            _check("场景引用受控", sc_ref in SCENES_DIRS, f"scenes_ref={sc_ref or '(空)'}")
+        )
 
-    checks.append(_check("模板目录存在", bool(tpl) and os.path.isdir(tpl),
-                         f"{mask_path(tpl)} " + ("存在" if tpl and os.path.isdir(tpl) else "缺失")))
-    checks.append(_check("场景目录存在", bool(scenes) and os.path.isdir(scenes),
-                         f"{mask_path(scenes)} " + ("存在" if scenes and os.path.isdir(scenes) else "缺失")))
+    checks.append(
+        _check(
+            "模板目录存在",
+            bool(tpl) and os.path.isdir(tpl),
+            f"{mask_path(tpl)} " + ("存在" if tpl and os.path.isdir(tpl) else "缺失"),
+        )
+    )
+    checks.append(
+        _check(
+            "场景目录存在",
+            bool(scenes) and os.path.isdir(scenes),
+            f"{mask_path(scenes)} " + ("存在" if scenes and os.path.isdir(scenes) else "缺失"),
+        )
+    )
+    if ds_ref:
+        checks.append(
+            _check(
+                "评估脚本存在",
+                bool(ds.get("script")) and os.path.isfile(ds["script"]),
+                "在项目入口或本机路径配置中指定兼容 match_eval 的脚本",
+            )
+        )
+        source = ds.get("airtest_source")
+        if source:
+            checks.append(
+                _check(
+                    "Airtest 源码结构",
+                    os.path.isfile(os.path.join(source, "airtest", "__init__.py")),
+                    "已配置源码根；运行时优先使用该包",
+                )
+            )
+    if ds_ref.startswith("entry-"):
+        from pathlib import Path
+
+        for label, directory in (("模板图片已就位", tpl), ("场景图片已就位", scenes)):
+            present = (
+                bool(directory)
+                and any(
+                    p.is_file() and p.suffix.lower() in (".png", ".jpg", ".jpeg", ".bmp")
+                    for p in Path(directory).iterdir()
+                )
+                if directory and os.path.isdir(directory)
+                else False
+            )
+            checks.append(
+                _check(label, present, "存在图片文件" if present else "目录缺失或没有支持的图片")
+            )
     tpl_fp = dir_fingerprint(tpl)
     sc_fp = dir_fingerprint(scenes)
-    checks.append(_check("基础结构完整", bool(tpl_fp) and bool(sc_fp),
-                         f"模板指纹={tpl_fp or '-'} 场景指纹={sc_fp or '-'}（非敏感）"))
+    checks.append(
+        _check(
+            "基础结构完整",
+            bool(tpl_fp) and bool(sc_fp),
+            f"模板指纹={tpl_fp or '-'} 场景指纹={sc_fp or '-'}（非敏感）",
+        )
+    )
     air = src.get("airtest_ref") or ""
     if air:
         ap = resolve_asset_ref("airtest_dir", air)
-        checks.append(_check("Airtest 目录存在", bool(ap) and os.path.isdir(ap),
-                             f"{mask_path(ap)} " + ("存在" if ap and os.path.isdir(ap) else "缺失（需用户录入）")))
+        checks.append(
+            _check(
+                "Airtest 目录存在",
+                bool(ap) and os.path.isdir(ap),
+                f"{mask_path(ap)} "
+                + ("存在" if ap and os.path.isdir(ap) else "缺失（需用户录入）"),
+            )
+        )
 
     missing = [c["name"] for c in checks if c["ok"] is False]
     steps = []
@@ -855,11 +1201,13 @@ def precheck_asset_source(src: dict) -> dict:
 
 
 # ---------- 引擎就绪度：可运行 / 缺少什么配置（不实际运行） ----------
+@registry.scoped
 def engine_readiness(db, db_path: str) -> list[dict]:
     """对三引擎分别给出"可运行/缺少什么配置"，供前端明确下一步；不发起任何执行。"""
     executors = [e for e in db.list_executors(db_path) if int(e.get("enabled", 1))]
     assets = [a for a in db.list_asset_sources(db_path) if int(a.get("enabled", 1))]
     out = []
+    probes = {}  # Reuse dependency probes within this request, never across config edits.
     for eng in ENGINES:
         missing, steps, usable = [], [], []
         for ex in executors:
@@ -869,27 +1217,65 @@ def engine_readiness(db, db_path: str) -> list[dict]:
             py = resolve_executor_python(ex)
             if not py:
                 continue
-            mods = _ENGINE_DEPS.get(eng) or []
-            rc, _out = _run_py(py, ["-c", f"import {', '.join(mods)}"], 6.0) if mods else (0, "")
+            mods = list(_ENGINE_DEPS.get(eng) or [])
+            mods += INTERPRETER_PROFILES.get(ex.get("python_ref"), {}).get("modules", [])
+            key = (py, tuple(mods))
+            if key not in probes:
+                probes[key] = (
+                    _run_py(py, ["-c", f"import {', '.join(mods)}"], 6.0) if mods else (0, "")
+                )
+            rc, _out = probes[key]
             if rc == 0:
                 usable.append(ex["name"])
         if not usable:
             missing.append("可用执行机")
-            steps.append(f"在 Executor 中启用一台允许 {eng} 且依赖齐备的执行机（解释器引用需可用）。")
+            steps.append(
+                f"在 Executor 中启用一台允许 {eng} 且依赖齐备的执行机（解释器引用需可用）。"
+            )
+        if eng == "airtest":
+            ready = any(
+                not ui_precheck({"suite": k, "case": s["cases"][0], "device": d["key"]}, db_path)
+                and (
+                    not d.get("executor_id")
+                    or any(
+                        ex["id"] == d["executor_id"] and ex["name"] in usable for ex in executors
+                    )
+                )
+                for k, s in UI_SUITES.items()
+                for d in device_catalog(db_path)
+            )
+            if not ready:
+                missing.append("已登记的 UI 设备与套件")
+                steps.append(
+                    "在资源与环境新增 UI 设备，关联可用执行机并保存窗口匹配规则和 Poco 端口；静态就绪不代表客户端已连接。"
+                )
         if eng == "locust":
-            if not any(a.get("kind") == "locust" for a in assets):
+            if not any(a.get("kind") == "locust" for a in assets) and not registry.catalog(
+                "locust"
+            ):
                 missing.append("Locust 场景资产源")
                 steps.append("新增并启用一个 kind=locust 的 AssetSource，选择受控场景引用。")
         if eng == "matcheval":
-            ok_assets = [a for a in assets if a.get("kind") == "matcheval"
-                         and precheck_asset_source(a)["ok"]]
-            if not ok_assets:
+            ok_assets = [
+                a for a in assets if a.get("kind") == "matcheval" and precheck_asset_source(a)["ok"]
+            ]
+            if not ok_assets and not any(
+                precheck_asset_source(dict(kind="matcheval", dataset_ref=k, name=v["label"]))["ok"]
+                for k, v in registry.catalog("datasets").items()
+            ):
                 missing.append("MatchEval 资产源")
-                steps.append("新增并启用一个 kind=matcheval 的 AssetSource，选择受控 dataset/模板/场景引用。")
-        out.append({
-            "engine": eng, "runnable": not missing,
-            "usable_executors": usable, "missing": missing, "next_steps": steps,
-        })
+                steps.append(
+                    "新增并启用一个 kind=matcheval 的 AssetSource，选择受控 dataset/模板/场景引用。"
+                )
+        out.append(
+            {
+                "engine": eng,
+                "runnable": not missing,
+                "usable_executors": usable,
+                "missing": missing,
+                "next_steps": steps,
+            }
+        )
     return out
 
 
@@ -901,22 +1287,26 @@ def build_config_snapshot(env: dict, executor: dict, asset_source: Optional[dict
     executor = executor or {}
     snap: dict[str, Any] = {
         "environment": {
-            "id": env.get("id"), "name": env.get("name"),
+            "id": env.get("id"),
+            "name": env.get("name"),
             "kind": env.get("kind") or "http",
             "protocol": env.get("protocol") or "http",
-            "host": env.get("host"), "port": env.get("port"),
+            "host": env.get("host"),
+            "port": env.get("port"),
             "target": f"{env.get('host', '-')}:{env.get('port', '-')}",
             "secret_ref": env.get("secret_ref") or "",
             "secret_kind": env.get("secret_kind") or "",
             "fingerprint": environment_fingerprint(env),
         },
         "executor": {
-            "id": executor.get("id"), "name": executor.get("name"),
+            "id": executor.get("id"),
+            "name": executor.get("name"),
             "python_ref": executor.get("python_ref") or "",
             "python_masked": mask_path(resolve_executor_python(executor)),
             "cwd_root": executor.get("cwd_root") or "",
-            "cwd_masked": mask_path(resolve_workdir(executor.get("cwd_root") or "")
-                                    or executor.get("cwd") or ""),
+            "cwd_masked": mask_path(
+                resolve_workdir(executor.get("cwd_root") or "") or executor.get("cwd") or ""
+            ),
             "allowed_runners": _json_list(executor.get("allowed_runners")) or list(ENGINES),
             "max_concurrency": executor.get("max_concurrency") or 1,
             "fingerprint": executor_fingerprint(executor),
@@ -924,7 +1314,8 @@ def build_config_snapshot(env: dict, executor: dict, asset_source: Optional[dict
     }
     if asset_source:
         snap["asset_source"] = {
-            "id": asset_source.get("id"), "name": asset_source.get("name"),
+            "id": asset_source.get("id"),
+            "name": asset_source.get("name"),
             "kind": asset_source.get("kind"),
             "refs": {k: asset_source.get(k) or "" for k in _ASSET_REF_KEYS},
             "fingerprint": asset_fingerprint(asset_source.get("kind") or "", asset_source),
@@ -932,8 +1323,10 @@ def build_config_snapshot(env: dict, executor: dict, asset_source: Optional[dict
     else:
         snap["asset_source"] = None
     snap["snapshot_fingerprint"] = _h(
-        snap["environment"]["fingerprint"], snap["executor"]["fingerprint"],
-        (snap["asset_source"] or {}).get("fingerprint"))
+        snap["environment"]["fingerprint"],
+        snap["executor"]["fingerprint"],
+        (snap["asset_source"] or {}).get("fingerprint"),
+    )
     return snap
 
 
@@ -949,8 +1342,14 @@ def snapshot_env_view(snapshot) -> Optional[dict]:
     e = (snapshot or {}).get("environment") or {}
     if not e.get("name"):
         return None
-    return {"id": e.get("id"), "name": e.get("name"), "host": e.get("host"),
-            "port": e.get("port"), "kind": e.get("kind"), "enabled": 1}
+    return {
+        "id": e.get("id"),
+        "name": e.get("name"),
+        "host": e.get("host"),
+        "port": e.get("port"),
+        "kind": e.get("kind"),
+        "enabled": 1,
+    }
 
 
 def snapshot_asset_key(snapshot, engine: str) -> str:
@@ -1006,10 +1405,15 @@ def build_plan_snapshot(plan: dict) -> dict:
         "steps": steps,
     }
     snap["snapshot_fingerprint"] = _h(
-        "plan", snap["plan_id"], snap["revision"],
+        "plan",
+        snap["plan_id"],
+        snap["revision"],
         json.dumps(steps, ensure_ascii=False, sort_keys=True),
-        snap["environment_id"], snap["executor_id"], snap["asset_source_id"],
-        int(snap["fail_fast"]))
+        snap["environment_id"],
+        snap["executor_id"],
+        snap["asset_source_id"],
+        int(snap["fail_fast"]),
+    )
     return snap
 
 
@@ -1027,11 +1431,34 @@ def plan_snapshot_name(snapshot) -> str:
 
 # ---------- Plan 步骤参数白名单（只接受受控 key；拒绝任意命令/路径/解释器） ----------
 _STEP_PARAM_KEYS: dict[str, set] = {
-    "pytest": {"args", "cwd", "cwd_root", "timeout_sec", "asset_source_id"},
-    "locust": {"locustfile", "users", "spawn_rate", "run_time", "csv_full_history",
-               "timeout_sec", "asset_source_id"},
-    "matcheval": {"dataset", "algorithm", "threshold", "output_level",
-                  "timeout_sec", "asset_source_id"},
+    "airtest": {
+        "suite",
+        "case",
+        "device",
+        "requirements",
+        "wait_timeout",
+        "reset",
+        "timeout_sec",
+        "asset_source_id",
+    },
+    "pytest": {"args", "cwd", "cwd_root", "entry", "timeout_sec", "asset_source_id"},
+    "locust": {
+        "locustfile",
+        "users",
+        "spawn_rate",
+        "run_time",
+        "csv_full_history",
+        "timeout_sec",
+        "asset_source_id",
+    },
+    "matcheval": {
+        "dataset",
+        "algorithm",
+        "threshold",
+        "output_level",
+        "timeout_sec",
+        "asset_source_id",
+    },
 }
 _ABS_PATH_RE = re.compile(r"^([A-Za-z]:[\\/]|\\\\|/)")
 # pytest 参数只允许相对测试选择器/开关；拒绝 shell 元字符、反斜杠、驱动盘符与可执行文件。
@@ -1044,9 +1471,18 @@ _EXE_RE = re.compile(r"\.exe\b", re.I)
 # 平台据 exit_code==0 判 success，若放行就等于「测试没跑却归档成功」——
 # 与平台「诚实归档」的立身之本冲突，故直接拒绝（与 pytest_runner 的 tests==0 兜底互为双保险）。
 _PYTEST_NO_RUN_FLAGS = {
-    "--collect-only", "--co", "--fixtures", "--fixtures-per-test",
-    "--setup-only", "--setup-plan", "--help", "-h", "--version", "-V",
-    "--markers", "--trace-config",
+    "--collect-only",
+    "--co",
+    "--fixtures",
+    "--fixtures-per-test",
+    "--setup-only",
+    "--setup-plan",
+    "--help",
+    "-h",
+    "--version",
+    "-V",
+    "--markers",
+    "--trace-config",
 }
 
 # locust 并发 / 时长约束（与 locust_runner 的防御性检查保持同一口径）
@@ -1054,30 +1490,50 @@ _LOCUST_USERS_MAX = 1000
 _RUN_TIME_RE = re.compile(r"^\d{1,6}[smh]?$")
 
 
-def validate_step_params(engine: str, params: dict) -> list[str]:
+@registry.scoped
+def validate_step_params(engine: str, params: dict, db_path=None) -> list[str]:
     """校验 Plan 步骤参数：仅白名单键；拒绝任意命令、绝对路径、解释器与素材目录。"""
     errors: list[str] = []
     if engine not in ENGINES:
         return [f"未知引擎：{engine}"]
+    if engine == "airtest":
+        errors += validate_ui_params(params or {}, db_path)
+    if engine == "pytest":
+        try:
+            params = registry.pytest_params(params or {})
+        except ValueError as exc:
+            return [str(exc)]
+        root = (params or {}).get("cwd_root") or (params or {}).get("cwd") or ""
+        errors += pytest_ui_errors(params or {}, resolve_workdir(root) or root)
     allowed = _STEP_PARAM_KEYS.get(engine, set())
     for k, v in (params or {}).items():
         if k not in allowed:
             errors.append(f"[{engine}] 不接受的参数键：{k!r}（只允许 {sorted(allowed)}）")
             continue
-        if k == "args":
+        if k == "entry":
+            if v not in registry.catalog("pytest"):
+                errors.append("pytest 入口引用不存在或已停用")
+        elif k == "args":
             if not isinstance(v, list):
                 errors.append("[pytest] args 必须是字符串数组")
                 continue
             for a in v:
                 s = str(a)
-                if (not s.strip() or _ABS_PATH_RE.match(s) or _DRIVE_RE.match(s)
-                        or ".." in s or _ARG_META_RE.search(s) or _EXE_RE.search(s)):
+                if (
+                    not s.strip()
+                    or _ABS_PATH_RE.match(s)
+                    or _DRIVE_RE.match(s)
+                    or ".." in s
+                    or _ARG_META_RE.search(s)
+                    or _EXE_RE.search(s)
+                ):
                     errors.append(f"[pytest] args 仅允许相对测试选择器/开关：{s!r}")
                     continue
                 if s.split("=", 1)[0].strip().lower() in _PYTEST_NO_RUN_FLAGS:
                     errors.append(
                         f"[pytest] 不允许「不执行用例」的开关：{s!r} —— 它会让 pytest "
-                        f"退出码为 0 但一个用例都不跑，平台无法据此判断测试是否真的通过")
+                        f"退出码为 0 但一个用例都不跑，平台无法据此判断测试是否真的通过"
+                    )
         elif k == "threshold":
             try:
                 t = float(v)
@@ -1097,8 +1553,10 @@ def validate_step_params(engine: str, params: dict) -> list[str]:
                 errors.append(f"dataset 必须是受控 dataset 引用 {list(DATASET_REFS)} 之一")
         elif k == "algorithm":
             algs = v if isinstance(v, list) else str(v).split(",")
-            if any(str(a).strip() not in ("tpl", "mstpl", "kaze", "brisk", "akaze", "orb")
-                   for a in algs):
+            if any(
+                str(a).strip() not in ("tpl", "mstpl", "kaze", "brisk", "akaze", "orb")
+                for a in algs
+            ):
                 errors.append("algorithm 含非白名单算法")
         elif k == "output_level":
             if str(v) not in ("full", "summary"):
@@ -1124,8 +1582,9 @@ def validate_step_params(engine: str, params: dict) -> list[str]:
 
 
 # ---------- Plan 引用校验（仅启用的配置可被引用；只认 ID） ----------
-def validate_plan_refs(db, db_path: str, environment_id, executor_id,
-                       asset_source_id=None) -> list[str]:
+def validate_plan_refs(
+    db, db_path: str, environment_id, executor_id, asset_source_id=None
+) -> list[str]:
     """校验 Plan 引用的配置存在且启用。返回错误列表（空=通过）。"""
     errors: list[str] = []
     env = db.get_environment(db_path, int(environment_id)) if environment_id else None
@@ -1138,6 +1597,15 @@ def validate_plan_refs(db, db_path: str, environment_id, executor_id,
         errors.append(f"引用的 Executor 不存在：{executor_id}")
     elif not int(ex.get("enabled", 1)):
         errors.append(f"引用的 Executor 已停用：{ex.get('name')}")
+    if ex:
+        if str(ex.get("python_ref") or "").startswith("runtime-") and not resolve_executor_python(
+            ex
+        ):
+            errors.append("执行机关联的运行环境已停用、已移动或不可用")
+        if str(ex.get("cwd_root") or "").startswith("project-") and not resolve_workdir(
+            ex["cwd_root"]
+        ):
+            errors.append("执行机默认项目已停用或不可用")
     if asset_source_id:
         a = db.get_asset_source(db_path, int(asset_source_id))
         if not a:
@@ -1160,53 +1628,136 @@ def _executor_engine_state(exec_pc: Optional[dict], engine: str) -> tuple[bool, 
     return dep is not None, bool(dep and dep.get("ok") is True)
 
 
-def precheck_plan(db, db_path: str, plan: dict) -> dict:
+@registry.scoped
+def precheck_plan(db, db_path: str, plan: dict, realtime: bool = False) -> dict:
     """计划预检 / 执行预览：调用与实际执行相同的后端校验逻辑，返回
     步骤顺序、解析后的引擎、配置就绪度、缺失依赖、锁/并发提示、预期 fail_fast 行为。
 
-    安全：只做低风险探测（引用可用性、白名单、解释器/依赖导入探测、TCP 连通性），
-    绝不创建 PlanRun/Job、绝不发起压测或完整测试。"""
+    Environment 连通性的口径（2026-10-13 修误报）：
+        · 含 Locust 或声明 requires_service 的 UI 套件 → env 连通性必需；
+        · 其余步骤 → env 连通性仅供参考，不阻断结论。
+      ⚠️ 这是**保守的代理判断，不是精确的依赖识别**：pytest / MatchEval 的测试代码可能
+      自行访问真实服务，而平台目前没有显式的环境依赖声明机制 —— 故不声称"已识别所有依赖"。
+
+    只做引用/依赖/连通性检查；realtime=True 时持设备锁只读探测 Unity/Poco 和 MongoDB。
+    绝不创建 PlanRun/Job、不点击客户端、不写入业务数据、不运行测试用例。"""
     ident = {"id": plan.get("id"), "name": plan.get("name")}
     revision = int(plan.get("revision") or 1)
     steps_in = plan.get("steps") or []
 
-    ref_errors = validate_plan_refs(db, db_path, plan.get("environment_id"),
-                                    plan.get("executor_id"), plan.get("asset_source_id"))
-    env = db.get_environment(db_path, int(plan["environment_id"])) if plan.get("environment_id") else None
+    # ---- Environment 连通性的「必要性」判定（2026-10-13 修误报）----
+    # 原三引擎只有 locust 使用 env；新增 UI 按套件 requires_service 明确声明。
+    # `pytest_runner` / `matcheval_runner` 虽然收下 env 参数，但正文从不使用它。
+    # 因此「计划挂了一个 Environment」**不等于**「这个计划要用它」。
+    #   · Locust / 声明服务依赖的 UI → 必需；其他 → 仅供参考。
+    # ⚠️ 边界（不得夸大）：pytest / MatchEval 的**测试代码可能自行访问真实服务**
+    #   （例如 GameAutoTest 的用例自己去连被测服务端）。平台目前**没有显式的环境依赖声明机制**，
+    #   无法代为判断某个 pytest 步骤是否需要连服务 —— 故提示文案必须写明这一点，不能声称已识别。
+    # UI additions: only suites explicitly declaring service usage require env.
+    uses_env = any(
+        isinstance(s, dict)
+        and (
+            s.get("engine") == "locust"
+            or (
+                s.get("engine") == "airtest"
+                and UI_SUITES.get((s.get("params") or {}).get("suite"), {}).get("requires_service")
+            )
+        )
+        for s in steps_in
+    )
+    notices: list[str] = []
+
+    ref_errors = validate_plan_refs(
+        db,
+        db_path,
+        plan.get("environment_id"),
+        plan.get("executor_id"),
+        plan.get("asset_source_id"),
+    )
+    env = (
+        db.get_environment(db_path, int(plan["environment_id"]))
+        if plan.get("environment_id")
+        else None
+    )
     exec_ = db.get_executor(db_path, int(plan["executor_id"])) if plan.get("executor_id") else None
-    asset = db.get_asset_source(db_path, int(plan["asset_source_id"])) if plan.get("asset_source_id") else None
+    asset = (
+        db.get_asset_source(db_path, int(plan["asset_source_id"]))
+        if plan.get("asset_source_id")
+        else None
+    )
 
     env_pc = precheck_environment(env) if env else None
     exec_pc = precheck_executor(exec_) if exec_ else None
     asset_pc = precheck_asset_source(asset) if asset else None
 
     step_reports, missing, next_steps = [], [], []
+    runtime_cache = {}
     for i, s in enumerate(steps_in):
         eng = s.get("engine")
         params = s.get("params") or {}
+        if eng == "pytest" and params.get("entry"):
+            try:
+                params = registry.pytest_params(params)
+            except ValueError:
+                pass
         registered = eng in ENGINES
-        param_errors = validate_step_params(eng, params) if registered else [f"未注册引擎：{eng!r}"]
+        param_errors = (
+            validate_step_params(eng, params, db_path) if registered else [f"未注册引擎：{eng!r}"]
+        )
+        if eng == "airtest":
+            param_errors += ui_precheck(params, db_path, plan.get("executor_id"))
+            if (
+                UI_SUITES.get(params.get("suite"), {}).get("requires_service")
+                and (env or {}).get("kind") == "offline"
+            ):
+                param_errors.append("该 UI 套件必须选择联机 Environment")
+            if asset and (
+                asset.get("kind") != "airtest" or asset.get("scenario_ref") != params.get("suite")
+            ):
+                param_errors.append("UI 步骤的套件与计划 AssetSource 不一致")
+        if eng == "pytest":
+            cwd = resolve_pytest_workdir(params, exec_ or {})
+            if not cwd or not os.path.isdir(cwd):
+                param_errors.append("测试项目目录未配置或不可用，请检查项目登记 / 本机路径配置")
+            param_errors += pytest_ui_errors(params, cwd)
         allowed, deps_ok = _executor_engine_state(exec_pc, eng) if registered else (False, False)
-        step_reports.append({
-            "index": i, "engine": eng, "name": s.get("name") or eng,
-            "requires_exclusive": bool(s.get("requires_exclusive", False)),
-            "params": dict(params),
-            "engine_registered": registered,
-            "params_ok": not param_errors,
-            "params_errors": param_errors,
-            "executor_allows": allowed,
-            "deps_ready": deps_ok,
-            "ready": bool(registered and not param_errors and allowed and deps_ok),
-        })
+        step_reports.append(
+            {
+                "index": i,
+                "engine": eng,
+                "name": s.get("name") or eng,
+                "requires_exclusive": eng == "airtest" or bool(s.get("requires_exclusive", False)),
+                "params": dict(params),
+                "engine_registered": registered,
+                "params_ok": not param_errors,
+                "params_errors": param_errors,
+                "executor_allows": allowed,
+                "deps_ready": deps_ok,
+                "ready": bool(registered and not param_errors and allowed and deps_ok),
+            }
+        )
+        if eng == "airtest" and step_reports[-1]["ready"]:
+            from .runtime_precheck import precheck_runtime
+
+            runtime = precheck_runtime(db_path, exec_, params, realtime, runtime_cache)
+            step_reports[-1]["runtime"] = runtime
+            step_reports[-1]["ready"] = runtime["ok"]
+            for row in runtime["checks"]:
+                if row["status"] in ("failed", "busy"):
+                    missing.append(f"步骤{i + 1} {row['name']}：{row['detail']}")
+                    if row.get("next_step"):
+                        next_steps.append(row["next_step"])
         if not registered:
             missing.append(f"步骤{i} 引擎未注册：{eng!r}")
-            next_steps.append("步骤引擎只能选择已注册的 pytest / locust / matcheval。")
+            next_steps.append("步骤引擎只能选择已注册的 pytest / locust / matcheval / airtest。")
         elif param_errors:
             missing.append(f"步骤{i} 参数非法")
             next_steps.append(f"修正步骤{i} 的参数（只允许受控白名单字段，不接受任意命令/路径）。")
         elif not allowed:
             missing.append(f"步骤{i} 执行机不允许 {eng}")
-            next_steps.append(f"在 Executor 的 allowed_runners 中加入 {eng}，或改用允许该引擎的执行机。")
+            next_steps.append(
+                f"在 Executor 的 allowed_runners 中加入 {eng}，或改用允许该引擎的执行机。"
+            )
         elif not deps_ok:
             missing.append(f"步骤{i} 执行机缺少 {eng} 依赖")
             next_steps.append(f"为执行机解释器安装 {eng} 依赖，或改用依赖齐备的执行机。")
@@ -1216,9 +1767,21 @@ def precheck_plan(db, db_path: str, plan: dict) -> dict:
         next_steps.append("至少添加一个执行步骤。")
 
     missing += ref_errors
+    if env_pc is not None:
+        # 供前端区分三态：required = 必须满足但当前缺失 / informational = 仅供参考（不阻断）
+        # （第三种"不适用"由 ok is None 表达，例如 kind=offline 的环境本就不做连通性检查）
+        env_pc["requirement"] = "required" if uses_env else "informational"
     if env_pc and env_pc.get("ok") is False:
-        missing.append("被测环境不可达")
-        next_steps += env_pc.get("next_steps") or []
+        if uses_env:
+            missing.append("被测环境不可达")
+            next_steps += env_pc.get("next_steps") or []
+        else:
+            notices.append(
+                "Environment 不可达，但本计划没有声明使用该地址的 Locust/UI 步骤 —— 不阻断预检结论（仅供参考）。"
+                "注意：pytest / MatchEval 步骤的测试代码可能自行访问真实服务，"
+                "平台目前没有显式的环境依赖声明机制，无法代为判断其连通性需求；"
+                "若该步骤确实要连被测服务，请自行确认其可达性。"
+            )
     if exec_pc and exec_pc.get("ok") is False:
         missing.append("执行机不可用")
         next_steps += exec_pc.get("next_steps") or []
@@ -1239,8 +1802,11 @@ def precheck_plan(db, db_path: str, plan: dict) -> dict:
     fail_fast = bool(plan.get("fail_fast", 1))
     ff = {
         "enabled": fail_fast,
-        "behavior": ("首个步骤失败后，其后尚未执行的步骤将置为 skipped（不覆盖历史报告）"
-                     if fail_fast else "任一失败不阻断后续步骤，继续串行执行"),
+        "behavior": (
+            "首个步骤失败后，其后尚未执行的步骤将置为 skipped（不覆盖历史报告）"
+            if fail_fast
+            else "任一失败不阻断后续步骤，继续串行执行"
+        ),
     }
 
     seen, missing_u = set(), []
@@ -1250,17 +1816,27 @@ def precheck_plan(db, db_path: str, plan: dict) -> dict:
             missing_u.append(m)
 
     steps_ready = bool(step_reports) and all(x["ready"] for x in step_reports)
-    config_bad = any((pc or {}).get("ok") is False for pc in (env_pc, exec_pc, asset_pc))
+    # 只有声明服务依赖的步骤将 Environment 不可达计入不就绪。
+    config_bad = (
+        bool((env_pc or {}).get("ok") is False and uses_env)
+        or bool((exec_pc or {}).get("ok") is False)
+        or bool((asset_pc or {}).get("ok") is False)
+    )
     return {
-        "entity": "plan", **ident,
+        "entity": "plan",
+        **ident,
         "revision": revision,
         "ok": bool((not ref_errors) and steps_ready and not config_bad),
         "steps": step_reports,
         "config": {"environment": env_pc, "executor": exec_pc, "asset_source": asset_pc},
         "missing": missing_u,
+        "notices": notices,
+        "environment_required": uses_env,
         "next_steps": next_steps,
         "concurrency": concurrency,
         "fail_fast": ff,
         "fingerprint": build_plan_snapshot(plan)["snapshot_fingerprint"],
         "no_side_effects": True,
+        "precheck_mode": "realtime" if realtime else "configuration",
+        "checked_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }

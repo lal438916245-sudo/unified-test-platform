@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -57,6 +58,11 @@ _PLAN_B_STEPS = [{
                "run_time": "12s", "csv_full_history": False, "timeout_sec": 120},
 }]
 
+_PLAN_UI_STEPS = [{
+    "engine": "airtest", "name": "ui-smoke", "requires_exclusive": True,
+    "params": {"suite": "unity-smoke", "case": "test_unity_smoke.py", "device": "unity-windows", "timeout_sec": 120},
+}]
+
 
 def test_frontend_plan_editor_roundtrip_is_byte_identical():
     node = _find_node()
@@ -84,7 +90,7 @@ def test_frontend_plan_editor_roundtrip_is_byte_identical():
             "scenario_ref": "colyseus-bot", "enabled": 1})
 
         plans = []
-        for name, steps in (("rt-unmanaged", _PLAN_A_STEPS), ("rt-locust-order", _PLAN_B_STEPS)):
+        for name, steps in (("rt-unmanaged", _PLAN_A_STEPS), ("rt-locust-order", _PLAN_B_STEPS), ("rt-ui", _PLAN_UI_STEPS)):
             pid = db.create_plan(db_path, Plan(
                 name=name, description="", environment_id=env, executor_id=ex,
                 asset_source_id=asset, fail_fast=True, owner="local",
@@ -126,3 +132,48 @@ def test_frontend_plan_editor_roundtrip_is_byte_identical():
             if not os.path.exists(tmp):
                 break
             time.sleep(0.2)
+
+
+@pytest.mark.parametrize("shared_requirement", [False, True])
+def test_airtest_suite_reference_roundtrip_saves_valid_script(tmp_path, shared_requirement):
+    import pytest
+    from fastapi.testclient import TestClient
+    from app.api import build_app
+    node = _find_node()
+    if not node:
+        pytest.skip("Node is required for editor DOM regression")
+    db_path = str(tmp_path / "db.sqlite")
+    db.init_db(db_path)
+    env = db.create_environment(db_path, {"name": "offline", "kind": "offline", "host": "", "port": 0})
+    ex = db.create_executor(db_path, {"name": "UI", "python_executable": sys.executable, "cwd_root": "backend-demo",
+                                   "allowed_runners": ["airtest"], "enabled": 1})
+    did = db.create_ui_device(db_path, {"name": "Unity", "executor_id": ex, "title_match": "Test Unity",
+        "match_mode": "contains", "process_name": "Unity.exe", "window_class": "", "unity_editor": 0,
+        "host": "127.0.0.1", "port": 5001, "smoke_selector": "", "smoke_result": "", "notes": "", "enabled": 1})
+    app = build_app(str(tmp_path / "static"))
+    app.state.db_path = db_path
+    with TestClient(app) as client:
+        extra = {}
+        if shared_requirement:
+            req = client.post("/api/config/runtime-requirements", json={"name": "MMO shared", "suite": "gameautotest-ui",
+                "modules": ["requests"], "mongo_ref": "gameautotest", "enabled": 1}).json()
+            extra["requirements"] = req["key"]
+        case = client.post("/api/test-cases", json={"name": "register", "engine": "airtest", "params": {
+            "suite": "gameautotest-ui", "case": "test_cases/test_mmo_loop.py", "device": f"ui-device-{did}",
+            "wait_timeout": 10, "reset": "none", "timeout_sec": 180, **extra}}).json()
+        suite = client.post("/api/suites", json={"name": "MMO suite", "cases": [
+            {"id": case["id"], "revision": case["revision"], "fingerprint": case["fingerprint"]}]}).json()
+        payload = {"catalog": cc.public_catalog(db_path), "refs": {"cases": [case], "suites": [suite],
+            "envs": [cc.mask_environment(db.get_environment(db_path, env))],
+            "execs": [cc.mask_executor(db.get_executor(db_path, ex))], "assets": []}}
+        inp, out = tmp_path / "input.json", tmp_path / "output.json"
+        inp.write_text(json.dumps(payload), encoding="utf-8")
+        result = subprocess.run([node, os.path.join(_PLATFORM, "_ci", "ui_case_reference_roundtrip.js"), str(inp), str(out)],
+            capture_output=True, text=True, encoding="utf-8", timeout=20)
+        assert result.returncode == 0, result.stdout + result.stderr
+        body = json.loads(out.read_text(encoding="utf-8"))
+        body.update(environment_id=env, executor_id=ex)
+        response = client.post("/api/plans", json=body)
+        assert response.status_code == 200, response.text
+        saved = db.get_plan(db_path, response.json()["id"])
+        assert all(s["case_ref"]["id"] == case["id"] and not s["override_params"] for s in saved["steps"])

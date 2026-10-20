@@ -3,22 +3,18 @@
 安全约束：Job 参数仅允许白名单内的受控项，命令始终以参数列表交给 subprocess（不 shell=True），
 任何人不得通过 Job 参数注入任意命令或任意本地路径。
 """
+
 from __future__ import annotations
 
 import csv
 import os
 import re
-import subprocess
-import time
-from typing import Callable, Optional
 
-from .base import (BaseRunner, RunnerResult, child_env, drain_proc, reap_proc,
-                   shell_cmd)
 from ..config_center import LOCUST_SCENARIOS, resolve_asset_ref
+from .base import BaseRunner, RunnerResult, child_env, drain_proc, reap_proc, shell_cmd, start_proc
 
 # 受白名单保护的 locustfile：Job 只能引用受控场景 key，不能填任意本地路径。
 # **唯一来源是登记层 config_center.LOCUST_SCENARIOS**：本文件不再持有第二份路径事实（避免双源漂移）。
-_SCENARIO_KEYS = tuple(LOCUST_SCENARIOS)   # 受控场景 key 列表；绝对路径由登记层解析
 
 # 并发参数上限（防御性；登记层 validate_step_params 已做前置校验并回 400）
 _USERS_MAX = 1000
@@ -28,10 +24,6 @@ _RUN_TIME_RE = re.compile(r"^\d{1,6}[smh]?$")
 def _locustfile_path(key: str) -> str:
     """受控场景 key -> 绝对路径（仅后端使用，不返回前端、不落日志）。"""
     return resolve_asset_ref("locust_scenario", key)
-
-# 受控参数：仅这些键会被读取；未知键一律忽略（不做 shell 拼接/任意路径）。
-_INT_KEYS = ("users", "spawn_rate")
-_STR_KEYS = ("locustfile", "run_time")
 
 
 def _fnum(v):
@@ -44,31 +36,45 @@ def _fnum(v):
 class LocustRunner(BaseRunner):
     engine = "locust"
 
-    def run(self, job, env, executor, junit_path, log_sink, is_cancelled, register_proc=None) -> RunnerResult:
+    def run(
+        self, job, env, executor, junit_path, log_sink, is_cancelled, register_proc=None
+    ) -> RunnerResult:
         params = job["params"] or {}
 
         # ---- 参数白名单解析 ----
         scen = str(params.get("locustfile", "http-fixture"))
-        if scen not in _SCENARIO_KEYS:
-            return RunnerResult(status="failed", exit_code=-1,
-                                error=f"非白名单 locustfile 场景: {scen!r}")
+        if scen not in LOCUST_SCENARIOS:
+            return RunnerResult(
+                status="failed", exit_code=-1, error=f"非白名单 locustfile 场景: {scen!r}"
+            )
         locustfile = _locustfile_path(scen)
+        if not locustfile or not os.path.isfile(locustfile):
+            return RunnerResult(
+                status="failed",
+                exit_code=-1,
+                error="Locust 场景脚本未配置或已移动，请检查本机路径配置 / 项目入口",
+            )
         try:
             users = int(params.get("users", 10))
             spawn_rate = int(params.get("spawn_rate", 2))
         except (TypeError, ValueError):
-            return RunnerResult(status="failed", exit_code=-1,
-                                error="locust users/spawn_rate 必须是整数")
+            return RunnerResult(
+                status="failed", exit_code=-1, error="locust users/spawn_rate 必须是整数"
+            )
         if not (1 <= users <= _USERS_MAX) or not (1 <= spawn_rate <= _USERS_MAX):
             return RunnerResult(
-                status="failed", exit_code=-1,
+                status="failed",
+                exit_code=-1,
                 error=f"locust users/spawn_rate 必须在 1..{_USERS_MAX} 之间"
-                      f"（当前 users={users}, spawn_rate={spawn_rate}）")
+                f"（当前 users={users}, spawn_rate={spawn_rate}）",
+            )
         run_time = str(params.get("run_time", "20s")).strip()
         if not _RUN_TIME_RE.match(run_time):
             return RunnerResult(
-                status="failed", exit_code=-1,
-                error=f"locust run_time 格式非法：{run_time!r}（应为 <数字><s|m|h>，如 30s / 2m / 1h）")
+                status="failed",
+                exit_code=-1,
+                error=f"locust run_time 格式非法：{run_time!r}（应为 <数字><s|m|h>，如 30s / 2m / 1h）",
+            )
         csv_full_history = bool(params.get("csv_full_history", True))
         python = executor["python_executable"]
         host = f"http://{env['host']}:{env['port']}"
@@ -79,25 +85,40 @@ class LocustRunner(BaseRunner):
         html_path = os.path.join(rdir, "locust_report.html")
         csv_prefix = os.path.join(rdir, "locust")
 
-        cmd = [python, "-m", "locust", "-f", locustfile, "--headless",
-               "-u", str(users), "-r", str(spawn_rate),
-               "--run-time", run_time, "--host", host,
-               "--html", html_path, "--csv", csv_prefix]
+        cmd = [
+            python,
+            "-m",
+            "locust",
+            "-f",
+            locustfile,
+            "--headless",
+            "-u",
+            str(users),
+            "-r",
+            str(spawn_rate),
+            "--run-time",
+            run_time,
+            "--host",
+            host,
+            "--html",
+            html_path,
+            "--csv",
+            csv_prefix,
+        ]
         if csv_full_history:
             cmd.append("--csv-full-history")
         log_sink(f"$ {shell_cmd(cmd)}\n$ cwd={os.path.dirname(locustfile)}\n")
 
-        proc = subprocess.Popen(
-            cmd, cwd=os.path.dirname(locustfile), env=child_env(),
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            stdin=subprocess.DEVNULL, text=True, encoding="utf-8",
-            errors="replace", bufsize=1,
+        proc = start_proc(
+            cmd,
+            cwd=os.path.dirname(locustfile),
+            env=child_env(),
+            register_proc=register_proc,
         )
-        if register_proc:
-            register_proc(proc)
 
-        outcome = drain_proc(proc, log_sink, is_cancelled,
-                             "\n[cancel] 收到取消请求，终止 locust 进程树\n")
+        outcome = drain_proc(
+            proc, log_sink, is_cancelled, "\n[cancel] 收到取消请求，终止 locust 进程树\n"
+        )
         if outcome == "cancelled":
             return RunnerResult(status="cancelled", exit_code=130, error="cancelled by user")
         reap_proc(proc)
@@ -111,7 +132,7 @@ class LocustRunner(BaseRunner):
         exceptions_path = os.path.join(rdir, "locust_exceptions.csv")
         html_path = os.path.join(rdir, "locust_report.html")
 
-        per_request = self._parse_stats(stats_path)          # 每接口维度
+        per_request = self._parse_stats(stats_path)  # 每接口维度
         timeseries = self._parse_history(history_path)
         n_failures = sum(r["failures"] for r in per_request)
         requests = sum(r["requests"] for r in per_request)
@@ -161,17 +182,23 @@ class LocustRunner(BaseRunner):
             status = "success"
         error = f"locust run failed {extra}".strip() if status == "failed" else None
 
-        artifacts = self._artifacts(rdir, html_path, stats_path, failures_path,
-                                    exceptions_path, history_path)
+        artifacts = self._artifacts(
+            rdir, html_path, stats_path, failures_path, exceptions_path, history_path
+        )
         engine_data = {
             "host": host,
             "request_stats": per_request,
             "timeseries": timeseries,
         }
         return RunnerResult(
-            status=status, exit_code=exit_code, summary=summary, metrics=metrics,
-            artifacts=artifacts, engine_data=engine_data,
-            engine_data_schema="locust/1.0", error=error,
+            status=status,
+            exit_code=exit_code,
+            summary=summary,
+            metrics=metrics,
+            artifacts=artifacts,
+            engine_data=engine_data,
+            engine_data_schema="locust/1.0",
+            error=error,
         )
 
     # ---------- CSV 解析 ----------
@@ -194,17 +221,26 @@ class LocustRunner(BaseRunner):
                 continue
             reqs = int(float(row.get("Request Count") or 0))
             fails = int(float(row.get("Failure Count") or 0))
-            out.append({
-                "type": row.get("Type", "-"),
-                "name": name,
-                "requests": reqs,
-                "failures": fails,
-                "rps": round(_fnum(row.get("Requests/s")), 3),
-                "avg_ms": round(_fnum(row.get("Average Response Time")), 2),
-                "p50_ms": round(_fnum(row.get("50%")) if _fnum(row.get("50%")) else _fnum(row.get("Median")), 2),
-                "p95_ms": round(_fnum(row.get("95%")), 2),
-                "p99_ms": round(_fnum(row.get("99%")), 2),
-            })
+            out.append(
+                {
+                    "type": row.get("Type", "-"),
+                    "name": name,
+                    "requests": reqs,
+                    "failures": fails,
+                    "rps": round(_fnum(row.get("Requests/s")), 3),
+                    "avg_ms": round(_fnum(row.get("Average Response Time")), 2),
+                    "p50_ms": round(
+                        (
+                            _fnum(row.get("50%"))
+                            if _fnum(row.get("50%"))
+                            else _fnum(row.get("Median"))
+                        ),
+                        2,
+                    ),
+                    "p95_ms": round(_fnum(row.get("95%")), 2),
+                    "p99_ms": round(_fnum(row.get("99%")), 2),
+                }
+            )
         return out
 
     def _parse_history(self, path: str) -> list[dict]:
@@ -214,8 +250,9 @@ class LocustRunner(BaseRunner):
             ts = row.get("Timestamp", "").strip()
             if "Aggregated" in (row.get("Name") or ""):
                 pass
-            cur = by_ts.setdefault(ts, {"ts": ts, "req": 0, "fail": 0,
-                                        "rps": 0.0, "p95": 0.0, "users": 0})
+            cur = by_ts.setdefault(
+                ts, {"ts": ts, "req": 0, "fail": 0, "rps": 0.0, "p95": 0.0, "users": 0}
+            )
             cur["req"] += int(float(row.get("Requests") or 0))
             cur["fail"] += int(float(row.get("Failures") or 0))
             cur["rps"] = max(cur["rps"], _fnum(row.get("Current RPS") or row.get("Requests/s")))
@@ -224,14 +261,16 @@ class LocustRunner(BaseRunner):
         series = []
         for k in sorted(by_ts):
             c = by_ts[k]
-            series.append({
-                "ts": c["ts"],
-                "requests": c["req"],
-                "failure_rate": round(c["fail"] / c["req"], 6) if c["req"] else 0.0,
-                "rps": round(c["rps"], 2),
-                "p95_ms": round(c["p95"], 2),
-                "users": int(c["users"]),
-            })
+            series.append(
+                {
+                    "ts": c["ts"],
+                    "requests": c["req"],
+                    "failure_rate": round(c["fail"] / c["req"], 6) if c["req"] else 0.0,
+                    "rps": round(c["rps"], 2),
+                    "p95_ms": round(c["p95"], 2),
+                    "users": int(c["users"]),
+                }
+            )
         return series
 
     # ---------- 产物 ----------
@@ -246,7 +285,12 @@ class LocustRunner(BaseRunner):
         ]
         for name, mime, path in entries:
             if path and os.path.exists(path):
-                arts.append({"name": name, "type": mime, "path": os.path.basename(path),
-                             "size": os.path.getsize(path)})
+                arts.append(
+                    {
+                        "name": name,
+                        "type": mime,
+                        "path": os.path.basename(path),
+                        "size": os.path.getsize(path),
+                    }
+                )
         return arts
-

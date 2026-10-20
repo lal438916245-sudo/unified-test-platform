@@ -1,9 +1,9 @@
 """report.json 协议：严格按已冻结 schema 构建与校验。"""
+
 from __future__ import annotations
 
 import json
 import os
-from typing import Any
 
 from .domain import REPORT_SCHEMA_VERSION
 
@@ -22,19 +22,21 @@ REQUIRED_TOP_LEVEL = [
 ]
 
 
-def build_report(*,
-                 plan_run_id: int,
-                 job_id: int,
-                 engine: str,
-                 status: str,
-                 started_at: str,
-                 ended_at: str,
-                 environment_snapshot: dict,
-                 summary: dict,
-                 metrics: dict,
-                 artifacts: list[dict],
-                 engine_data: dict | None = None,
-                 engine_data_schema: str = "pytest/1.0") -> dict:
+def build_report(
+    *,
+    plan_run_id: int,
+    job_id: int,
+    engine: str,
+    status: str,
+    started_at: str,
+    ended_at: str,
+    environment_snapshot: dict,
+    summary: dict,
+    metrics: dict,
+    artifacts: list[dict],
+    engine_data: dict | None = None,
+    engine_data_schema: str = "pytest/1.0",
+) -> dict:
     """构造一份结构完整、合法的 report.json（不写文件）。"""
     report = {
         "schema_version": REPORT_SCHEMA_VERSION,

@@ -1,10 +1,24 @@
 # 统一游戏测试平台 MVP
 
+> **安装与配置迁移**：Windows 目标电脑解压交付包后运行 `install.bat` / `start.bat`；新安装默认空白配置。网页“安装与配置迁移”支持选择导出用例、套件和计划，以及导入自己的 JSON / 模板、关联本机资源、预览和原子新增，不覆盖原记录。详见 [安装与配置迁移](docs/安装与配置迁移.md)。被测项目与测试依赖由目标电脑准备。
+
+> **异机完整验收**：[离线操作手册与可填写检查清单](frontend/help/cross-pc-acceptance.html) · [Markdown 手册](docs/异机完整验收操作手册.md) · [文本检查清单](docs/异机完整验收检查清单.md)。配套示例含成功与故意失败计划，用于先校准平台链路，再验收目标电脑自己的真实项目。
+
+> **使用说明（含真实截图）**：[网页手册](frontend/help/user-guide.html) · [Markdown 源稿](docs/平台使用说明.md)。覆盖当前四类引擎、资源配置、用例 / 套件 / 计划、实时预检、执行与报告；本机平台启动后可访问 `/static/help/user-guide.html`。
+
+> **新项目接入**：在“资源与环境 → 管理项目与测试入口”登记本机项目、Python、测试入口和资产，现有四类引擎无需修改平台源码即可接入新项目。详见 [新项目登记与执行](docs/新项目登记与执行.md)。旧用例、计划与报告保留；安装打包见上方迁移说明，执行仍在当前平台所在电脑进行。
+
+> **消除本机路径依赖**：同页新增“本机路径配置”，可重新绑定旧用例使用的 Python、项目、Locust / 视觉脚本、Airtest 源码和真实图片目录。配置持久化并即时生效；启动脚本使用显式 Python、平台 `.venv` 或 PATH，已移除开发机盘符。详见 [换电脑与路径配置](docs/换电脑与路径配置.md)。
+
+> 公共运行要求与实时预检：在「资源与环境 → 公共运行要求」管理复用配置，在 UI 用例中引用。计划预检逐项检查项目依赖、MongoDB、Unity/Poco；执行前重新验证。操作与边界见 [RUNTIME_REQUIREMENTS.md](RUNTIME_REQUIREMENTS.md)。
+
+> UI 交互引擎已接入：`airtest`（Airtest + Poco，pytest 组织用例）。「资源与环境 → UI 设备」支持持久配置、执行机关联和动态窗口匹配，无需每次设置设备环境变量。Colyseus MMO 的真实 Begin → Sign Up 冒烟已通过；配置、证据与验收边界见 [UI_ENGINE.md](UI_ENGINE.md)。下文三引擎验收记录保留为历史事实。
+
 > **仓库名：`unified-test-platform`** · 分支 `main` · 仓库根 = 本目录（`platform/`）。
 > 中文产品名「统一游戏测试平台」表达**产品定位**；仓库名刻意不带 `game`，
 > 因为平台的受控登记层对任意被测系统通用（已登记 3 个 SUT，其中 `GameAutoTest-Pro` 本身不是游戏）。
 
-一个**三引擎测试薄壳**：只管 **测试计划编排 / 独立子进程执行 / 统一报告 / 环境与资源配置**，
+一个支持 **pytest、Locust、MatchEval、Airtest + Poco** 的测试平台：负责 **测试计划编排 / 独立子进程执行 / 统一报告 / 环境与资源配置**，
 本机单机工具，FastAPI 后端 + 单页前端。
 
 **不做**（产品边界）：用例编辑器、脚本在线编辑、鉴权与多租户、分布式 Worker、专项大屏。
@@ -20,8 +34,9 @@
 
 | 能力 | 说明 |
 |---|---|
-| 三引擎 | `pytest`（功能/API）、`locust`（压测）、`matcheval`（UI 视觉识别评估） |
-| 计划编辑器 | 新建/编辑/复制、步骤增删与上下移、三引擎专用表单、**无副作用预检**、一键执行；不提供删除计划 |
+| 四类引擎 | `pytest`（功能/API）、`locust`（压测）、`matcheval`（视觉识别评估）、`airtest`（UI 交互） |
+| 安装与迁移 | Windows 安装包、独立虚拟环境、定义 JSON 导入导出、持久待关联批次、本机资源重绑定；原子新增，不覆盖历史 |
+| 计划编辑器 | 新建/编辑/复制、步骤增删与上下移、引擎专用表单、**无副作用预检**、一键执行；计划支持归档 / 恢复，保留历史报告 |
 | 版本快照 | 编辑计划 `revision+1`；执行时固化计划快照与脱敏配置快照，历史不漂移 |
 | 任务控制 | 串行执行、`fail_fast`、`queued/running/cancelling/success/failed/cancelled/timedout/skipped`、取消、超时看门狗、重试、Windows 进程树回收、Executor 独占锁 |
 | 报告中心 | 按 job 维度索引（筛选/分页/趋势/两次报告对比），计划名取执行时快照；对比仅允许同引擎 + 同 schema 主版本 + 同环境等条件的报告 |
@@ -49,7 +64,7 @@
 
 ```powershell
 # 前置：使用含 fastapi / uvicorn 的 Python（本机为 F:\Anaconda3\python.exe）
-F:\Anaconda3\python.exe backend\run.py            # 默认 127.0.0.1:8000
+F:\Anaconda3\python.exe backend\run.py --seed-demo # 默认 127.0.0.1:8000，显式登记演示数据
 # 其他方式：start.bat ／ powershell -File start.ps1
 # 可选：--port 8123 --no-browser ；隔离数据目录 --data-dir <dir> 或环境变量 PLATFORM_DATA_DIR
 ```
@@ -162,7 +177,8 @@ F:\Anaconda3\python.exe backend\run.py            # 默认 127.0.0.1:8000
 | AssetSource 语义 | 资产源**不决定执行内容**：只在步骤未填 `dataset` / `locustfile` 时兜底注入，且 kind 与引擎不匹配时静默跳过 —— **步骤参数优先** |
 | 动态端口目标 | 目标是「被拉起的进程用随机端口」时（如 PrivaHigh 由游戏自动拉起），平台没有端口发现机制，只能**固定端口手动启动**后再测 |
 | 路径限制 | 参数里的路径必须在受控目录根之下；绝对路径、盘符、`..`、shell 元字符一律 400 拒绝 |
-| 已知平台缺陷（未修） | 预检 `run_in_progress` 会因历史 `timedout` 记录误报（仅显示层，不拦执行）；Job#24 曾出现约 69s 退出延迟（根因未确证，未复现） |
+| Environment 连通性的预检口径 | Locust 和已声明服务依赖的 UI 套件（`colyseus-ui-smoke` / `gameautotest-ui`）将可达性当必需项；不可达则判不就绪。通用 Unity 控件冒烟、纯 pytest / MatchEval 将其作为参考，不阻断结论。pytest / MatchEval 的测试代码可能自行访问服务，平台没有针对它们的显式环境依赖声明机制，仍需自行确认实际依赖 |
+| 已知平台缺陷（未修） | Job#24 曾出现约 69s 退出延迟（根因未确证，未复现）。~~预检 `run_in_progress` 因历史 `timedout` 误报~~ **已于 2026-10-08 修复**（`db.any_non_terminal_run` 改用 `domain.RUN_TERMINAL`） |
 | 未纳入 MVP | UI 交互自动化（Airtest poco 未被平台接管）、分布式 Worker、鉴权、多租户 |
 
 ### 环境变量（可覆盖本机路径）
@@ -197,7 +213,11 @@ F:\Anaconda3\python.exe -m pip install -r requirements.txt
 | POST | `/api/plans/precheck` | 草稿预检（零副作用） |
 | POST | `/api/plans/{id}/precheck` | 已保存计划预检 |
 | POST | `/api/plans/{id}/run` | 触发计划 → 返回 `run_id` |
-| GET | `/api/plans` · `/api/runs?limit=&offset=` | 计划列表 · 运行记录（倒序，支持分页） |
+| GET | `/api/plans?status=active\|archived\|all` · `/api/runs?limit=&offset=` | 计划列表（默认使用中）· 运行记录（倒序，支持分页） |
+| POST | `/api/plans/{id}/archive` · `/api/plans/{id}/restore` | 归档 / 恢复计划；未结束任务阻止归档，归档后禁止编辑、执行与重试 |
+| GET / POST / PUT | `/api/config/projects` · `/api/config/projects/{id}` | 本机项目登记、编辑与停用；写请求需 `X-Platform-Config: 1` |
+| GET / POST / PUT | `/api/config/project-resources` · `/api/config/project-resources/{id}` | 登记 Python、四类入口和资产；用例 / 计划保存受控引用 |
+| POST | `/api/config/projects/{id}/discover` · `.../precheck` · `/api/config/project-resources/{id}/precheck` | 静态入口发现 / 配置检查，未运行测试；限本机访问 |
 | GET | `/api/runs/{id}` | PlanRun + Jobs |
 | GET | `/api/jobs/{id}/logs` | Job 日志 |
 | POST | `/api/jobs/{id}/cancel` · `/retry` | 取消（排队→终态；运行中→终止子进程）· 重试（新 job_id） |

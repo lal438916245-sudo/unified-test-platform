@@ -1,0 +1,2 @@
+# Install in a separate Python if project dependencies require isolation.
+locust>=2.31,<3

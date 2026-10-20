@@ -1,7 +1,8 @@
 """Job 状态机与迁移校验（对齐冻结状态机）。"""
+
 from __future__ import annotations
 
-from ..domain import TRANSITIONS, TERMINAL
+from ..domain import TERMINAL, TRANSITIONS
 
 
 def can_transition(frm: str, to: str) -> bool:

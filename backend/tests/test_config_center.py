@@ -48,6 +48,14 @@ def test_mask_environment_never_returns_secret_value():
     assert m["secret_ref"] == "MY_TOKEN"            # 引用名可展示
     assert "value" not in m and "secret_value" not in m
 
+    # labels 必须归一化为 list：库里是 JSON 文本（labels TEXT DEFAULT '[]'）。
+    # 漏了这步，前端 `(e.labels||[]).join(',')` 会对字符串调 join 抛 TypeError，
+    # 而 renderEnv 是整页一个 try → 整页「资源与环境」变成「加载配置失败」。
+    assert mask_environment({"id": 2, "labels": '["a","b"]'})["labels"] == ["a", "b"]
+    assert mask_environment({"id": 3, "labels": []})["labels"] == []
+    assert mask_environment({"id": 4})["labels"] == []          # 缺字段不炸
+    assert isinstance(mask_environment({"id": 5, "labels": "not-json"})["labels"], list)
+
 
 def test_mask_asset_source_no_absolute_path():
     a = {"id": 1, "name": "s", "kind": "locust", "scenario_ref": "http-fixture"}

@@ -1,4 +1,5 @@
 """领域常量与状态定义：严格对齐已冻结的规格（Plan/PlanRun/Job/Report/Environment/Executor）。"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -7,12 +8,12 @@ from typing import Any, Optional
 # ---- Job 状态机（任务控制加固后冻结）----
 STATUS_QUEUED = "queued"
 STATUS_RUNNING = "running"
-STATUS_CANCELLING = "cancelling"      # 已发起取消、标记者，子进程正在被回收（中间态，非终态）
+STATUS_CANCELLING = "cancelling"  # 已发起取消、标记者，子进程正在被回收（中间态，非终态）
 STATUS_SUCCESS = "success"
 STATUS_FAILED = "failed"
 STATUS_CANCELLED = "cancelled"
 STATUS_TIMEDOUT = "timedout"
-STATUS_SKIPPED = "skipped"            # 失败即停/整体取消导致"未执行"的 Job（终态，可追溯）
+STATUS_SKIPPED = "skipped"  # 失败即停/整体取消导致"未执行"的 Job（终态，可追溯）
 
 # 真正进入终端状态的集合（终态不可再迁移）
 TERMINAL = {STATUS_SUCCESS, STATUS_FAILED, STATUS_CANCELLED, STATUS_TIMEDOUT, STATUS_SKIPPED}
@@ -101,8 +102,8 @@ class Executor:
     name: str
     python_executable: str
     cwd: str
-    python_ref: str = ""              # 受控解释器引用 key（首选）
-    cwd_root: str = ""                # 受控工作目录根 key
+    python_ref: str = ""  # 受控解释器引用 key（首选）
+    cwd_root: str = ""  # 受控工作目录根 key
     allowed_runners: list[str] = field(default_factory=list)
     max_concurrency: int = 1
     notes: str = ""
@@ -113,7 +114,7 @@ class Executor:
 class AssetSource:
     id: int
     name: str
-    kind: str                          # matcheval | locust
+    kind: str  # matcheval | locust
     dataset_ref: str = ""
     tpl_ref: str = ""
     scenes_ref: str = ""
@@ -206,11 +207,11 @@ class Job:
     timeout_sec: int = 300
     requires_exclusive: bool = False
     params: dict[str, Any] = field(default_factory=dict)
-    config_snapshot: Optional[dict[str, Any]] = None   # Job 创建时固化的脱敏配置快照
+    config_snapshot: Optional[dict[str, Any]] = None  # Job 创建时固化的脱敏配置快照
     status: str = STATUS_QUEUED
     parent_job_id: Optional[int] = None
-    retry_of: Optional[int] = None   # 若为重试 Job，指向被重试的原始 Job id
-    attempt: int = 1                 # 第几次尝试（原始=1，重试=原+1）
+    retry_of: Optional[int] = None  # 若为重试 Job，指向被重试的原始 Job id
+    attempt: int = 1  # 第几次尝试（原始=1，重试=原+1）
     cancel_requested: int = 0
     exit_code: Optional[int] = None
     log_path: Optional[str] = None

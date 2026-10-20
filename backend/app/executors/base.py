@@ -1,4 +1,5 @@
 """执行层基类：统一 Runner 接口。执行必须走独立子进程，绝不在本线程内跑测试。"""
+
 from __future__ import annotations
 
 import os
@@ -20,7 +21,8 @@ def kill_proc_tree(proc: subprocess.Popen) -> None:
         if os.name == "nt":
             subprocess.run(
                 ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
-                capture_output=True, timeout=6,
+                capture_output=True,
+                timeout=6,
             )
         else:
             proc.terminate()
@@ -29,6 +31,7 @@ def kill_proc_tree(proc: subprocess.Popen) -> None:
             proc.kill()
         except Exception:  # noqa: BLE001
             pass
+
 
 # 编排线程向 Runner 提供的两个回调：
 #   is_cancelled()  -> 取消探测
@@ -54,6 +57,27 @@ def child_env(*extra: dict) -> dict:
         if d:
             env.update(d)
     return env
+
+
+def start_proc(
+    command: list[str], *, cwd: str, env: dict, register_proc: Optional[RegisterProc] = None
+) -> subprocess.Popen:
+    """Start a runner with the common pipe settings, then register its process."""
+    proc = subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        bufsize=1,
+    )
+    if register_proc:
+        register_proc(proc)
+    return proc
 
 
 def shell_cmd(parts: list[str]) -> str:
@@ -85,6 +109,7 @@ def _close_stdout(proc: subprocess.Popen) -> None:
     直接 ``proc.stdout.close()`` 会等读线程释放锁而**同样卡住**（实测可卡到孤儿退出为止，
     那就白改了）。因此把它丢进守护线程，主流程绝不为它等待。
     """
+
     def _do() -> None:
         try:
             if proc.stdout:
@@ -95,9 +120,14 @@ def _close_stdout(proc: subprocess.Popen) -> None:
     threading.Thread(target=_do, daemon=True).start()
 
 
-def drain_proc(proc: subprocess.Popen, log_sink: Callable[[str], None],
-               is_cancelled: Callable[[], bool], cancel_note: str,
-               eof_grace: float = 5.0, poll: float = 0.3) -> str:
+def drain_proc(
+    proc: subprocess.Popen,
+    log_sink: Callable[[str], None],
+    is_cancelled: Callable[[], bool],
+    cancel_note: str,
+    eof_grace: float = 5.0,
+    poll: float = 0.3,
+) -> str:
     """把子进程输出逐行喂给 log_sink，直到 EOF。返回 ``'eof' | 'cancelled' | 'stalled'``。
 
     为什么不能简单写 ``while line: readline()``：
@@ -121,7 +151,7 @@ def drain_proc(proc: subprocess.Popen, log_sink: Callable[[str], None],
         except Exception:  # noqa: BLE001 —— 强杀进程时管道读取会抛，属预期
             pass
         finally:
-            q.put(None)                      # EOF 哨兵
+            q.put(None)  # EOF 哨兵
 
     threading.Thread(target=_reader, daemon=True).start()
 
@@ -130,7 +160,7 @@ def drain_proc(proc: subprocess.Popen, log_sink: Callable[[str], None],
         try:
             item = q.get(timeout=poll)
         except queue.Empty:
-            item = ""                        # 超时：仅用于做取消/存活检查，不是数据
+            item = ""  # 超时：仅用于做取消/存活检查，不是数据
         if item is None:
             return "eof"
         if item:
@@ -145,17 +175,18 @@ def drain_proc(proc: subprocess.Popen, log_sink: Callable[[str], None],
             if exited_at is None:
                 exited_at = time.monotonic()
             elif time.monotonic() - exited_at > eof_grace:
-                log_sink("\n[warn] 子进程已退出但输出管道未收到 EOF（疑似孤儿孙进程仍持有写端），"
-                         "已跳过等待并按已落盘产物归档。\n")
+                log_sink(
+                    "\n[warn] 子进程已退出但输出管道未收到 EOF（疑似孤儿孙进程仍持有写端），"
+                    "已跳过等待并按已落盘产物归档。\n"
+                )
                 kill_proc_tree(proc)
                 _close_stdout(proc)
                 return "stalled"
 
 
-
 @dataclass
 class RunnerResult:
-    status: str                       # success | failed | cancelled | timedout
+    status: str  # success | failed | cancelled | timedout
     exit_code: int = 0
     summary: dict = field(default_factory=dict)
     metrics: dict = field(default_factory=dict)
@@ -169,13 +200,15 @@ class BaseRunner(ABC):
     engine: str = "generic"
 
     @abstractmethod
-    def run(self,
-            job: dict,
-            env: dict,
-            executor: dict,
-            junit_path: str,
-            log_sink: Callable[[str], None],
-            is_cancelled: RunnerCtx,
-            register_proc: Optional[RegisterProc] = None) -> RunnerResult:
+    def run(
+        self,
+        job: dict,
+        env: dict,
+        executor: dict,
+        junit_path: str,
+        log_sink: Callable[[str], None],
+        is_cancelled: RunnerCtx,
+        register_proc: Optional[RegisterProc] = None,
+    ) -> RunnerResult:
         """启动独立子进程执行引擎并回收结果。log_sink 接收已含换行的文本行。"""
         raise NotImplementedError

@@ -66,6 +66,7 @@ htmlcov/
 
 # ---------- 5. Node ----------
 node_modules/
+.venv-ui/
 npm-debug.log*
 
 # ---------- 6. IDE / 编辑器 / 系统临时文件 ----------

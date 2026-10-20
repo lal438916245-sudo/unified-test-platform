@@ -1,0 +1,5 @@
+# UI subprocess environment; platform backend dependencies stay separate.
+# Versions found on this workstation; real-device compatibility awaits acceptance.
+airtest==1.4.3
+pocoui==1.0.94
+pytest==8.4.2

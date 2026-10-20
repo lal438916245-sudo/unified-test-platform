@@ -1,14 +1,27 @@
 import os
 
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from ..db import PlanLifecycleConflict
 from .router import router as api_router
 
 
 def build_app(static_dir: str) -> FastAPI:
     app = FastAPI(title="统一游戏测试平台 MVP")
+    from ..project_registry import registry_scope
+    from .migration import router as migration_router
+    from .projects import router as project_router
+
+    @app.middleware("http")
+    async def _registry_context(request, call_next):
+        with registry_scope(getattr(app.state, "db_path", None)):
+            return await call_next(request)
+
+    @app.exception_handler(PlanLifecycleConflict)
+    async def _plan_lifecycle_conflict(request, exc):
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
 
     @app.get("/health", include_in_schema=False)
     def _health() -> dict[str, str]:
@@ -26,10 +39,13 @@ def build_app(static_dir: str) -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(api_router)
+    app.include_router(project_router)
+    app.include_router(migration_router)
     if os.path.isdir(static_dir):
         app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
         @app.get("/", include_in_schema=False)
         def _index():
             return RedirectResponse("/static/index.html")
+
     return app

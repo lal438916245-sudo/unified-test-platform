@@ -7,6 +7,7 @@ import atexit
 import gc
 import os
 import shutil
+import socket
 import sys
 import tempfile
 
@@ -49,11 +50,13 @@ def _db():
     return path
 
 
-def _plan(steps, *, name="p", revision=1, fail_fast=True):
+def _plan(steps, *, name="p", revision=1, fail_fast=True,
+          environment_id=1, executor_id=2):
     return {
         "id": 7, "name": name, "description": "d", "revision": revision,
         "fail_fast": fail_fast, "owner": "local",
-        "environment_id": 1, "executor_id": 2, "asset_source_id": None,
+        "environment_id": environment_id, "executor_id": executor_id,
+        "asset_source_id": None,
         "steps": steps,
     }
 
@@ -202,6 +205,69 @@ def test_precheck_plan_no_side_effects_and_reports_readiness():
     assert "exclusive_lock_held" in r["concurrency"]
     assert r["fingerprint"]
     assert (_count(path, "plan_runs"), _count(path, "jobs")) == before
+
+    # ---------- Environment 连通性的「必需 vs 仅供参考」（2026-10-13 修误报） ----------
+    # 这里必须用**真实存在**的配置实体：上面 _plan 默认引用的 environment_id=1 / executor_id=2
+    # 在 init_db 刚建的库里并不存在（env_pc 恒为 None），所以这条分支此前从未被覆盖过。
+    def _closed_port() -> int:
+        """拿一个刚被释放的端口 —— 无人监听 ⇒ 连通性探测必然失败。"""
+        s = socket.socket()
+        s.bind(("127.0.0.1", 0))
+        p = s.getsockname()[1]
+        s.close()
+        return p
+
+    ex_id = db.create_executor(path, {
+        "name": "ex-pytest-only", "python_executable": sys.executable, "cwd": "",
+        "python_ref": "", "cwd_root": "backend-demo", "allowed_runners": ["pytest"],
+        "max_concurrency": 1, "enabled": 1})
+    env_down = db.create_environment(path, {
+        "name": "e-down", "host": "127.0.0.1", "port": _closed_port(),
+        "kind": "http", "protocol": "http", "enabled": 1})
+    pytest_step = {"engine": "pytest", "name": "s",
+                   "params": {"args": ["demo/test_platform_demo.py"]}}
+    base = (_count(path, "plan_runs"), _count(path, "jobs"))
+
+    # (1) 纯 pytest + Environment 不可达 → env **仅供参考**，不阻断整体预检
+    r1 = precheck_plan(db, path, _plan([pytest_step], environment_id=env_down,
+                                       executor_id=ex_id))
+    assert r1["config"]["environment"]["ok"] is False            # 探测确实失败了
+    assert r1["config"]["environment"]["requirement"] == "informational"
+    assert r1["environment_required"] is False
+    assert "被测环境不可达" not in r1["missing"]                  # 不再计入缺失项
+    assert r1["notices"] and any("没有显式的环境依赖声明机制" in n for n in r1["notices"])
+    assert r1["ok"] is True, (r1["missing"], r1["notices"])       # 关键：不被无关 env 拖垮
+
+    # (2) 含 Locust 步骤 + Environment 不可达 → env 仍是**必需项**，明确提示（既有规则不变）
+    locust_step = {"engine": "locust", "name": "l",
+                   "params": {"locustfile": "http-fixture", "users": 2,
+                              "spawn_rate": 1, "run_time": "5s"}}
+    r2 = precheck_plan(db, path, _plan([locust_step], environment_id=env_down,
+                                       executor_id=ex_id))
+    assert r2["config"]["environment"]["requirement"] == "required"
+    assert r2["environment_required"] is True
+    assert "被测环境不可达" in r2["missing"]
+    assert r2["ok"] is False
+    assert any("目标服务已启动" in s for s in r2["next_steps"])
+
+    # (3) Environment 可达 → 原有行为保持：就绪、无提示、无缺失
+    ls = socket.socket()
+    ls.bind(("127.0.0.1", 0))
+    ls.listen(1)
+    try:
+        env_up = db.create_environment(path, {
+            "name": "e-up", "host": "127.0.0.1", "port": ls.getsockname()[1],
+            "kind": "http", "protocol": "http", "enabled": 1})
+        r3 = precheck_plan(db, path, _plan([pytest_step], environment_id=env_up,
+                                           executor_id=ex_id))
+        assert r3["config"]["environment"]["ok"] is True
+        assert r3["notices"] == [] and "被测环境不可达" not in r3["missing"]
+        assert r3["ok"] is True
+    finally:
+        ls.close()
+
+    # 三种场景走完，预检依然**零副作用**（未创建 PlanRun/Job）
+    assert (_count(path, "plan_runs"), _count(path, "jobs")) == base
 
 
 def test_precheck_plan_flags_unregistered_engine():

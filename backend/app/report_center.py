@@ -6,11 +6,11 @@
 - 仅同 engine、同 engine_data_schema 主版本、同场景/选择器、同环境、关键输入可比才有效。
 - 不生成跨引擎总分；fixture 与真实资产识别报告绝不混为有效性能结论。
 """
+
 from __future__ import annotations
 
 import hashlib
 import json
-import os
 from typing import Any, Optional
 
 from . import db
@@ -51,22 +51,33 @@ def engine_compare_key(job: dict, env: dict, engine_data_schema: str) -> dict:
     env_name = (env or {}).get("name") or "-"
     env_host = f"{(env or {}).get('host','-')}:{(env or {}).get('port','-')}"
 
-    key: dict[str, Any] = {"engine": engine, "env": env_name,
-                           "schema_main": _main_version(engine_data_schema)}
+    key: dict[str, Any] = {
+        "engine": engine,
+        "env": env_name,
+        "schema_main": _main_version(engine_data_schema),
+    }
     if engine == "pytest":
         args = params.get("args") or []
         selectors = [a for a in args if (str(a).endswith(".py") or "::" in str(a))]
         key["selector"] = selectors or []
         key["selector_fp"] = _h(sorted(selectors)) if selectors else None
         key["cwd_tail"] = _safe_basename(params.get("cwd") or "")
+    elif engine == "airtest":
+        key.update({k: params.get(k) for k in ("suite", "case", "device")})
+        key["wait_timeout"] = params.get("wait_timeout", 10)
+        key["reset"] = params.get("reset", "none")
+        key["content_fp"] = ((job.get("config_snapshot") or {}).get("content") or {}).get(
+            "fingerprint"
+        )
     elif engine == "locust":
         key["scenario"] = str(params.get("locustfile") or "http-fixture")
         key["host"] = str(env_host)
         key["users"] = int(params.get("users") or 0)
         key["spawn_rate"] = int(params.get("spawn_rate") or 0)
         key["run_time"] = str(params.get("run_time") or "")
-        key["input_fp"] = _h(key["scenario"], params.get("users"),
-                             params.get("spawn_rate"), params.get("run_time"))
+        key["input_fp"] = _h(
+            key["scenario"], params.get("users"), params.get("spawn_rate"), params.get("run_time")
+        )
     elif engine == "matcheval":
         alg = params.get("algorithm") or []
         if isinstance(alg, str):
@@ -101,14 +112,18 @@ def _main_version(schema: Optional[str]) -> str:
 
 
 # ---------- 供调度器落库的派生行 ----------
-def build_index_row(report: dict, job: dict, plan: Optional[dict],
-                    env: dict, created_at: str) -> dict:
+def build_index_row(
+    report: dict, job: dict, plan: Optional[dict], env: dict, created_at: str
+) -> dict:
     """从已归档 report.json + job + plan + env 派生一行 report_index，兼容缺失字段。"""
     status = report.get("status") or job.get("status") or "-"
     started = report.get("started_at")
     ended = report.get("ended_at")
-    duration_ms = _num(metrics_of(report).get("duration_ms")) if metrics_of(report).get("duration_ms") is not None \
+    duration_ms = (
+        _num(metrics_of(report).get("duration_ms"))
+        if metrics_of(report).get("duration_ms") is not None
         else _num(report.get("summary", {}).get("duration_ms"))
+    )
 
     schema = report.get("engine_data_schema") or "generic/1.0"
     ck = engine_compare_key(job, env, schema)
@@ -134,10 +149,13 @@ def build_index_row(report: dict, job: dict, plan: Optional[dict],
         "metrics": json.dumps(metrics_of(report), ensure_ascii=False),
         "summary": json.dumps(report.get("summary") or {}, ensure_ascii=False),
         "metadata_incomplete": 0,
-        "extra": json.dumps({
-            "job_name": job.get("name"),
-            "report_schema_version": report.get("schema_version"),
-        }, ensure_ascii=False),
+        "extra": json.dumps(
+            {
+                "job_name": job.get("name"),
+                "report_schema_version": report.get("schema_version"),
+            },
+            ensure_ascii=False,
+        ),
         "created_at": created_at,
     }
     # 缺少关键可比性输入（如旧记录 args 为空）→ 标记信息不完整但不伪造
@@ -153,6 +171,8 @@ def _is_incomplete(ck: dict) -> bool:
         return not ck.get("scenario")
     if eng == "matcheval":
         return not ck.get("dataset")
+    if eng == "airtest":
+        return not all(ck.get(k) for k in ("suite", "case", "device", "content_fp"))
     return False
 
 
@@ -163,11 +183,30 @@ def _comparator(ck: dict, schema_main: Optional[str] = "") -> str:
         return _h("pytest", schema_main, ck.get("selector"), ck.get("cwd_tail"))
     if eng == "locust":
         # 并发参数是趋势的关注点，保留在 comparator 内以便"同配置"分组
-        return _h("locust", schema_main, ck.get("scenario"), ck.get("host"),
-                  ck.get("users"), ck.get("spawn_rate"), ck.get("run_time"))
+        return _h(
+            "locust",
+            schema_main,
+            ck.get("scenario"),
+            ck.get("host"),
+            ck.get("users"),
+            ck.get("spawn_rate"),
+            ck.get("run_time"),
+        )
     if eng == "matcheval":
-        return _h("matcheval", schema_main, ck.get("dataset"), ck.get("algorithm"),
-                  ck.get("threshold"))
+        return _h(
+            "matcheval", schema_main, ck.get("dataset"), ck.get("algorithm"), ck.get("threshold")
+        )
+    if eng == "airtest":
+        return _h(
+            "airtest",
+            schema_main,
+            ck.get("suite"),
+            ck.get("case"),
+            ck.get("device"),
+            ck.get("wait_timeout"),
+            ck.get("reset"),
+            ck.get("content_fp"),
+        )
     return _h(eng or "?", "generic")
 
 
@@ -182,23 +221,34 @@ def compare_compatibility(a: dict, b: dict) -> dict:
     ack, bck = a.get("compare_key") or {}, b.get("compare_key") or {}
 
     if (a.get("engine") or "") != (b.get("engine") or ""):
-        return {"compatible": False,
-                "reasons": [f"引擎不同：{a.get('engine')} vs {b.get('engine')}"],
-                "summary": "引擎不同，禁止比较"}
-    if (ack.get("schema_main") or a.get("schema_main_version")) \
-            != (bck.get("schema_main") or b.get("schema_main_version")):
-        return {"compatible": False,
-                "reasons": [f"engine_data_schema 主版本不同：{a.get('schema_main_version')} vs "
-                            f"{b.get('schema_main_version')}"],
-                "summary": "报告协议主版本不同，禁止比较"}
+        return {
+            "compatible": False,
+            "reasons": [f"引擎不同：{a.get('engine')} vs {b.get('engine')}"],
+            "summary": "引擎不同，禁止比较",
+        }
+    if (ack.get("schema_main") or a.get("schema_main_version")) != (
+        bck.get("schema_main") or b.get("schema_main_version")
+    ):
+        return {
+            "compatible": False,
+            "reasons": [
+                f"engine_data_schema 主版本不同：{a.get('schema_main_version')} vs "
+                f"{b.get('schema_main_version')}"
+            ],
+            "summary": "报告协议主版本不同，禁止比较",
+        }
     if a.get("env_name") != b.get("env_name"):
-        return {"compatible": False,
-                "reasons": [f"环境不同：{a.get('env_name')} vs {b.get('env_name')}"],
-                "summary": "被测环境不同，禁止比较"}
+        return {
+            "compatible": False,
+            "reasons": [f"环境不同：{a.get('env_name')} vs {b.get('env_name')}"],
+            "summary": "被测环境不同，禁止比较",
+        }
     if a.get("metadata_incomplete") or b.get("metadata_incomplete"):
-        return {"compatible": False,
-                "reasons": ["旧报告元数据不足（缺少可比性输入，历史记录信息不完整）"],
-                "summary": "历史记录信息不完整"}
+        return {
+            "compatible": False,
+            "reasons": ["旧报告元数据不足（缺少可比性输入，历史记录信息不完整）"],
+            "summary": "历史记录信息不完整",
+        }
 
     eng = a.get("engine")
     if eng == "pytest":
@@ -206,6 +256,12 @@ def compare_compatibility(a: dict, b: dict) -> dict:
             reasons.append(f"测试选择器不同：{_norm_sel(ack)} vs {_norm_sel(bck)}")
         elif ack.get("cwd_tail") != bck.get("cwd_tail"):
             reasons.append("工作目录不同")
+    elif eng == "airtest":
+        if any(
+            ack.get(k) != bck.get(k)
+            for k in ("suite", "case", "device", "wait_timeout", "reset", "content_fp")
+        ):
+            reasons.append("UI 套件、用例、设备、等待/复位策略或输入内容不同")
     elif eng == "locust":
         if ack.get("scenario") != bck.get("scenario"):
             reasons.append(f"场景不同：{ack.get('scenario')} vs {bck.get('scenario')}")
@@ -214,9 +270,13 @@ def compare_compatibility(a: dict, b: dict) -> dict:
         if ack.get("users") != bck.get("users"):
             reasons.append(f"并发(users)不同：{ack.get('users')} vs {bck.get('users')}")
         if ack.get("spawn_rate") != bck.get("spawn_rate"):
-            reasons.append(f"递增率(spawn_rate)不同：{ack.get('spawn_rate')} vs {bck.get('spawn_rate')}")
+            reasons.append(
+                f"递增率(spawn_rate)不同：{ack.get('spawn_rate')} vs {bck.get('spawn_rate')}"
+            )
         if ack.get("run_time") != bck.get("run_time"):
-            reasons.append(f"压测时长(run_time)不同：{ack.get('run_time')} vs {bck.get('run_time')}")
+            reasons.append(
+                f"压测时长(run_time)不同：{ack.get('run_time')} vs {bck.get('run_time')}"
+            )
     elif eng == "matcheval":
         if ack.get("dataset") != bck.get("dataset"):
             reasons.append(f"样本集(dataset)不同：{ack.get('dataset')} vs {bck.get('dataset')}")
@@ -226,9 +286,11 @@ def compare_compatibility(a: dict, b: dict) -> dict:
             reasons.append(f"阈值不同：{ack.get('threshold')} vs {bck.get('threshold')}")
 
     compatible = not reasons
-    return {"compatible": compatible,
-            "reasons": reasons if not compatible else [],
-            "summary": "有效对比" if compatible else "输入不可比；原因如下"}
+    return {
+        "compatible": compatible,
+        "reasons": reasons if not compatible else [],
+        "summary": "有效对比" if compatible else "输入不可比；原因如下",
+    }
 
 
 def _norm_sel(ck: dict):
@@ -239,6 +301,12 @@ def _norm_sel(ck: dict):
 # ---------- 引擎专项指标（统一方向与格式化） ----------
 # metric -> (label, 单位, "higher_better" | "lower_better" | "neutral")
 _ENGINE_METRICS: dict[str, list[tuple]] = {
+    "airtest": [
+        ("passed", "通过数", "", "higher_better"),
+        ("failed", "失败数", "", "lower_better"),
+        ("skipped", "跳过数", "", "neutral"),
+        ("duration_ms", "耗时", "ms", "lower_better"),
+    ],
     "pytest": [
         ("passed", "通过数", "", "higher_better"),
         ("failed", "失败数", "", "lower_better"),
@@ -278,22 +346,29 @@ def metric_deltas(a: dict, b: dict) -> dict:
     for meta in engine_metrics(engine):
         key = meta["key"]
         bv = bm.get(key)
-        av = amc = am.get(key)
+        av = am.get(key)
         if bv is None and av is None:
             continue
         bv = _num(bv)
         av = _num(av)
         if bv is None or av is None:
-            items.append({**meta, "base": av, "candidate": bv, "delta": None,
-                          "label_fmt": _fmt_single(meta, av) + " → " + _fmt_single(meta, bv),
-                          "missing": True})
+            items.append(
+                {
+                    **meta,
+                    "base": av,
+                    "candidate": bv,
+                    "delta": None,
+                    "label_fmt": _fmt_single(meta, av) + " → " + _fmt_single(meta, bv),
+                    "missing": True,
+                }
+            )
             continue
         delta = bv - av
         unit = meta["unit"]
         if unit == "%":
-            bvf, avf, deltav = bv * 100, av * 100, delta * 100
+            deltav = delta * 100
         else:
-            bvf, avf, deltav = bv, av, delta
+            deltav = delta
         prefix = "+" if deltav > 0 else ("-" if deltav < 0 else "")
         if meta["direction"] == "higher_better":
             color = "up" if delta > 0 else ("down" if delta < 0 else "flat")
@@ -302,12 +377,19 @@ def metric_deltas(a: dict, b: dict) -> dict:
             color = "down" if delta > 0 else ("up" if delta < 0 else "flat")
             dir_label = "更差" if delta > 0 else ("更好" if delta < 0 else "持平")
         else:
-            color = "flat"; dir_label = ""
-        items.append({**meta,
-                      "base": round(av, 4), "candidate": round(bv, 4),
-                      "delta": round(deltav, 4),
-                      "formatted": f"{prefix}{_trim(deltav)}{unit}",
-                      "dir_label": dir_label, "color": color})
+            color = "flat"
+            dir_label = ""
+        items.append(
+            {
+                **meta,
+                "base": round(av, 4),
+                "candidate": round(bv, 4),
+                "delta": round(deltav, 4),
+                "formatted": f"{prefix}{_trim(deltav)}{unit}",
+                "dir_label": dir_label,
+                "color": color,
+            }
+        )
     return {"engine": engine, "items": items}
 
 
@@ -330,12 +412,19 @@ def build_trend(rows: list[dict]) -> dict:
     for r in rows:
         m = r.get("metrics") or {}
         mm = {k: (m[k] if m.get(k) is not None else None) for k in wanted}
-        points.append({"job_id": r.get("job_id"), "plan_run_id": r.get("plan_run_id"),
-                       "started_at": r.get("started_at"), "metrics": mm})
+        points.append(
+            {
+                "job_id": r.get("job_id"),
+                "plan_run_id": r.get("plan_run_id"),
+                "started_at": r.get("started_at"),
+                "metrics": mm,
+            }
+        )
     return {"engine": engine, "points": points}
 
 
 # ---------- 迁移：从既有 reports/jobs 重建索引（兼容旧记录，不触碰事实源） ----------
+
 
 def rebuild_report_index(db_path: str) -> dict:
     """全量重建 report_index。旧报告缺少可比性输入时标记 metadata_incomplete，
@@ -345,7 +434,8 @@ def rebuild_report_index(db_path: str) -> dict:
         "SELECT r.job_id AS rid, r.report_json, r.created_at AS rcreated, "
         "pr.plan_snapshot AS run_plan_snapshot, j.* "
         "FROM reports r LEFT JOIN jobs j ON j.id=r.job_id "
-        "LEFT JOIN plan_runs pr ON pr.id=j.plan_run_id").fetchall()
+        "LEFT JOIN plan_runs pr ON pr.id=j.plan_run_id"
+    ).fetchall()
     conn.close()
     rebuilt = incomplete = skipped = 0
     for r in rows:
@@ -362,11 +452,18 @@ def rebuild_report_index(db_path: str) -> dict:
         try:
             rep = json.loads(r["report_json"])
             # 环境身份优先取 Job 固化快照：配置实体后续编辑不得改变历史比较结论
-            env = snapshot_env_view(job.get("config_snapshot")) \
-                or db.get_environment(db_path, job.get("environment_id")) or {}
+            env = (
+                snapshot_env_view(job.get("config_snapshot"))
+                or db.get_environment(db_path, job.get("environment_id"))
+                or {}
+            )
             # 计划名优先取执行时的 PlanRun 计划快照：后续改名不漂移历史
             snap_name = plan_snapshot_name(job.get("run_plan_snapshot"))
-            plan = {"name": snap_name} if snap_name else (db.get_plan(db_path, job.get("plan_id")) or {})
+            plan = (
+                {"name": snap_name}
+                if snap_name
+                else (db.get_plan(db_path, job.get("plan_id")) or {})
+            )
             row = build_index_row(rep, job, plan, env, r["rcreated"] or "")
         except Exception:  # noqa: BLE001 —— 单条失败不阻断整体迁移
             skipped += 1

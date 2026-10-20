@@ -11,6 +11,7 @@
     --warn:#f0a500;
   }
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
   body{margin:0;font-family:'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;color:var(--ink);background:#fbfcfb;font-size:14px}
   header{background:#fff;border-bottom:1px solid var(--rule);padding:14px 28px;display:flex;align-items:center;gap:20px;position:sticky;top:0;z-index:5}
   header .logo{font-weight:700;font-size:15px;color:var(--brand-d)}
@@ -45,6 +46,13 @@
   .metrics{display:flex;gap:24px;flex-wrap:wrap;margin:6px 0}
   .metrics .k{font-size:12px;color:var(--muted)}.metrics .v{font-size:20px;font-weight:700}
   .muted{color:var(--muted);font-size:12px}
+  /* 预检三态（.ok/.bad 只作用于 .pre 内部，而"配置就绪度"表格在 .pre 之外，故另立可全局使用的类） */
+  .st-ok{color:var(--ok);font-weight:700}
+  .st-bad{color:var(--fail);font-weight:700}
+  .st-warn{color:var(--warn);font-weight:700}
+  .st-na{color:var(--muted)}
+  .hint-warn{border-left:3px solid var(--warn);background:#fff8e6;padding:8px 12px;border-radius:6px;margin:8px 0 0;font-size:12px}
+  .hint-warn ul{margin:4px 0 0 18px;padding:0}
   a{color:var(--brand-d)}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .err{border-left:3px solid var(--fail);background:#fdf0f0;padding:10px 12px;border-radius:6px}
@@ -68,6 +76,7 @@
     <a href="#/suites" data-page-node-id="tsSuitesNav0001">测试套件</a>
     <a href="#/reports-center" data-page-node-id="o7FrPEAk2AKR4EXuQy5uM1">报告中心</a>
     <a href="#/env" data-page-node-id="LgTQo0WGwKos9HB6aDB29m">资源与环境</a>
+    <a href="#/migration">安装与配置迁移</a>
   </nav>
   <span class="muted" style="margin-left:auto" id="health" data-page-node-id="EEP2FUhAd8yU7jTHy1Bmgv"></span>
 </header>
@@ -76,29 +85,37 @@
 <script>
 const API='';
 const $=id=>document.getElementById(id);
-async function j(path,opt){const r=await fetch(API+path,opt);if(!r.ok)throw new Error(r.status+' '+await r.text());return r.json();}
+async function j(path,opt){if(opt)opt={...opt,headers:{"X-Platform-Config":"1",...(opt.headers||{})}};const r=await fetch(API+path,opt);if(!r.ok)throw new Error(r.status+' '+await r.text());return r.json();}
 function chip(s){return `<span class="chip c-${s}">${s}</span>`;}
-function esc(s){s=String(s==null?'':s);return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function esc(s){s=String(s==null?'':s);return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function term(status){return ['success','failed','cancelled','timedout','skipped'].includes(status);}
 let timer=null, pollBusy=false;
 // ---------- 报告对比选择（基线/候选，存会话，跨页保持） ----------
-function pickBaseline(jobId){sessionStorage.setItem('rc_base',String(jobId));alert('已设为基线报告 #'+jobId);}
-function pickCandidate(jobId){sessionStorage.setItem('rc_cand',String(jobId));alert('已设为候选报告 #'+jobId);}
+function pickBaseline(jobId){sessionStorage.setItem('rc_base',String(jobId));alert('已设为基线报告 #'+jobId);router();}
+function pickCandidate(jobId){sessionStorage.setItem('rc_cand',String(jobId));alert('已设为候选报告 #'+jobId);router();}
+function pickClear(){sessionStorage.removeItem('rc_base');sessionStorage.removeItem('rc_cand');router();}
 function compareSel(){
+  // 只如实返回"到底选了什么"，**不要**把"只选了一个"抹成"没选"：
+  // 抹掉之后界面既不给行高亮、也没有"已选基线 #X"的提示与清除入口，
+  // 用户设完基线毫无反馈、也无法撤销（2026-10-13 修）。
   const b=sessionStorage.getItem('rc_base'), c=sessionStorage.getItem('rc_cand');
-  if(!b||!c) return {b:null,c:null};
-  return {b,b,c:c};
+  return {b:b||null,c:c||null};
 }
 
 function router(){
   clearInterval(timer); timer=null;
   const h=location.hash||'#/plans';
+  if(!h.startsWith('#/env')){cfgForm=null;cfgFocusPending=false;}
+  if(!h.startsWith('#/cases')){tcEdit=null;tcMsg='';}
+  if(!h.startsWith('#/suites')){tsEdit=null;tsMsg='';}
   if(h.startsWith('#/run/')) renderRun(h.split('/')[2]);
   else if(h.startsWith('#/report/')) renderReport(h.split('/')[2]);
   else if(h.startsWith('#/compare/')){const parts=h.split('/').slice(2);renderCompare(parts[0],parts[1]);}
   else if(h.startsWith('#/reports-center')) renderReportCenter();
   else if(h.startsWith('#/cases')) renderCases();
   else if(h.startsWith('#/suites')) renderSuites();
+  else if(h.startsWith('#/projects')) renderProjects();
+  else if(h.startsWith('#/migration')) renderMigration(h.split('/')[2]);
   else if(h.startsWith('#/env')) renderEnv();
   else if(h.startsWith('#/plan-editor/')) renderPlanEditor(h.split('/')[2]);
   else renderPlans();
@@ -112,36 +129,64 @@ function navHighlight(h){
   });
 }
 window.addEventListener('hashchange',router);
+// Position newly opened forms below the sticky navigation, including cross-page links.
+function focusForm(id){
+  const form=$(id);if(!form)return;
+  form.style.scrollMarginTop=((document.querySelector('header')?.offsetHeight||0)+16)+'px';
+  form.scrollIntoView({block:'start'});
+  form.querySelector('input:not([type="hidden"]):not([disabled]),select:not([disabled])')?.focus({preventScroll:true});
+}
 window.addEventListener('load',()=>{heartbeat();router();});
 async function heartbeat(){try{const[e,x]=await Promise.all([j('/api/environments'),j('/api/executors')]);$('health').textContent=`环境 ${e.length} · 执行机 ${x.length}`}catch(e){$('health').textContent='后端未连接'}}
 
 // ---------- 计划列表 ----------
+let plListMode='active', plArchiveBusy=false, plArchiveMessage='';
 async function renderPlans(){
   const app=$('app'); app.innerHTML='<h1>测试计划</h1><div class="card"><p class="muted">加载中…</p></div>';
   try{
-    const plans=await j('/api/plans');
+    const plans=await j('/api/plans?status='+plListMode);
     const rows=plans.map(p=>`
       <tr>
-        <td><strong>${esc(p.name)}</strong><div class="muted">${esc(p.description||'')}</div></td>
+        <td><strong>${esc(p.name)}</strong>${p.archived?' <span class="chip c-skipped">已归档</span>':''}<div class="muted">${esc(p.description||'')}</div>${p.archived_at?`<div class="muted">归档于 ${esc(p.archived_at)}</div>`:''}</td>
         <td class="muted">${esc((p.steps||[]).map(s=>s.engine).join(' → '))||'无'}</td>
         <td class="muted">rev ${p.revision??1}<div class="muted">${esc(p.updated_at||'-')}</div></td>
         <td class="row">
-          <button class="primary" onclick="trigger(${p.id})">一键执行</button>
-          <button onclick="plPrecheckSaved(${p.id})">预检</button>
-          <button onclick="location.hash='#/plan-editor/${p.id}'">编辑</button>
+          ${p.archived?`<button class="primary" onclick="plChangeArchive(${p.id},false)">恢复</button>`:
+          `<button class="primary" onclick="trigger(${p.id})">一键执行</button>
+          <button onclick="plPrecheckSaved(${p.id})">预检</button>`}
+          <button onclick="location.hash='#/plan-editor/${p.id}'">${p.archived?'查看':'编辑'}</button>
           <button onclick="plCopy(${p.id})">复制</button>
+          ${p.archived?'':`<button onclick="plChangeArchive(${p.id},true)">归档</button>`}
         </td>
       </tr>`).join('');
     app.innerHTML=`<h1>测试计划</h1>
       <div class="card">
         <div class="row"><h2 style="margin:0">计划列表</h2>
           <button class="primary" style="margin-left:auto" onclick="location.hash='#/plan-editor/new'">新建计划</button></div>
+        <div class="row" style="margin-top:12px">${[['active','使用中'],['archived','已归档'],['all','全部']].map(([key,label])=>
+          `<button ${plListMode===key?'class="primary"':''} aria-pressed="${plListMode===key}" onclick="plSetListMode('${key}')">${label}</button>`).join('')}
+          <span class="muted">当前 ${plans.length} 个计划</span></div>
+        <p class="muted">归档后移出使用中列表，历史执行与报告保留。恢复后可继续编辑和执行；有未结束任务的计划需等待结束或取消后再归档。</p>
+        <p id="pl-list-msg" role="status" aria-live="polite">${esc(plArchiveMessage)}</p>
         <table style="margin-top:10px"><thead><tr><th>名称</th><th>执行单元</th><th>版本</th><th>操作</th></tr></thead>
           <tbody>${rows||'<tr><td colspan=4 class=muted>暂无计划</td></tr>'}</tbody></table></div>
       <div id="pl-precheck-host"></div>
       <div class="card"><h2>最近执行记录</h2><div id="recent"></div></div>`;
     loadRecent();
   }catch(e){app.innerHTML=`<div class="card err">加载计划失败：${esc(e.message)}</div>`;}
+}
+function plSetListMode(mode){plListMode=mode;plArchiveMessage='';renderPlans();}
+async function plChangeArchive(id,archived,editor=false){
+  if(plArchiveBusy)return;
+  plArchiveBusy=true;
+  try{
+    await j(`/api/plans/${id}/${archived?'archive':'restore'}`,{method:'POST'});
+    plArchiveMessage=archived?'已归档，可在“已归档”列表恢复。':'已恢复，可在“使用中”列表继续编辑和执行。';
+    if(editor)await renderPlanEditor(String(id));else await renderPlans();
+  }catch(e){
+    const host=$(editor?'pl-msg':'pl-list-msg');
+    if(host)host.textContent='操作失败：'+e.message;
+  }finally{plArchiveBusy=false;}
 }
 let recentLimit=8;   // 最近执行记录的显示条数（「加载更多」每次 +16）
 async function loadRecent(){
@@ -168,8 +213,7 @@ async function renderRun(runId,silent){
   const keepLogs=$('logsl')?$('logsl').innerHTML:'';   // 轮询重绘时保留已打开的日志面板
   if(!silent) app.innerHTML='<h1>执行详情</h1><div class="card"><p class="muted">加载中…</p></div>';
   try{
-    const {run,jobs}=await j(`/api/runs/${runId}`);
-    ready(jobs);
+    const {run,jobs,plan_archived}=await j(`/api/runs/${runId}`);
     const snap=run.plan_snapshot||null;
     const planName=(snap&&snap.name)||('plan#'+run.plan_id);
     const rev=run.plan_revision!=null?run.plan_revision:(snap?snap.revision:null);
@@ -180,6 +224,7 @@ async function renderRun(runId,silent){
           <span class="muted">状态</span>${chip(run.status)} <span class="muted">${esc(run.started_at||'')}</span></div>
         <p class="muted" style="margin-top:8px">计划名与版本取自执行时的不可变快照；后续编辑原计划不会改变本次执行与报告。</p>
       </div>
+      ${plan_archived?'<div class="card hint-warn">原计划已归档，历史记录和产物仍可查看。恢复计划后可重试。<a href="#/plans" onclick="plListMode=\'archived\'">前往已归档计划 →</a></div>':''}
       ${planSnapshotCard(snap)}
       <div class="card"><h2>执行单元</h2><table><thead><tr><th>#</th><th>Job</th><th>引擎</th><th>状态</th><th>尝试</th><th>退出码</th><th>操作</th></tr></thead>
         <tbody>${jobs.map(jb=>`
@@ -192,7 +237,7 @@ async function renderRun(runId,silent){
             <td class="row">
               <a href="javascript:void 0" onclick="showLogs(${jb.id})">日志</a>
               ${!term(jb.status)?`<button ${jb.status==='cancelling'?'disabled':''} onclick="cancel(${jb.id})">${jb.status==='cancelling'?'取消中…':'取消'}</button>`:''}
-              ${term(jb.status)?`<button onclick="retry(${jb.id})">重试</button>`:''}
+              ${term(jb.status)?`<button ${plan_archived?'disabled title="请先恢复原计划"':''} onclick="retry(${jb.id})">重试</button>`:''}
               ${jb.report_path?`<a href="#/report/${jb.id}">报告</a>`:''}
             </td>
           </tr>`).join('')}</tbody></table>
@@ -224,7 +269,6 @@ function pollRun(runId,jobs){
     }catch(e){}finally{pollBusy=false;}
   },1200);
 }
-function ready(jobs){return jobs;}
 
 // ---------- 报告详情 ----------
 async function renderReport(jobId){
@@ -234,7 +278,7 @@ async function renderReport(jobId){
     const data=JSON.parse(rep.report_json);
     const s=data.summary||{},m=data.metrics||{};
     const art=(data.artifacts||[]).map(a=>`<a href="/api/artifacts/${jobId}/${esc(a.path)}" target="_blank">${esc(a.name)}</a><span class="muted"> · ${(a.size/1024).toFixed(1)}KB</span>`).join(' · ')||'无';
-    const engPanel = data.engine==='locust' ? locustPanel(data) : (data.engine==='matcheval' ? matchevalPanel(data, jobId) : '');
+    const engPanel = data.engine==='locust' ? locustPanel(data) : (data.engine==='matcheval' ? matchevalPanel(data, jobId) : data.engine==='airtest' ? airtestPanel(data) : '');
     app.innerHTML=`<h1>报告详情 <span class="muted">${esc(data.job_id)}</span></h1>
       <div class="card">
         <div class="row"><span class="muted">引擎</span><strong>${esc(data.engine)}</strong>
@@ -255,6 +299,20 @@ async function renderReport(jobId){
 }
 
 // ---------- 压测专项（仅 engine==locust，并入报告详情，不新增页面） ----------
+function airtestPanel(data){
+  const e=data.engine_data||{};
+  const phases={prepare:'设备准备',run:'用例执行',teardown:'收尾'};
+  return `<div class="card"><h2>UI 交互证据</h2><p>阶段：${esc(phases[e.phase]||e.phase||'-')} · 失败分类：${esc(e.failure_kind||'无')}</p>
+    <p>套件 ${esc(e.suite||'-')} · 设备 ${esc(e.device||'-')}</p>
+    ${e.target_window?`<p>本次窗口：${esc(e.target_window.title)} · ${esc(e.target_window.process_name)} · HWND ${esc(e.target_window.hwnd)}</p>`:''}
+    ${e.connection_cleanup?`<p>连接回收：${esc(e.connection_cleanup.state)}</p>`:''}
+    ${e.error?`<p class="muted">${esc(e.error)}</p>`:''}
+    ${e.runtime_requirements?`<p>公共运行要求：${esc(e.runtime_requirements.name)} · ${esc(e.runtime_requirements.fingerprint)}</p>`:''}
+    ${e.runtime_checks?runtimeChecksHtml(e.runtime_checks):''}
+    ${(e.evidence_errors||[]).map(x=>`<p>${esc(x)}</p>`).join('')}
+    ${(e.cleanup_errors||[]).map(x=>`<p>${esc(x)}</p>`).join('')}
+    <table><thead><tr><th>用例</th><th>阶段</th><th>结果</th></tr></thead><tbody>${(e.cases||[]).map(c=>`<tr><td>${esc(c.id)}</td><td>${esc(c.when)}</td><td>${esc(c.outcome)}</td></tr>`).join('')}</tbody></table></div>`;
+}
 function locustPanel(data){
   const m=data.metrics||{},ed=(data.engine_data||{});
   const key=(v,d)=>(v==null||isNaN(v)?d:v);
@@ -324,29 +382,33 @@ function spark(series,title){
 }
 
 // ---------- 资源与环境（配置中心：CRUD / 启停 / 预检 / 就绪度；不显示密钥、不提供任意路径浏览器） ----------
-let cfgCatalog=null, cfgData={envs:[],execs:[],assets:[]}, cfgForm=null, cfgPrecheck=null;
-const CFG_TYPE_LABEL={environment:'Environment',executor:'Executor',asset:'AssetSource'};
-const CFG_BASE={environment:'/api/config/environments',executor:'/api/config/executors',asset:'/api/config/asset-sources'};
+let cfgCatalog=null, cfgData={envs:[],execs:[],assets:[],devices:[],requirements:[]}, cfgForm=null, cfgPrecheck=null, cfgWindows=[], cfgFocusPending=false;
+const CFG_TYPE_LABEL={environment:'Environment',executor:'Executor',asset:'AssetSource',device:'UI 设备',requirement:'公共运行要求'};
+const CFG_BASE={environment:'/api/config/environments',executor:'/api/config/executors',asset:'/api/config/asset-sources',device:'/api/config/ui-devices',requirement:'/api/config/runtime-requirements'};
 
 async function renderEnv(){
   const app=$('app');
   app.innerHTML='<h1>资源与环境</h1><div class="card"><p class="muted">加载中…</p></div>';
   try{
-    const[envs,execs,assets,cat,ready]=await Promise.all([
+    const[envs,execs,assets,cat,ready,devices]=await Promise.all([
       j('/api/environments'),j('/api/executors'),j('/api/asset-sources'),
-      j('/api/config/catalog'),j('/api/config/readiness')]);
+      j('/api/config/catalog'),j('/api/config/readiness'),j('/api/ui-devices')]);
     cfgCatalog=cat;
-    cfgData={envs,execs,assets};
+    cfgData={envs,execs,assets,devices,requirements:cat.runtime_requirements||[]};
     app.innerHTML=`<h1>资源与环境 <span class="muted">配置中心</span></h1>
+      <div class="card"><h2>项目、运行环境与本机路径</h2><p>登记项目、Python、外部引擎与资产；更换电脑后可重新绑定已有引用的本机路径。</p><a href="#/projects">管理项目与测试入口 →</a></div>
       ${cfgReadinessCard(ready.engines)}
       <div id="cfg-precheck">${cfgPrecheck?cfgPrecheckHtml(cfgPrecheck):''}</div>
       ${cfgEnvCard(envs)}
       ${cfgExecCard(execs)}
+      ${cfgDeviceCard(devices)}
+      ${cfgRequirementCard(cfgData.requirements)}
       ${cfgAssetCard(assets)}
       <div id="cfg-form-host"></div>
       ${cfgDeprecatedCard(cat.deprecated_env)}
-      <div class="card muted">约束：前端只提交受控 ID/key（下拉选择），不接受任意命令、路径、Python 可执行文件或素材目录；密钥只保存引用名（环境变量名 / 外部 secret 引用），平台不保存明文；所有对外视图一律脱敏。预检只做低风险探测，不发起压测或完整测试。</div>`;
+      <div class="card muted">项目与测试入口页面允许登记本机路径；用例和计划只引用登记后的 ID/key，不接受命令或临时绝对路径；密钥只保存引用名（环境变量名 / 外部 secret 引用），平台不保存明文；本机配置页展示登记路径，执行快照和报告使用引用与指纹。预检只做低风险探测，不发起压测或完整测试。</div>`;
     cfgRenderForm();
+    if(cfgFocusPending){cfgFocusPending=false;focusForm('cfg-form');}
   }catch(e){app.innerHTML=`<div class="card err">加载配置失败：${esc(e.message)}</div>`;}
 }
 
@@ -359,7 +421,7 @@ function cfgReadinessCard(engines){
     <td class="muted">${esc((e.missing||[]).join('；')||'—')}</td>
     <td class="muted">${(e.next_steps||[]).map(esc).join('<br>')||'—'}</td>
   </tr>`).join('')||'<tr><td colspan=5 class="muted">无</td></tr>';
-  return `<div class="card"><h2>引擎就绪度 <span class="muted">（仅预检，不发起压测/完整测试）</span></h2>
+  return `<div class="card"><h2>引擎配置就绪度 <span class="muted">（配置就绪不代表客户端在线；实时状态请在计划预检中查看）</span></h2>
     <table><thead><tr><th>引擎</th><th>状态</th><th>可用执行机</th><th>缺失项</th><th>下一步</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
@@ -422,9 +484,58 @@ function cfgExecCard(execs){
 }
 
 // ---------- AssetSource ----------
+function cfgDeviceCard(devices){
+  const rows=devices.map(d=>`<tr><td><strong>${esc(d.name)}</strong><div class="muted">ui-device-${d.id} · rev ${d.revision}</div></td>
+    <td>${esc((cfgData.execs.find(x=>x.id===d.executor_id)||{}).name||'#'+d.executor_id)}</td>
+    <td>${d.match_mode==='exact'?'完全一致':'包含'}：${esc(d.title_match)}<div class="muted">${esc(d.process_name||'不限进程')} · ${esc(d.window_class||'不限类名')}</div></td>
+    <td>${esc(d.host)}:${d.port}${d.unity_editor?' · Editor':''}</td>
+    <td>${d.enabled?'启用':'停用'}</td><td class="row">
+    <a href="javascript:void 0" onclick="cfgEdit('device',${d.id})">编辑</a>
+    <a href="javascript:void 0" onclick="cfgToggle('device',${d.id})">${d.enabled?'停用':'启用'}</a>
+    <a href="javascript:void 0" onclick="cfgPrecheckNow('device',${d.id})">静态预检</a>
+    <a href="javascript:void 0" onclick="cfgProbeDevice(${d.id})">探测窗口</a>
+    <a href="javascript:void 0" onclick="cfgProbeDevice(${d.id},true)">Unity / Poco 实时探测</a></td></tr>`).join('');
+  return `<div class="card"><div class="row"><h2 style="margin:0">UI 设备</h2><button class="primary" style="margin-left:auto" onclick="cfgNew('device')">新增</button></div>
+    <p class="muted">配置持久保存，关联执行机。窗口句柄在执行时解析；修改规则后新建执行，旧任务重试会检查原配置指纹。</p>
+    <table><thead><tr><th>设备</th><th>执行机</th><th>窗口匹配规则</th><th>Poco</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows||'<tr><td colspan=6>暂无设备；先在 Executor 中允许 airtest，再新增设备。</td></tr>'}</tbody></table></div>`;
+}
+async function cfgProbeDevice(id,realtime=false){
+  $('cfg-precheck').innerHTML='<div class="card">只读探测中…</div>';
+  try{
+    cfgPrecheck=await j(`${CFG_BASE.device}/${id}/${realtime?'runtime-probe':'probe'}`,{method:'POST'});
+    $('cfg-precheck').innerHTML=cfgPrecheck.checks&&cfgPrecheck.checks.some(c=>c.status)
+      ?`<div class="card"><h2>${esc(cfgPrecheck.entity)} · ${esc(cfgPrecheck.name)}</h2>${runtimeChecksHtml(cfgPrecheck.checks)}<p class="muted">设备探测不检查某个用例的项目依赖或 MongoDB；完整检查请进入计划预检。</p></div>`
+      :cfgPrecheckHtml(cfgPrecheck);
+    $('cfg-precheck').scrollIntoView({behavior:'smooth',block:'center'});
+  }catch(e){alert('窗口探测失败：'+e.message);}
+}
+async function cfgDiscoverWindows(){
+  const host=$('cfg-windows');
+  const executorId=Number($('cf-device-executor').value);
+  if(!Number.isInteger(executorId)||executorId<=0){
+    host.textContent='请先选择关联执行机（需允许 airtest），再查看本机窗口。';
+    return;
+  }
+  host.textContent='只读探测中…';
+  try{
+    const result=await j('/api/config/ui-windows/probe',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({executor_id:executorId})});
+    cfgWindows=result.windows||[];
+    host.innerHTML=`<table><thead><tr><th>标题</th><th>进程 / 类名</th><th></th></tr></thead><tbody>${cfgWindows.map((w,i)=>
+      `<tr><td>${esc(w.title)}</td><td>${esc(w.process_name)} / ${esc(w.window_class)}</td><td><button onclick="cfgUseWindow(${i})">采用此窗口</button></td></tr>`).join('')||'<tr><td>没有可见窗口</td></tr>'}</tbody></table>`;
+  }catch(e){host.textContent='探测失败：'+e.message;}
+}
+function cfgUseWindow(i){
+  const w=cfgWindows[i]; if(!w)return;
+  $('cf-title-match').value=$('cf-unity-editor').checked?w.title.split(' - ')[0]:w.title;
+  $('cf-process-name').value=w.process_name;
+  $('cf-window-class').value=w.window_class;
+  $('cfg-windows').textContent='已填入匹配规则，请确认标题稳定且唯一，保存后点击“探测窗口”。';
+}
+
 function cfgAssetCard(assets){
   const rows=assets.map(a=>{
-    const refs=a.kind==='locust'?[['场景',a.scenario_ref,a.scenario_ref_masked]]
+    const refs=(a.kind==='locust'||a.kind==='airtest')?[[a.kind==='airtest'?'UI 套件':'场景',a.scenario_ref,a.scenario_ref_masked]]
       :[['dataset',a.dataset_ref,a.dataset_masked],['模板',a.tpl_ref,a.tpl_ref_masked],
         ['场景',a.scenes_ref,a.scenes_ref_masked],['真值',a.ground_truth_ref,a.ground_truth_ref_masked],
         ['Airtest',a.airtest_ref,a.airtest_ref_masked]];
@@ -447,17 +558,28 @@ function cfgAssetCard(assets){
       <tbody>${rows||'<tr><td colspan=5 class="muted">暂无资产源</td></tr>'}</tbody></table></div>`;
 }
 
+function cfgRequirementCard(rows){
+  return `<div class="card"><div class="row"><h2 style="margin:0">公共运行要求</h2><button class="primary" style="margin-left:auto" onclick="cfgNew('requirement')">新增公共要求</button></div>
+    <p class="muted">同类用例选择同一份要求即可复用，无需修改连接 fixture。未指定时继承 UI 套件默认要求；自定义配置可补充检查，不能移除套件声明的基础要求。配置变更影响后续执行，历史快照保持不变。</p>
+    <table><thead><tr><th>名称 / 引用</th><th>适用 UI 套件</th><th>项目依赖</th><th>MongoDB 来源</th><th>状态 / 操作</th></tr></thead><tbody>${rows.map(r=>`<tr>
+      <td><strong>${esc(r.name)}</strong><div class="muted">${esc(r.key)} · rev ${r.revision}</div></td>
+      <td>${esc(r.suite||'通用 Unity')}</td><td>${esc((r.modules||[]).join('、')||'无额外依赖')}</td>
+      <td>${r.mongo_ref?'GameAutoTest 项目配置（含环境覆盖）':'随 UI 套件基础要求'}</td>
+      <td>${r.builtin?'内置默认':`${r.enabled?'启用':'停用'} · <a href="javascript:void 0" onclick="cfgEdit('requirement',${r.id})">编辑</a> · <a href="javascript:void 0" onclick="cfgToggle('requirement',${r.id})">${r.enabled?'停用':'启用'}</a>`}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
 // ---------- 新增/编辑表单（只提供受控下拉，不提供路径浏览器） ----------
-function cfgNew(type){cfgForm={type,id:null,data:{}};cfgRenderForm();}
+function cfgNew(type){cfgForm={type,id:null,data:{}};cfgRenderForm();focusForm('cfg-form');}
 function cfgEdit(type,id){
   const item=cfgList(type).find(x=>x.id===id);
   if(!item)return;
   cfgForm={type,id,data:JSON.parse(JSON.stringify(item))};
   cfgRenderForm();
-  const el=$('cfg-form'); if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+  focusForm('cfg-form');
 }
-function cfgCloseForm(){cfgForm=null;cfgRenderForm();}
-function cfgList(type){return {environment:cfgData.envs,executor:cfgData.execs,asset:cfgData.assets}[type]||[];}
+function cfgCloseForm(){cfgForm=null;cfgFocusPending=false;cfgRenderForm();}
+function cfgList(type){return {environment:cfgData.envs,executor:cfgData.execs,asset:cfgData.assets,device:cfgData.devices,requirement:cfgData.requirements}[type]||[];}
 
 function cfgRenderForm(){
   const host=$('cfg-form-host'); if(!host)return;
@@ -477,6 +599,15 @@ function cfgFields(type){
   const d=cfgForm.data||{};
   const opts=(list,cur,emptyLabel)=>`<option value="" ${!cur?'selected':''}>${esc(emptyLabel||'(不指定)')}</option>`+
     list.map(o=>`<option value="${esc(o.key)}" ${cur===o.key?'selected':''}>${esc(o.label)}</option>`).join('');
+  if(type==='requirement'){
+    return `<label>名称<input id="cf-name" value="${esc(d.name||'')}"></label>
+      <label>适用 UI 套件<select id="cf-req-suite">${(cfgCatalog.asset.ui_suites||[]).map(s=>`<option value="${esc(s.key)}" ${(d.suite||'gameautotest-ui')===s.key?'selected':''}>${esc(s.label)}</option>`).join('')}</select></label>
+      <label>MongoDB 配置来源<select id="cf-req-mongo"><option value="">继承套件基础要求</option><option value="gameautotest" ${d.mongo_ref==='gameautotest'?'selected':''}>GameAutoTest 项目配置</option></select></label>
+      <label class="inline"><input id="cf-enabled" type="checkbox" ${d.enabled!==0?'checked':''}> 启用</label>
+      <div style="grid-column:1/-1">补充项目依赖<div class="row">${(cfgCatalog.runtime_modules||[]).map(m=>`<label class="inline"><input class="cf-req-module" type="checkbox" value="${m}" ${(d.modules||[]).includes(m)?'checked':''}> ${m}</label>`).join('')}</div></div>
+      <label>备注<input id="cf-notes" value="${esc(d.notes||'')}"></label>
+      <p class="muted" style="grid-column:1/-1">所有 UI 用例均检查唯一窗口及 Poco 层级。GameAutoTest UI 还会自动检查 requests、psutil、pymongo 与 MongoDB；数据库地址和认证取自该项目 config.py 及其环境覆盖，不在此重复保存。MongoDB 探测仅 ping 和读取，不验证删除权限、不清理账号。</p>`;
+  }
   if(type==='environment'){
     const kinds=cfgCatalog.env_kinds.map(k=>`<option value="${esc(k)}" ${d.kind===k?'selected':''}>${esc(k)}</option>`).join('');
     const protos=cfgCatalog.env_protocols.map(k=>`<option value="${esc(k)}" ${d.protocol===k?'selected':''}>${esc(k)}</option>`).join('');
@@ -504,6 +635,23 @@ function cfgFields(type){
       <label class="inline"><input id="cf-enabled" type="checkbox" ${d.enabled!==0?'checked':''}> 启用</label>
       <div style="grid-column:1/-1"><div class="muted">允许的 Runner</div><div class="row">${runners}</div></div>`;
   }
+  if(type==='device'){
+    const exs=cfgData.execs.filter(x=>x.enabled&&(!(x.allowed_runners||[]).length||x.allowed_runners.includes('airtest')));
+    return `<label>设备名称<input id="cf-name" value="${esc(d.name||'')}"></label>
+      <label>关联执行机<select id="cf-device-executor"><option value="">请选择允许 airtest 的执行机</option>${exs.map(x=>`<option value="${x.id}" ${Number(d.executor_id)===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
+      <label>窗口标题规则<input id="cf-title-match" value="${esc(d.title_match||'')}" placeholder="例如 ColyseusTechDemo-MMO"></label>
+      <label>匹配方式<select id="cf-match-mode"><option value="contains" ${d.match_mode!=='exact'?'selected':''}>标题包含</option><option value="exact" ${d.match_mode==='exact'?'selected':''}>标题完全一致</option></select></label>
+      <label>进程名（可选）<input id="cf-process-name" value="${esc(d.process_name??'Unity.exe')}" placeholder="Unity.exe"></label>
+      <label>窗口类名（可选）<input id="cf-window-class" value="${esc(d.window_class||'')}"></label>
+      <label>Poco 地址（loopback）<input id="cf-device-host" value="${esc(d.host||'127.0.0.1')}"></label>
+      <label>Poco 端口<input id="cf-device-port" type="number" min="1" max="65535" value="${d.port??5001}"></label>
+      <label class="inline"><input id="cf-unity-editor" type="checkbox" ${d.unity_editor!==0?'checked':''}> Unity Editor GameView 模式</label>
+      <label class="inline"><input id="cf-enabled" type="checkbox" ${d.enabled!==0?'checked':''}> 启用</label>
+      <label>通用冒烟：安全点击控件（可选）<input id="cf-smoke-selector" value="${esc(d.smoke_selector||'')}"></label>
+      <label>通用冒烟：点击后目标控件（可选）<input id="cf-smoke-result" value="${esc(d.smoke_result||'')}"></label>
+      <label>备注<input id="cf-notes" value="${esc(d.notes||'')}"></label>
+      <div style="grid-column:1/-1"><button onclick="cfgDiscoverWindows()">查看本机窗口</button><span class="muted"> 只读枚举，不聚焦、不点击、不连接 Poco。每次执行重新匹配，必须恰好 1 个窗口。Colyseus 专用冒烟无需填写通用冒烟控件。</span><div id="cfg-windows"></div></div>`;
+  }
   const A=cfgCatalog.asset||{};
   const kinds=cfgCatalog.asset_kinds.map(k=>`<option value="${esc(k)}" ${d.kind===k?'selected':''}>${esc(k)}</option>`).join('');
   return `
@@ -521,6 +669,7 @@ function cfgFields(type){
     <div id="cf-asset-locust" style="grid-column:1/-1">
       <label>Locust 场景引用<select id="cf-scenario-ref">${opts(A.locust_scenarios,d.scenario_ref,'(不指定)')}</select></label>
     </div>
+    <div id="cf-asset-ui" style="grid-column:1/-1"><label>UI 套件引用<select id="cf-ui-suite">${opts(A.ui_suites||[],d.scenario_ref,'(不指定)')}</select></label></div>
     <label>备注<input id="cf-notes" value="${esc(d.notes||'')}"></label>
     <label class="inline"><input id="cf-enabled" type="checkbox" ${d.enabled!==0?'checked':''}> 启用</label>`;
 }
@@ -539,6 +688,7 @@ function cfgBindKind(){
     const me=$('cf-asset-matcheval'), lo=$('cf-asset-locust');
     if(me) me.style.display=kind==='matcheval'?'':'none';
     if(lo) lo.style.display=kind==='locust'?'':'none';
+    if($('cf-asset-ui'))$('cf-asset-ui').style.display=kind==='airtest'?'':'none';
   }
 }
 
@@ -546,6 +696,9 @@ function cfgPayload(type){
   const val=id=>{const el=$(id);return el?el.value:'';};
   const num=id=>{const v=val(id);return v===''?0:Number(v);};
   const on=id=>{const el=$(id);return el?!!el.checked:true;};
+  if(type==='requirement')return {name:val('cf-name').trim(),suite:val('cf-req-suite'),
+    modules:[...document.querySelectorAll('.cf-req-module:checked')].map(x=>x.value),mongo_ref:val('cf-req-mongo'),
+    notes:val('cf-notes'),enabled:on('cf-enabled')?1:0};
   if(type==='environment'){
     const kind=val('cf-kind');
     const p={name:val('cf-name').trim(),kind,protocol:val('cf-protocol'),
@@ -562,9 +715,19 @@ function cfgPayload(type){
       allowed_runners:runners,max_concurrency:num('cf-max-concurrency')||1,
       notes:val('cf-notes'),enabled:on('cf-enabled')?1:0};
   }
+  if(type==='device'){
+    return {name:val('cf-name').trim(),executor_id:num('cf-device-executor'),
+      title_match:val('cf-title-match').trim(),match_mode:val('cf-match-mode'),
+      process_name:val('cf-process-name').trim(),window_class:val('cf-window-class').trim(),
+      host:val('cf-device-host').trim(),port:num('cf-device-port'),unity_editor:on('cf-unity-editor')?1:0,
+      smoke_selector:val('cf-smoke-selector').trim(),smoke_result:val('cf-smoke-result').trim(),
+      notes:val('cf-notes'),enabled:on('cf-enabled')?1:0};
+  }
   const kind=val('cf-kind');
   const p={name:val('cf-name').trim(),kind,notes:val('cf-notes'),enabled:on('cf-enabled')?1:0};
-  if(kind==='locust'){
+  if(kind==='airtest'){
+    p.scenario_ref=val('cf-ui-suite');
+  }else if(kind==='locust'){
     p.scenario_ref=val('cf-scenario-ref');
   }else{
     p.dataset_ref=val('cf-dataset-ref');p.tpl_ref=val('cf-tpl-ref');
@@ -599,6 +762,7 @@ async function cfgPrecheckNow(type,id){
 }
 
 function cfgPrecheckHtml(r){
+  if(r&&r.checks&&r.checks.some(c=>c.status))return `<div class="card"><h2>${esc(r.entity||'预检')} · ${esc(r.name||'')}</h2>${runtimeChecksHtml(r.checks)}<p class="muted">结果只代表检查时刻；设备探测不代替计划的项目依赖检查。</p></div>`;
   if(!r)return '';
   const badge=r.ok===true?'<span class="ok">可运行</span>'
     :r.ok===false?'<span class="bad">缺少配置</span>':'<span class="muted">无需检查</span>';
@@ -611,11 +775,12 @@ function cfgPrecheckHtml(r){
   const steps=(r.next_steps||[]).length?`<p class="muted" style="margin:6px 0 0">下一步：</p><ul>${r.next_steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:'';
   const fp=r.fingerprint?`<p class="muted" style="margin:6px 0 0">非敏感指纹：${esc(r.fingerprint)}${r.dir_fingerprint?' · 目录指纹 '+esc(r.dir_fingerprint):''}</p>`:'';
   return `<div class="card"><h2>预检结果 · ${esc(r.entity||'')} <span class="muted">${esc(r.name||'')}</span> ${badge}</h2>
-    <div class="pre"><ul>${checks||'<li class="muted">（无检查项）</li>'}</ul>${missing}${steps}${fp}</div></div>`;
+    <div class="pre"><ul>${checks||'<li class="muted">（无检查项）</li>'}</ul>${missing}${steps}${fp}
+    ${(r.windows||[]).map(w=>`<p>${esc(w.title)} · ${esc(w.process_name)} · ${esc(w.window_class)} · HWND ${esc(w.hwnd)}</p>`).join('')}</div></div>`;
 }
 
 // ---------- 计划编辑器（受控表单：新建/编辑/复制/版本信息/一键执行/预检；步骤增删上下移） ----------
-const PL_ENGINES=['pytest','locust','matcheval'];
+const PL_ENGINES=['pytest','locust','matcheval','airtest'];
 const PL_ALGOS=['tpl','mstpl','kaze','brisk','akaze','orb'];
 let plCatalog=null, plRefs={envs:[],execs:[],assets:[],cases:[],suites:[]}, plForm=null, plPrecheck=null, plMsg='', plBusy=false;
 
@@ -628,6 +793,7 @@ async function plEnsureRefs(){
           assets:assets.filter(a=>a.enabled),cases:cases,suites:suites};
 }
 function plEmptyStep(engine){return {kind:'inline',fresh:true,engine:engine||'pytest',name:'',requires_exclusive:false,params:{}};}
+function plExecutorChanged(){plCollect();plRenderEditor();}
 // 引用形态步骤：case_ref 固定 (id,revision,fingerprint)，override_params 只放与用例不同的键
 function plEmptyCaseStep(cid){return {kind:'case',case_ref:cid||null,override_params:{},
   name:'',requires_exclusive:false,params:{}};}
@@ -644,7 +810,7 @@ async function renderPlanEditor(idStr){
           fail_fast:true,steps:[plEmptyStep('pytest')]}};
     }else{
       const p=await j('/api/plans/'+idStr);
-      plForm={id:p.id,revision:p.revision??1,created_at:p.created_at,updated_at:p.updated_at,
+      plForm={id:p.id,revision:p.revision??1,created_at:p.created_at,updated_at:p.updated_at,archived:!!p.archived,
         data:{name:p.name||'',description:p.description||'',environment_id:p.environment_id||0,
           executor_id:p.executor_id||0,asset_source_id:p.asset_source_id||0,
           fail_fast:!!p.fail_fast,
@@ -667,6 +833,8 @@ function plRenderEditor(){
   const d=f.data;
   const stepsHtml=d.steps.map((s,i)=>plStepCard(s,i)).join('')||'<p class="muted">暂无步骤，请添加。</p>';
   app.innerHTML=`<h1>计划编辑器 <span class="muted">${f.id?('#'+f.id+' · rev '+(f.revision??1)):'新建'}</span></h1>
+    ${f.archived?`<div class="card hint-warn"><strong>已归档 · 只读查看</strong><p>恢复后可编辑和执行；计划版本与历史报告保持不变。</p><button onclick="plChangeArchive(${f.id},false,true)">恢复计划</button><span id="pl-msg" role="status"></span></div>`:''}
+    <fieldset ${f.archived?'disabled':''} style="border:0;padding:0;margin:0;min-width:0">
     <div class="card">
       <div class="row"><h2 style="margin:0">基础信息</h2>
         <a href="#/plans" class="muted" style="margin-left:auto">返回计划列表</a></div>
@@ -674,7 +842,7 @@ function plRenderEditor(){
         <label>名称<input id="pl-name" value="${esc(d.name)}" placeholder="计划名称"></label>
         <label>说明<input id="pl-desc" value="${esc(d.description)}" placeholder="用途/范围说明"></label>
         <label>Environment（仅启用）<select id="pl-env">${plEnvOpts(d.environment_id)}</select></label>
-        <label>Executor（仅启用）<select id="pl-exec">${plExecOpts(d.executor_id)}</select></label>
+        <label>Executor（仅启用）<select id="pl-exec" onchange="plExecutorChanged()">${plExecOpts(d.executor_id)}</select></label>
         <label>AssetSource（仅启用且兼容）<select id="pl-asset">${plAssetOpts(d.asset_source_id)}</select></label>
         <label class="inline"><input id="pl-failfast" type="checkbox" ${d.fail_fast?'checked':''}> 失败即停（fail_fast）</label>
       </div>
@@ -698,10 +866,10 @@ function plRenderEditor(){
         <button class="primary" onclick="plSave(false)">保存</button>
         <button onclick="plSave(true)">保存并执行</button>
         <button onclick="plRunPrecheck()">预检 / 执行预览</button>
-        <span class="muted" id="pl-msg">${esc(plMsg||'')}</span>
+        ${f.archived?'':`<span class="muted" id="pl-msg">${esc(plMsg||'')}</span>`}
       </div>
     </div>
-    <div id="pl-precheck-host">${plPrecheck?plPrecheckHtml(plPrecheck):''}</div>`;
+    </fieldset><div id="pl-precheck-host">${plPrecheck?plPrecheckHtml(plPrecheck):''}</div>`;
 }
 
 function plStepCard(s,i){
@@ -710,7 +878,7 @@ function plStepCard(s,i){
   const down=i<plForm.data.steps.length-1?`<button onclick="plStepMove(${i},1)">下移</button>`:'';
   const head = isCase
     ? `<strong>步骤 ${i+1}</strong><span class="chip">引用用例</span>
-       <select id="pl-s${i}-case" onchange="plPickCase(${i},this.value)">${plCaseOpts(s.case_ref&&s.case_ref.id)}</select>`
+       <select id="pl-s${i}-case-ref" onchange="plPickCase(${i},this.value)">${plCaseOpts(s.case_ref&&s.case_ref.id)}</select>`
     : `<strong>步骤 ${i+1}</strong><span class="chip">内联</span>
        <select id="pl-s${i}-engine" onchange="plStepEngine(${i},this.value)">${
          PL_ENGINES.map(e=>`<option value="${e}" ${s.engine===e?'selected':''}>${e}</option>`).join('')}</select>`;
@@ -804,22 +972,38 @@ function plStepFields(s,i){
       下方参数中<b>与用例不同的项</b>将自动记为 override_params（只允许调整该用例<b>已声明</b>的参数）。
       <a href="#/cases" style="margin-left:6px">管理用例 →</a></div>` : '';
   const common=`<label>步骤名<input id="pl-s${i}-name" value="${esc(s.name||'')}" placeholder="默认为引擎名/用例名"></label>
-    <label>超时(秒)<input id="pl-s${i}-timeout" type="number" min="1" value="${p.timeout_sec??300}"></label>
-    <label class="inline"><input id="pl-s${i}-excl" type="checkbox" ${s.requires_exclusive?'checked':''}> 独占执行机（UI/Unity 类）</label>`;
+    <label>超时(秒)<input id="pl-s${i}-timeout" type="number" min="1" value="${p.timeout_sec??PL_DEFAULTED.pytest.timeout_sec}"></label>
+    <label class="inline"><input id="pl-s${i}-excl" type="checkbox" ${(eng==='airtest'||s.requires_exclusive)?'checked':''} ${eng==='airtest'?'disabled':''}> 独占执行机（UI/Unity 类）</label>`;
+  if(eng==='airtest'){
+    const A=(plCatalog&&plCatalog.asset)||{};
+    const suite=p.suite||((A.ui_suites||[])[0]||{}).key||'';
+    const opts=(items,sel)=>items.map(x=>`<option value="${esc(x.key)}" ${x.key===sel?'selected':''}>${esc(x.label)}</option>`).join('');
+    const cases=(A.ui_cases||{})[suite]||[];
+    return tip+common+`<label>UI 套件<select id="pl-s${i}-suite" onchange="plUIChange('${i}')">${opts(A.ui_suites||[],suite)}</select></label>
+      <label>公共运行要求<select id="pl-s${i}-requirements">${plRequirementOpts(suite,p.requirements)}</select></label>
+      <label>已登记用例<select id="pl-s${i}-case">${cases.map(c=>`<option value="${esc(c)}" ${c===p.case?'selected':''}>${esc(c)}</option>`).join('')}</select></label>
+      <label>目标设备<select id="pl-s${i}-device"><option value="">请选择已登记设备</option>${(A.ui_devices||[]).map(x=>{
+        const unavailable=x.enabled===0||(i!=='c'&&plForm&&x.executor_id&&Number(plForm.data.executor_id)!==x.executor_id);
+        return `<option value="${esc(x.key)}" ${x.key===p.device?'selected':''} ${unavailable?'disabled':''}>${esc(x.label)}${unavailable?'（停用或执行机不匹配）':''}</option>`;
+      }).join('')}</select></label>
+      <label>等待超时(秒)<input id="pl-s${i}-wait" type="number" min="1" max="120" value="${p.wait_timeout??PL_DEFAULTED.airtest.wait_timeout}"></label>
+      <label>复位策略<select id="pl-s${i}-reset"><option value="none">用例自行检查初始状态</option></select></label>
+      <div class="muted">计划预检会只读探测窗口、Poco 和项目依赖；执行前重新检查。GameAutoTest 用例执行时会创建/清理测试账号，预检不写入数据。<a href="#/env">管理公共运行要求 →</a></div>`;
+  }
   if(eng==='pytest'){
-    return tip+common+`<label style="grid-column:1/-1">测试选择器 / 参数（空格分隔；仅相对路径与开关，不接受绝对路径或命令）
+    return tip+common+`<label style="grid-column:1/-1">已登记 pytest 入口（可选）<select id="pl-s${i}-entry" onchange="plPytestEntryChange('${i}')"><option value="">自定义受控项目内选择器</option>${((plCatalog&&plCatalog.pytest_entries)||[]).map(e=>`<option value="${esc(e.key)}" ${p.entry===e.key?'selected':''}>${esc(e.label)}</option>`).join('')}${p.entry&&!((plCatalog&&plCatalog.pytest_entries)||[]).some(e=>e.key===p.entry)?`<option selected value="${esc(p.entry)}">原入口 ${esc(p.entry)}（不可用）</option>`:''}</select></label><label style="grid-column:1/-1">测试选择器 / 参数（空格分隔；仅相对路径与开关，不接受绝对路径或命令）
       <input id="pl-s${i}-args" value="${esc((p.args||[]).join(' '))}" placeholder="demo/test_platform_demo.py -o addopts= --tb=short"></label>
       <label>工作目录根（受控）<select id="pl-s${i}-cwd-root">${plRootOpts(p.cwd_root)}</select></label>`;
   }
   if(eng==='locust'){
     return tip+common+`<label>场景（受控引用）<select id="pl-s${i}-locustfile">${plScenarioOpts(p.locustfile)}</select></label>
-      <label>并发用户数 users<input id="pl-s${i}-users" type="number" min="1" value="${p.users??5}"></label>
-      <label>启动速率 spawn_rate<input id="pl-s${i}-spawn" type="number" min="1" value="${p.spawn_rate??2}"></label>
-      <label>运行时长 run_time<input id="pl-s${i}-runtime" value="${esc(p.run_time||'15s')}" placeholder="如 15s / 1m"></label>
+      <label>并发用户数 users<input id="pl-s${i}-users" type="number" min="1" value="${p.users??PL_DEFAULTED.locust.users}"></label>
+      <label>启动速率 spawn_rate<input id="pl-s${i}-spawn" type="number" min="1" value="${p.spawn_rate??PL_DEFAULTED.locust.spawn_rate}"></label>
+      <label>运行时长 run_time<input id="pl-s${i}-runtime" value="${esc(p.run_time||PL_DEFAULTED.locust.run_time)}" placeholder="如 15s / 1m"></label>
       <label class="inline"><input id="pl-s${i}-csv" type="checkbox" ${p.csv_full_history?'checked':''}> 记录完整 CSV 历史</label>`;
   }
   return tip+common+`<label>样本集 dataset（受控引用）<select id="pl-s${i}-dataset">${plDatasetOpts(p.dataset)}</select></label>
-    <label>阈值 threshold（0..1）<input id="pl-s${i}-threshold" type="number" min="0" max="1" step="0.01" value="${p.threshold??0.8}"></label>
+    <label>阈值 threshold（0..1）<input id="pl-s${i}-threshold" type="number" min="0" max="1" step="0.01" value="${p.threshold??PL_DEFAULTED.matcheval.threshold}"></label>
     <label>输出级别 output_level<select id="pl-s${i}-output-level">${plOutOpts(p.output_level)}</select></label>
     <div style="grid-column:1/-1"><div class="muted">算法（受控白名单，多选）</div>
       <div class="row">${PL_ALGOS.map(a=>`<label class="inline"><input type="checkbox" class="pl-alg-${i}" value="${a}" ${(p.algorithm||[]).includes(a)?'checked':''}> ${a}</label>`).join('')}</div></div>`;
@@ -837,31 +1021,43 @@ function plAssetOpts(cur){
   // 用例步骤的引擎取自其引用的用例（步骤本身不保存 engine）
   const kinds=new Set(plForm.data.steps.map(s=>{
     const eng = s.kind==='case' ? (plFindCase(s.case_ref&&s.case_ref.id)||{}).engine : s.engine;
-    return eng==='locust'?'locust':eng==='matcheval'?'matcheval':null;
+    return eng==='locust'?'locust':eng==='matcheval'?'matcheval':eng==='airtest'?'airtest':null;
   }).filter(Boolean));
   const list=plRefs.assets.filter(a=>kinds.size===0||kinds.has(a.kind));
   return `<option value="0" ${!cur?'selected':''}>（不指定）</option>`+
     list.map(a=>`<option value="${a.id}" ${String(cur)===String(a.id)?'selected':''}>${esc(a.name)} · ${esc(a.kind)}</option>`).join('');
 }
+function plKeyOpts(items,cur,placeholder){
+  return `<option value="" ${!cur?'selected':''}>${placeholder}</option>`+
+    items.map(o=>`<option value="${esc(o.key)}" ${cur===o.key?'selected':''}>${esc(o.label)}</option>`).join('');
+}
 function plRootOpts(cur){
-  const roots=(plCatalog&&plCatalog.workdir_roots)||[];
-  return `<option value="" ${!cur?'selected':''}>（不指定）</option>`+
-    roots.map(o=>`<option value="${esc(o.key)}" ${cur===o.key?'selected':''}>${esc(o.label)}</option>`).join('');
+  return plKeyOpts((plCatalog&&plCatalog.workdir_roots)||[],cur,'（不指定）');
 }
 function plScenarioOpts(cur){
-  const list=(plCatalog&&plCatalog.asset&&plCatalog.asset.locust_scenarios)||[];
-  return `<option value="" ${!cur?'selected':''}>（选择受控场景）</option>`+
-    list.map(o=>`<option value="${esc(o.key)}" ${cur===o.key?'selected':''}>${esc(o.label)}</option>`).join('');
+  return plKeyOpts((plCatalog&&plCatalog.asset&&plCatalog.asset.locust_scenarios)||[],cur,'（选择受控场景）');
 }
 function plDatasetOpts(cur){
-  const list=(plCatalog&&plCatalog.asset&&plCatalog.asset.datasets)||[];
-  return `<option value="" ${!cur?'selected':''}>（选择受控样本集）</option>`+
-    list.map(o=>`<option value="${esc(o.key)}" ${cur===o.key?'selected':''}>${esc(o.label)}</option>`).join('');
+  return plKeyOpts((plCatalog&&plCatalog.asset&&plCatalog.asset.datasets)||[],cur,'（选择受控样本集）');
 }
 function plOutOpts(cur){
-  return ['summary','full'].map(k=>`<option value="${k}" ${(cur||'summary')===k?'selected':''}>${k}</option>`).join('');
+  return ['summary','full'].map(k=>`<option value="${k}" ${(cur||PL_DEFAULTED.matcheval.output_level)===k?'selected':''}>${k}</option>`).join('');
 }
 
+function plUIChange(i){
+  const suite=$(`pl-s${i}-suite`).value;
+  const cases=((plCatalog&&plCatalog.asset&&plCatalog.asset.ui_cases)||{})[suite]||[];
+  $(`pl-s${i}-case`).innerHTML=cases.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const req=$(`pl-s${i}-requirements`);
+  if(req)req.innerHTML=plRequirementOpts(suite,'');
+}
+function plRequirementOpts(suite,current){
+  const list=((plCatalog&&plCatalog.runtime_requirements)||[]).filter(r=>!r.suite||r.suite===suite);
+  const selectedMissing=current&&!list.some(r=>r.key===current);
+  return `<option value="" ${!current?'selected':''}>继承套件默认（${suite==='gameautotest-ui'?'MMO Unity 公共要求':'Unity / Poco 公共要求'}）</option>`+
+    (selectedMissing?`<option value="${esc(current)}" selected>原引用 ${esc(current)}（不可用，请重新选择）</option>`:'')+
+    list.map(r=>`<option value="${esc(r.key)}" ${r.key===current?'selected':''} ${r.enabled?'':'disabled'}>${esc(r.name)}${r.enabled?'':'（已停用）'}</option>`).join('');
+}
 function plReadParams(i,eng){
   const v=id=>{const el=$(id);return el?el.value:'';};
   const num=id=>{const el=$(id);const t=el?el.value:'';return t===''?null:Number(t);};
@@ -869,18 +1065,23 @@ function plReadParams(i,eng){
   const p={};
   const to=num(`pl-s${i}-timeout`); if(to)p.timeout_sec=to;
   if(eng==='pytest'){
+    const entry=v(`pl-s${i}-entry`);if(entry)p.entry=entry;
     const raw=v(`pl-s${i}-args`).trim(); if(raw)p.args=raw.split(/\s+/);
     const cr=v(`pl-s${i}-cwd-root`); if(cr)p.cwd_root=cr;
+  }else if(eng==='airtest'){
+    p.suite=v(`pl-s${i}-suite`);p.case=v(`pl-s${i}-case`);p.device=v(`pl-s${i}-device`);
+    const req=v(`pl-s${i}-requirements`);if(req)p.requirements=req;
+    p.wait_timeout=num(`pl-s${i}-wait`)??PL_DEFAULTED.airtest.wait_timeout;p.reset=v(`pl-s${i}-reset`)||PL_DEFAULTED.airtest.reset;
   }else if(eng==='locust'){
     const lf=v(`pl-s${i}-locustfile`); if(lf)p.locustfile=lf;
     p.users=num(`pl-s${i}-users`)||1;
     p.spawn_rate=num(`pl-s${i}-spawn`)||1;
-    p.run_time=v(`pl-s${i}-runtime`)||'15s';
+    p.run_time=v(`pl-s${i}-runtime`)||PL_DEFAULTED.locust.run_time;
     p.csv_full_history=on(`pl-s${i}-csv`);
   }else{
     const ds=v(`pl-s${i}-dataset`); if(ds)p.dataset=ds;
     p.threshold=num(`pl-s${i}-threshold`);
-    p.output_level=v(`pl-s${i}-output-level`)||'summary';
+    p.output_level=v(`pl-s${i}-output-level`)||PL_DEFAULTED.matcheval.output_level;
     const algs=[...document.querySelectorAll(`.pl-alg-${i}:checked`)].map(x=>x.value);
     if(algs.length)p.algorithm=algs;
   }
@@ -893,19 +1094,17 @@ function plReadParams(i,eng){
 // 规则：以原 params 为基底合并 —— 保键序、保留未管理的键；有缺省回退的键只在
 // "原本已声明"或"用户改成非默认值"时才写入；表单没产出 = 用户清空 → 删除该键。
 // 新建步骤（fresh）保持原有行为不变，避免影响新计划的默认值体验。
-const PL_MANAGED_KEYS={pytest:['args','cwd_root','timeout_sec'],
+const PL_MANAGED_KEYS={pytest:['args','cwd_root','entry','timeout_sec'],
   locust:['locustfile','users','spawn_rate','run_time','csv_full_history','timeout_sec'],
-  matcheval:['dataset','threshold','output_level','algorithm','timeout_sec']};
-// ⚠️ 必须与 plStepFields / plReadParams 的**表单回退值**严格一致（即 `${p.x??N}` 里的 N）。
-// 若这里写的值与表单实际显示的回退值不同，"原步骤没有该键 + 用户什么都没改" 就会被
-// 误判成"用户显式设置成非默认值"，从而把默认值凭空写进旧步骤的 params —— 后果是
-// legacy steps 变样、下一次 plan_snapshot 指纹漂移。回退值对照：
-//   timeout_sec→300（三引擎）· locust: users→5, spawn_rate→2, run_time→'15s', csv_full_history→false
-//   matcheval: threshold→0.8, output_level→'summary'
+  matcheval:['dataset','threshold','output_level','algorithm','timeout_sec'],
+  airtest:['suite','case','device','requirements','wait_timeout','reset','timeout_sec']};
+// 表单展示和保真合并共用默认值。清空控件后的读取兜底（如 users=1）
+// 以及 Runner 的执行默认值保留各自现有语义，不在这里合并。
 const PL_DEFAULTED={
   pytest:{timeout_sec:300},
   locust:{users:5,spawn_rate:2,run_time:'15s',csv_full_history:false,timeout_sec:300},
-  matcheval:{threshold:0.8,output_level:'summary',timeout_sec:300}};
+  matcheval:{threshold:0.8,output_level:'summary',timeout_sec:300},
+  airtest:{wait_timeout:10,reset:'none',timeout_sec:300}};
 function plMergeParams(orig,built,eng,fresh){
   if(fresh) return built;                      // 新建步骤：沿用原行为
   const managed=PL_MANAGED_KEYS[eng]||[], dflt=PL_DEFAULTED[eng]||{};
@@ -939,6 +1138,13 @@ function plCollectStep(i){
     Object.keys(base).forEach(k=>{
       if(JSON.stringify(cur[k])!==JSON.stringify(base[k])) ov[k]=cur[k];
     });
+    // This optional resource reference may be added to old cases or explicitly
+    // reset to inherited defaults without changing the referenced TestCase.
+    if(tc.engine==='airtest'){
+      const req=v(`pl-s${i}-requirements`);
+      if(req!==(base.requirements||''))ov.requirements=req;
+      else delete ov.requirements;
+    }
     s.override_params=ov;
     return;
   }
@@ -992,6 +1198,7 @@ function plStepEngine(i,eng){
 }
 
 async function plSave(andRun){
+  if(plForm&&plForm.archived){$('pl-msg').textContent='该计划已归档，请先恢复';return;}
   if(plBusy)return;
   plBusy=true;
   const msg=$('pl-msg'); if(msg)msg.textContent='保存中…';
@@ -1047,8 +1254,8 @@ async function plPrecheckSaved(id){
 
 function plPrecheckHtml(r){
   if(!r)return '';
-  const badge=r.ok===true?'<span class="ok">可运行</span>'
-    :r.ok===false?'<span class="bad">缺少配置 / 参数</span>':'<span class="muted">无需检查</span>';
+  const badge=r.ok===true?'<span class="ok">本次检查通过</span>'
+    :r.ok===false?'<span class="bad">预检未通过</span>':'<span class="muted">无需检查</span>';
   const stepRows=(r.steps||[]).map(s=>{
     const marks=[['引擎已注册',s.engine_registered],['参数合法',s.params_ok],
       ['执行机允许',s.executor_allows],['依赖就绪',s.deps_ready]]
@@ -1058,24 +1265,44 @@ function plPrecheckHtml(r){
       <td>${marks}</td><td class="muted">${esc(JSON.stringify(s.params||{}))}${errs?`<ul class="bad">${errs}</ul>`:''}</td></tr>`;
   }).join('');
   const cfg=r.config||{};
-  const cfgRow=(label,pc)=>pc?`<tr><td>${label}</td><td>${pc.ok===true?'<span class="ok">就绪</span>':pc.ok===false?'<span class="bad">缺失</span>':'<span class="muted">无需检查</span>'}</td><td class="muted">${esc((pc.missing||[]).join('；')||'—')}</td></tr>`
-    :`<tr><td>${label}</td><td class="muted">未引用</td><td class="muted">—</td></tr>`;
+  // 配置就绪度四态（清晰区分）：必须满足但缺失(红) / 仅供参考(黄) / 不适用(灰) / 未引用(灰)
+  // requirement 由后端按步骤是否声明服务依赖给出；ok===null 表示不适用。
+  const cfgRow=(label,pc)=>{
+    if(!pc)return `<tr><td>${label}</td><td><span class="st-na">未引用</span></td><td class="muted">—</td></tr>`;
+    const det=esc((pc.missing||[]).join('；')||'—');
+    if(pc.ok===true)return `<tr><td>${label}</td><td><span class="st-ok">就绪</span></td><td class="muted">${det}</td></tr>`;
+    if(pc.ok===false&&pc.requirement==='required')return `<tr><td>${label}</td><td><span class="st-bad">缺失</span></td><td class="muted">${det} · 本计划声明依赖此服务，必须可达</td></tr>`;
+    if(pc.ok===false)return `<tr><td>${label}</td><td><span class="st-warn">仅供参考</span></td><td class="muted">${det} · 本计划未声明依赖此服务，不阻断预检</td></tr>`;
+    return `<tr><td>${label}</td><td><span class="st-na">不适用</span></td><td class="muted">${det}</td></tr>`;
+  };
   const conc=r.concurrency||{}, ff=r.fail_fast||{};
   const missing=(r.missing||[]).length?`<p class="bad" style="margin:8px 0 0">缺失项：${esc(r.missing.join('；'))}</p>`:'';
+  const notices=(r.notices||[]).length?`<div class="hint-warn"><strong>提示（不阻断预检）：</strong><ul>${r.notices.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`:'';
   const nxt=(r.next_steps||[]).length?`<p class="muted" style="margin:6px 0 0">下一步：</p><ul>${r.next_steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:'';
+  const runtime=(r.steps||[]).filter(s=>s.engine==='airtest').map(s=>`<div style="margin-top:12px"><strong>步骤 ${s.index+1} · ${esc(s.name||'airtest')} · 公共运行要求</strong>
+    ${s.runtime?runtimeChecksHtml(s.runtime.checks):'<p class="st-warn">未探测：请先修复本步骤的参数、执行机或引擎依赖。</p>'}</div>`).join('');
   return `<div class="card"><h2>预检 / 执行预览 <span class="muted">${esc(r.name||'')} · rev ${r.revision??'-'}</span> ${badge}</h2>
+    <p class="muted">${r.precheck_mode==='realtime'?'实时预检（只读探测）':'配置预检（客户端未探测）'} · ${esc(r.checked_at||'')}。结果仅代表检查时刻，执行前仍会重新检查客户端。</p>
     <p class="muted">步骤顺序与解析后的引擎：</p>
     <table><thead><tr><th>#</th><th>引擎</th><th>就绪项</th><th>参数</th></tr></thead>
       <tbody>${stepRows||'<tr><td colspan=4 class="muted">无步骤</td></tr>'}</tbody></table>
     <p class="muted" style="margin-top:10px">配置就绪度：</p>
     <table><thead><tr><th>配置</th><th>状态</th><th>缺失</th></tr></thead><tbody>
       ${cfgRow('Environment',cfg.environment)}${cfgRow('Executor',cfg.executor)}${cfgRow('AssetSource',cfg.asset_source)}</tbody></table>
+    ${runtime}
     <div class="pre" style="margin-top:10px">
-      <div>并发 / 锁：执行机独占锁${conc.exclusive_lock_held?`<span class="bad"> 已被 Job #${conc.holder_job_id} 持有</span>`:'<span class="ok"> 空闲</span>'} · 全局串行${conc.run_in_progress?'<span class="muted">（有进行中的 PlanRun）</span>':''}</div>
+      <div>并发 / 锁：执行机独占锁${conc.exclusive_lock_held?`<span class="bad"> ${conc.holder_job_id<0?'正在实时探测':'已被 Job #'+conc.holder_job_id+' 持有'}</span>`:'<span class="ok"> 空闲</span>'} · 全局串行${conc.run_in_progress?'<span class="muted">（有进行中的 PlanRun）</span>':''}</div>
       <div>fail_fast：${ff.enabled?'<span class="ok">开启</span>':'<span class="muted">关闭</span>'} —— ${esc(ff.behavior||'')}</div>
-      ${missing}${nxt}
-      <p class="muted" style="margin:6px 0 0">本预检不创建 PlanRun/Job、不拉起子进程、不发起压测或完整测试${r.fingerprint?` · 非敏感指纹 ${esc(r.fingerprint)}`:''}。</p>
+      ${missing}${notices}${nxt}
+      <p class="muted" style="margin:6px 0 0">预检使用隔离探测进程，不创建 PlanRun/Job、不点击客户端、不写入数据库业务数据、不运行测试用例${r.fingerprint?` · 非敏感指纹 ${esc(r.fingerprint)}`:''}。</p>
     </div></div>`;
+}
+
+function runtimeChecksHtml(rows){
+  const labels={passed:'通过',failed:'失败',not_checked:'未检查',not_applicable:'不适用',busy:'资源占用'};
+  return `<table><thead><tr><th>检查项</th><th>状态</th><th>详情 / 下一步</th><th>检查时间</th></tr></thead><tbody>${(rows||[]).map(c=>`<tr>
+    <td>${esc(c.name)}</td><td class="${c.status==='passed'?'st-ok':c.status==='failed'?'st-bad':'st-warn'}">${labels[c.status]||esc(c.status)}</td>
+    <td>${esc(c.detail||'')}${c.next_step?`<div class="muted">${esc(c.next_step)}</div>`:''}</td><td class="muted">${esc(c.checked_at||'')}</td></tr>`).join('')}</tbody></table>`;
 }
 
 function planSnapshotCard(snap){
@@ -1097,14 +1324,13 @@ function planSnapshotCard(snap){
 
 // ---------- 测试用例（v0.2 定义层：只描述"要跑什么"，不绑定环境/执行机/资产） ----------
 let tcList=[], tcEdit=null, tcMsg='', tcBusy=false;
-const TC_ASSET_KIND={pytest:'',locust:'locust',matcheval:'matcheval'};
+const TC_ASSET_KIND={pytest:'',locust:'locust',matcheval:'matcheval',airtest:'airtest'};
 
 async function renderCases(){
   const app=$('app'); app.innerHTML='<h1>测试用例</h1><div class="card"><p class="muted">加载中…</p></div>';
   try{
     await plEnsureRefs();
     tcList=await j('/api/test-cases');
-    if(!tcEdit) tcEdit=tcBlank();
     tcRender();
   }catch(e){app.innerHTML=`<div class="card err">加载失败：${esc(e.message)}</div>`;}
 }
@@ -1116,7 +1342,7 @@ function tcRender(){
   const app=$('app');
   const rows=tcList.map(c=>`<tr>
       <td>${c.id}</td>
-      <td>${esc(c.name)}${c.id===tcEdit.id?' <span class="chip">编辑中</span>':''}</td>
+      <td>${esc(c.name)}${c.id===tcEdit?.id?' <span class="chip">编辑中</span>':''}</td>
       <td>${esc(c.engine)}</td>
       <td>rev ${c.revision}</td>
       <td><code>${esc(c.fingerprint)}</code></td>
@@ -1136,7 +1362,7 @@ function tcRender(){
       <table style="margin-top:10px"><thead><tr><th>ID</th><th>名称</th><th>引擎</th><th>版本</th>
         <th>定义指纹</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>
     </div>
-    <div class="card">
+    ${!tcEdit?`<p id="tc-msg" role="status">${esc(tcMsg)}</p>`:`<div class="card" id="tc-form">
       <div class="row"><h2 style="margin:0">${tcEdit.id?('编辑用例 #'+tcEdit.id+' · rev '+(tcEdit.revision??1)):'新建用例'}</h2>
         <span class="muted" style="margin-left:auto">${tcEdit.id?('当前定义指纹 <code>'+esc(tcEdit.fingerprint||'-')+'</code>'):'保存后计算定义指纹'}</span></div>
       <div class="form-grid" style="margin-top:12px">
@@ -1152,21 +1378,21 @@ function tcRender(){
          params:tcEdit.params||{}},'c')}</div>
       <div class="row" style="margin-top:12px">
         <button class="primary" onclick="tcSave()">保存</button>
-        <button onclick="tcCancel()">取消 / 新建</button>
+        <button onclick="tcCancel()">取消</button>
         <span class="muted" id="tc-msg">${esc(tcMsg||'')}</span>
       </div>
       <p class="muted" style="margin-top:8px">参数与计划步骤共用同一套白名单校验；<code>asset_source_id</code> 属计划/执行级，不能写在用例里。</p>
-    </div>`;
+    </div>`}`;
 }
 function tcSetEngine(v){ plCollectTc(); tcEdit.engine=v; tcEdit.params={};
   tcEdit.asset_kind=TC_ASSET_KIND[v]||''; tcRender(); }
-function tcNew(){ plCollectTc(); tcEdit=tcBlank(); tcMsg=''; tcRender(); }
-function tcCancel(){ tcNew(); }
+function tcNew(){ tcEdit=tcBlank(); tcMsg=''; tcRender(); focusForm('tc-form'); }
+function tcCancel(){ tcEdit=null; tcMsg=''; tcRender(); }
 function tcLoad(id){
   plCollectTc();
   const c=tcList.find(x=>x.id===id); if(!c)return;
   tcEdit=JSON.parse(JSON.stringify(c));
-  tcMsg=''; tcRender();
+  tcMsg=''; tcRender(); focusForm('tc-form');
 }
 function plCollectTc(){
   if(!tcEdit)return;
@@ -1191,7 +1417,7 @@ async function tcSave(){
       ? await j('/api/test-cases/'+tcEdit.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       : await j('/api/test-cases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     tcList=await j('/api/test-cases');
-    tcEdit=JSON.parse(JSON.stringify(saved));
+    tcEdit=null;
     tcMsg=`已保存 · rev ${saved.revision} · 指纹 ${saved.fingerprint}`;
     tcRender();
   }catch(e){if(msg)msg.textContent='保存失败：'+e.message;}
@@ -1205,7 +1431,7 @@ async function tcToggle(id){
 async function tcDelete(id){
   if(!confirm('确认删除用例 #'+id+'？（被计划引用的用例会被拒绝删除）'))return;
   try{ await j(`/api/test-cases/${id}`,{method:'DELETE'});
-       if(tcEdit&&tcEdit.id===id)tcEdit=tcBlank();
+       if(tcEdit&&tcEdit.id===id)tcEdit=null;
        tcList=await j('/api/test-cases'); tcMsg='已删除 #'+id; tcRender(); }
   catch(e){alert('删除失败：'+e.message);}
 }
@@ -1226,7 +1452,6 @@ async function renderSuites(){
   try{
     await plEnsureRefs();               // 复用：需要已启用的 TestCase 列表供选择
     tsList=await j('/api/suites');
-    if(!tsEdit) tsEdit=tsBlank();
     tsRender();
   }catch(e){app.innerHTML=`<div class="card err">加载失败：${esc(e.message)}</div>`;}
 }
@@ -1291,7 +1516,7 @@ function tsRender(){
       <table style="margin-top:10px"><thead><tr><th>ID</th><th>名称</th><th>描述</th><th>用例数</th>
         <th>版本</th><th>定义指纹</th><th>状态</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>
     </div>
-    <div class="card">
+    ${!tsEdit?`<p id="ts-msg" role="status">${esc(tsMsg)}</p>`:`<div class="card" id="ts-form">
       <div class="row"><h2 style="margin:0">${e.id?('编辑套件 #'+e.id+' · rev '+(e.revision??1)):'新建套件'}</h2>
         <span class="muted" style="margin-left:auto">${e.id?('当前定义指纹 <code>'+esc(e.fingerprint||'-')+'</code>'):'保存后计算定义指纹'}</span></div>
       <div class="form-grid" style="margin-top:12px">
@@ -1308,13 +1533,13 @@ function tsRender(){
         <tbody>${tsCaseRows()}</tbody></table>
       <div class="row" style="margin-top:12px">
         <button class="primary" onclick="tsSave()">保存</button>
-        <button onclick="tsNew()">取消 / 新建</button>
+        <button onclick="tsCancel()">取消</button>
         <span class="muted" id="ts-msg">${esc(tsMsg||'')}</span>
       </div>
       <p class="muted" style="margin-top:8px">用例在这里以 <code>(id, revision, 指纹)</code> <b>固定引用</b>：
         用例一旦被修改，本套件会显示「已过期」，保存时后端如实报错，不会静默跟随。
         在<b>计划编辑器</b>里可以把本套件展开成等价的用例步骤（套件本身不会被写进计划）。</p>
-    </div>`;
+    </div>`}`;
 }
 
 function tsCollect(){
@@ -1325,11 +1550,12 @@ function tsCollect(){
   tsEdit.owner=($('ts-owner')||{}).value||'local';
   tsEdit.tags=(($('ts-tags')||{}).value||'').split(',').map(s=>s.trim()).filter(Boolean);
 }
-function tsNew(){tsCollect();tsEdit=tsBlank();tsMsg='';tsRender();}
+function tsNew(){tsEdit=tsBlank();tsMsg='';tsRender();focusForm('ts-form');}
+function tsCancel(){tsEdit=null;tsMsg='';tsRender();}
 function tsLoad(id){
   tsCollect();
   const s=tsList.find(x=>x.id===id); if(!s)return;
-  tsEdit=JSON.parse(JSON.stringify(s)); tsMsg=''; tsRender();
+  tsEdit=JSON.parse(JSON.stringify(s)); tsMsg=''; tsRender();focusForm('ts-form');
 }
 function tsAddCase(){
   tsCollect();
@@ -1361,7 +1587,7 @@ async function tsSave(){
       ? await j('/api/suites/'+tsEdit.id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       : await j('/api/suites',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     tsList=await j('/api/suites');
-    tsEdit=JSON.parse(JSON.stringify(saved));
+    tsEdit=null;
     tsMsg=`已保存 · rev ${saved.revision} · 指纹 ${saved.fingerprint}`;
     tsRender();
   }catch(e){if(msg)msg.textContent='保存失败：'+e.message;}
@@ -1377,7 +1603,7 @@ async function tsToggle(id){
 async function tsDelete(id){
   if(!confirm('确认删除套件 #'+id+'？（已被计划引用时会拒绝删除）'))return;
   try{ await j(`/api/suites/${id}`,{method:'DELETE'});
-       if(tsEdit&&tsEdit.id===id)tsEdit=tsBlank();
+       if(tsEdit&&tsEdit.id===id)tsEdit=null;
        tsList=await j('/api/suites'); tsMsg='已删除 #'+id; tsRender(); }
   catch(e){alert('删除失败：'+e.message);}
 }
@@ -1410,14 +1636,15 @@ async function renderReportCenter(){
         </div>
       </div>
       <div class="card">
-        ${sel.b&&sel.c?`<div class="row" style="margin-bottom:8px;gap:6px">
-          <span class="muted">基线 #${sel.b} · 候选 #${sel.c}</span>
-          <a class="primary" href="#/compare/${sel.b}/${sel.c}" style="display:inline-block;background:var(--brand);color:#fff;padding:4px 12px;border-radius:6px;text-decoration:none;font-size:13px">进入对比视图</a>
-          <a href="javascript:void 0" onclick="sessionStorage.removeItem('rc_base');sessionStorage.removeItem('rc_cand');router()" class="muted" style="font-size:12px">清除选择</a>
+        ${sel.b||sel.c?`<div class="row" style="margin-bottom:8px;gap:6px">
+          <span class="muted">基线 ${sel.b?'#'+sel.b:'（未选）'} · 候选 ${sel.c?'#'+sel.c:'（未选）'}</span>
+          ${sel.b&&sel.c?`<a class="primary" href="#/compare/${sel.b}/${sel.c}" style="display:inline-block;background:var(--brand);color:#fff;padding:4px 12px;border-radius:6px;text-decoration:none;font-size:13px">进入对比视图</a>`
+            :`<span class="muted">两份都选齐后才能进入对比视图</span>`}
+          <a href="javascript:void 0" onclick="pickClear()" class="muted" style="font-size:12px">清除选择</a>
         </div>`:`
         <p class="muted">在下方报告中，用“基线/候选”标记两份报告后生成对比。</p>`}
-        <table><thead><tr><th>状态</th><th>计划</th><th>引擎</th><th>环境</th><th>开始时间</th><th>耗时</th><th>关键摘要指标</th><th>操作</th></tr></thead>
-        <tbody>${items||'<tr><td colspan=8 class="muted">暂无报告</td></tr>'}</tbody></table>
+        <table><thead><tr><th>Job</th><th>状态</th><th>计划</th><th>引擎</th><th>环境</th><th>开始时间</th><th>耗时</th><th>关键摘要指标</th><th>操作</th></tr></thead>
+        <tbody>${items||'<tr><td colspan=9 class="muted">暂无报告</td></tr>'}</tbody></table>
         <div class="pager">
           <button ${data.page<=1?'disabled':''} onclick="rcGo(${data.page-1})">上一页</button>
           <span class="muted">第 ${data.page} / ${Math.max(1,Math.ceil(data.total/Math.max(data.page_size,1)))} 页</span>
@@ -1449,6 +1676,7 @@ function rcRow(r,sel){
   const isBase=sel.b==String(r.job_id), isCand=sel.c==String(r.job_id);
   const cls=(isBase?' sel-base':isCand?' sel-cand':'');
   return `<tr class="${cls.trim()}">
+    <td><strong>#${r.job_id??'-'}</strong>${r.plan_run_id?`<div class="muted">run#${r.plan_run_id}</div>`:''}</td>
     <td>${chip(r.status)}${incompl?'<span title="历史记录信息不完整"> ⚠</span>':''}</td>
     <td>${esc(r.plan_name||('plan#'+r.plan_id))}</td>
     <td>${esc(r.engine)}${r.schema_main_version?`<div class="muted">${esc(r.schema_main_version)}</div>`:''}</td>
@@ -1536,5 +1764,7 @@ function fmtMetric(v,k){
   return v;
 }
 </script>
+<script src="projects.js"></script>
+<script src="migration.js"></script>
 </body>
 </html>

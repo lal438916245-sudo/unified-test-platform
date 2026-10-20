@@ -288,7 +288,7 @@ def main() -> int:
     child_env["PYTHONUNBUFFERED"] = "1"
 
     argv = [PYTHON, RUN_PY, "--host", "127.0.0.1", "--port", str(PORT),
-            "--data-dir", TMP, "--db", DB_PATH, "--no-browser"]
+            "--data-dir", TMP, "--db", DB_PATH, "--no-browser", "--seed-demo"]
     print(f"\n  启动: {' '.join(argv)}")
 
     proc = None

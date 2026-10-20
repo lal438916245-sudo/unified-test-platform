@@ -1,0 +1,67 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>安装与配置迁移</title><style>body{font:16px/1.85 "Microsoft YaHei",sans-serif;color:#17332f;background:#f5f8f7;max-width:960px;margin:auto;padding:32px}main{background:white;border:1px solid #dfe9e4;border-radius:12px;padding:30px}h2{margin-top:36px}pre{overflow:auto;background:#edf4f1;padding:16px;border-radius:8px}code{font-family:Consolas,monospace}a{color:#087c67}</style><main><a href="../index.html#/migration">返回迁移页面 →</a><h1>安装与配置迁移</h1>
+<p>这是“跨电脑独立部署版”的第三步。目标电脑运行自己的平台服务，登记自己的被测项目、解释器和资产，再导入或自行编写用例与计划定义。当前交付面向 Windows 64 位；需要先准备 Python 3.11 或以上。</p>
+<h2>1. 在另一台电脑安装</h2>
+<ol>
+<li>将平台 ZIP 复制到目标电脑，解压到自己选择的目录。目录可含空格和中文，不要求固定盘符，也不要求被测项目与平台同级。</li>
+<li>在解压后的 <code>platform</code> 目录运行 <code>install.bat</code>。安装器创建本目录的 <code>.venv</code> 并安装核心服务与 pytest 依赖，不修改原数据库和项目文件。</li>
+<li>如果系统找不到合适的 Python，使用 PowerShell 显式指定：</li>
+</ol>
+<pre><code class="language-powershell">.\install.ps1 -PythonExe 'D:\Python\python.exe'
+</code></pre>
+<ol>
+<li>运行 <code>start.bat</code>，或 <code>start.ps1</code>，打开 <code>http://127.0.0.1:8000</code>。新安装默认空白配置；已有数据库继续使用，不再自动补入开发机演示计划。需要演示数据时显式运行 <code>python backend/run.py --seed-demo</code>。</li>
+<li>端口已被占用时，停止原实例或改用 <code>start.ps1 -Port 8001</code>；需要独立运行数据时使用 <code>backend/run.py --data-dir &lt;目录&gt; --port 8001 --no-browser</code>。</li>
+</ol>
+<p>安装核心依赖需要访问 Python 包源。可选引擎通过安装参数追加，也可在单独的 Python 环境安装并登记为执行机：</p>
+<pre><code class="language-powershell">.\install.ps1 -WithUI
+.\install.ps1 -WithLocust
+.\install.ps1 -WithVision
+</code></pre>
+<p>UI 设备仍需运行中的 Unity / Poco 客户端。MongoDB、被测服务和项目自己的测试依赖由项目维护；安装器不会启动 Unity、复位页面、安装业务服务或修改 fixture。</p>
+<h2>2. 离线安装</h2>
+<p>安装包带有与目标 Python / Windows 架构匹配的 <code>wheelhouse</code> 时，可运行：</p>
+<pre><code class="language-powershell">.\install.ps1 -Offline -PythonExe 'D:\Python\python.exe'
+</code></pre>
+<p>如果 wheel 不匹配目标 Python 版本，离线安装会停止并保留现有数据。离线依赖必须在有网络的电脑上提前准备，例如：</p>
+<pre><code class="language-powershell">python -m pip download --only-binary=:all: -r requirements-core.txt --dest wheelhouse
+</code></pre>
+<p>可选引擎也需要将对应 requirements 文件及其依赖下载到 wheelhouse。当前随交付附带的核心离线 wheel 以验收时的 Windows x64 / CPython 3.13 为目标，其他 Python 版本可以在线安装，或重新准备匹配的离线依赖。</p>
+<h2>3. 迁移包包含什么</h2>
+<p>网页 <strong>安装与配置迁移 → 导出定义</strong> 可以选择用例、套件和计划。套件与计划引用的用例会自动包含。</p>
+<ul>
+<li>导出用例定义、套件顺序、计划步骤与参数覆盖，以及启用 / 停用和计划归档状态。</li>
+<li>对项目、测试入口、执行机、被测环境、设备、运行要求和资产只导出资源槽的名称与类型。目标电脑重新关联自己的资源，不复用源电脑的数值 ID 或绝对路径。</li>
+<li>导入后重新生成本库 ID、用例 / 套件指纹与引用版本。新记录初始版本为 1，不覆盖现有记录；同名自动追加导入序号，预览中可看到最终名称。</li>
+<li>不迁移执行事实、历史报告、日志、源码、虚拟环境或真实图片，也不导出资源配置中的账号密钥值；这些由各自的数据 / 项目交付管理。用例参数与描述会随定义导出，请勿将密码直接写入这些字段。原库中的历史记录不会被更改。</li>
+</ul>
+<p>如果计划或套件仍固定引用某个已经变化的旧用例版本，导出会要求先同步引用，或取消选择该条记录，不会静默换成新版用例。</p>
+<h2>4. 导入目标电脑自己的用例和计划</h2>
+<p>不需要使用这台开发机的项目，也不要求先从本平台导出。</p>
+<ol>
+<li>准备目标电脑自己的 pytest / UI / Locust / 视觉项目、Python 与资产。</li>
+<li>在 <strong>资源与环境 → 管理项目与测试入口</strong> 登记项目、运行环境和入口，关联执行机；登记被测环境，UI 场景再登记设备及公共运行要求。</li>
+<li>打开 <strong>安装与配置迁移</strong>。可以选择已有的迁移 JSON，也可以点击 <strong>填入示例模板</strong> 或 <strong>下载 JSON 模板</strong>，把名称和定义改成自己的业务用例 / 计划。</li>
+<li>点击 <strong>导入到待关联批次</strong>。此时只保存待导入文件，不生成正式用例和计划，也不会运行代码。</li>
+<li>在批次中为每个资源槽选择本机资源，例如把“我的登录测试入口”关联到自己登记的 pytest 入口。缺少资源可以先离开页面登记，再返回批次继续；批次会保存在数据库中。</li>
+<li>点击 <strong>保存关联并预览</strong>，检查名称、数量、错误和停用提示，再点击 <strong>确认新增这些记录</strong>。</li>
+<li>到测试用例 / 套件 / 计划页面查看，按常规流程进行预检，然后手动执行。导入预览是配置和参数检查，不能证明业务服务或客户端当前可用。</li>
+</ol>
+<p>普通 <code>.py</code> 测试脚本先登记为测试入口；JSON 用来描述用例 / 套件 / 计划，不是源代码上传格式。任意 Excel、其他平台的私有 JSON 和数据库文件不会自动猜测转换，需要按下载的模板转换。</p>
+<h2>5. JSON 模板与资源关联</h2>
+<p>格式名为 <code>unified-test-platform/config</code>，版本为 <code>1</code>。模板中 <code>resources</code> 声明资源槽；用例参数中的 <code>{"$resource":"login-entry"}</code> 指向资源槽，计划的 <code>environment</code> / <code>executor</code> 也引用资源槽 ID。用例、套件和计划的迁移 ID 只是包内标识，不是目标库 ID。</p>
+<p>pytest 入口引用在目标机派生实际选择器和工作目录。UI 用例的文件名需属于所选目标套件，公共运行要求需与套件匹配；关联到不同结构的入口时，预览会报错，需要修改 JSON 或选择正确的入口，不会默默改换测试。</p>
+<p>资源同名建议关联仍需核对。设备、执行机和自定义项目的源库数值 ID 不会自动视为目标库的同一记录。执行资源未关联、不可用或类型不匹配时不能提交。</p>
+<h2>6. 失败、恢复与保护</h2>
+<ul>
+<li>未完成关联的批次可刷新页面或重启平台后继续，也可放弃待导入批次，不影响正式记录。</li>
+<li>更改关联、前缀、本机资源或已有名称后需要重新预览；过期预览会被拒绝。</li>
+<li>新增用例、套件和计划在一个事务中提交，数据库拒绝其中任何一步时整体回滚，不留下半批记录。</li>
+<li>重试同一已提交批次返回原回执，不会再生成重复记录。已提交批次保留回执，正式记录在各自页面管理。</li>
+<li>导入不执行测试、不启动进程、不连接 Unity / Poco，不写业务数据库；正式执行仍经过现有 Runner、设备锁、预检及证据归档流程。</li>
+</ul>
+<h2>7. 生成安装包</h2>
+<p>维护者可从平台源码目录构建一个不包含运行数据库、虚拟环境、冻结基线和外部项目的 ZIP：</p>
+<pre><code class="language-powershell">python _ci/build_deployment.py --output test-platform-windows.zip
+python _ci/build_deployment.py --output test-platform-windows-offline.zip --wheelhouse wheelhouse
+</code></pre>
+<p>归档内部固定为 <code>platform/</code>，目标电脑解压后的外部路径可自行选择。<code>installation-manifest.json</code> 记录文件摘要，可核对交付内容。</p></main></html>

@@ -1,15 +1,26 @@
 """SQLite 存储层：每个操作独立连接 + 全局锁，供 API 线程与编排线程共用。"""
+
 from __future__ import annotations
 
 import json
 import sqlite3
 import threading
 import time
-from typing import Any, Optional
+from typing import Optional
 
-from .domain import Plan, RUN_TERMINAL, STATUS_QUEUED
+from .domain import RUN_TERMINAL, STATUS_QUEUED, TERMINAL, Job, Plan
 
 _LOCK = threading.Lock()
+
+
+class PlanLifecycleConflict(ValueError):
+    """A plan's management state prevents this mutation (HTTP 409)."""
+
+
+def _require_active_plan(conn, pid):
+    row = conn.execute("SELECT archived FROM plans WHERE id=?", (pid,)).fetchone()
+    if row and row["archived"]:
+        raise PlanLifecycleConflict("该测试计划已归档，请先恢复后再编辑、执行或重试")
 
 
 def _now() -> str:
@@ -40,6 +51,9 @@ def get_conn(db_path: str) -> sqlite3.Connection:
 
 def init_db(db_path: str) -> None:
     with _LOCK, get_conn(db_path) as conn:
+        from .project_registry import initialize
+
+        initialize(conn)
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS environments (
@@ -73,6 +87,37 @@ def init_db(db_path: str) -> None:
                 created_at TEXT,
                 updated_at TEXT
             );
+            CREATE TABLE IF NOT EXISTS ui_devices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                executor_id INTEGER NOT NULL,
+                title_match TEXT NOT NULL,
+                match_mode TEXT DEFAULT 'contains',
+                process_name TEXT DEFAULT 'Unity.exe',
+                window_class TEXT DEFAULT '',
+                unity_editor INTEGER DEFAULT 1,
+                host TEXT DEFAULT '127.0.0.1',
+                port INTEGER DEFAULT 5001,
+                smoke_selector TEXT DEFAULT '',
+                smoke_result TEXT DEFAULT '',
+                notes TEXT DEFAULT '',
+                enabled INTEGER DEFAULT 1,
+                revision INTEGER DEFAULT 1,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS runtime_requirements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                suite TEXT NOT NULL,
+                modules TEXT NOT NULL DEFAULT '[]',
+                mongo_ref TEXT DEFAULT '',
+                notes TEXT DEFAULT '',
+                enabled INTEGER DEFAULT 1,
+                revision INTEGER DEFAULT 1,
+                created_at TEXT,
+                updated_at TEXT
+            );
             CREATE TABLE IF NOT EXISTS plans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -84,6 +129,8 @@ def init_db(db_path: str) -> None:
                 fail_fast INTEGER DEFAULT 1,
                 owner TEXT DEFAULT 'local',
                 revision INTEGER DEFAULT 1,
+                archived INTEGER NOT NULL DEFAULT 0,
+                archived_at TEXT,
                 created_at TEXT,
                 updated_at TEXT
             );
@@ -240,6 +287,10 @@ def init_db(db_path: str) -> None:
             conn.execute("ALTER TABLE plans ADD COLUMN asset_source_id INTEGER")
         if "revision" not in pcols:
             conn.execute("ALTER TABLE plans ADD COLUMN revision INTEGER DEFAULT 1")
+        if "archived" not in pcols:
+            conn.execute("ALTER TABLE plans ADD COLUMN archived INTEGER NOT NULL DEFAULT 0")
+        if "archived_at" not in pcols:
+            conn.execute("ALTER TABLE plans ADD COLUMN archived_at TEXT")
         # 计划编辑器迁移：PlanRun 固化"计划版本 + 不可变计划快照"
         rcols = {r[1] for r in conn.execute("PRAGMA table_info(plan_runs)")}
         if "plan_revision" not in rcols:
@@ -248,16 +299,51 @@ def init_db(db_path: str) -> None:
             conn.execute("ALTER TABLE plan_runs ADD COLUMN plan_snapshot TEXT")
         if "config_snapshot" not in cols:
             conn.execute("ALTER TABLE jobs ADD COLUMN config_snapshot TEXT")
+        from .machine_paths import initialize as initialize_paths
+
+        initialize_paths(conn)
+        from .config_migration import initialize as initialize_migration
+
+        initialize_migration(conn)
         conn.commit()
 
 
 # ---------- Environment / Executor ----------
-_ENV_COLS = ("name", "host", "port", "kind", "protocol", "secret_ref", "secret_kind",
-             "labels", "notes", "enabled")
-_EXEC_COLS = ("name", "python_executable", "cwd", "python_ref", "cwd_root",
-              "allowed_runners", "max_concurrency", "notes", "enabled")
-_ASSET_COLS = ("name", "kind", "dataset_ref", "tpl_ref", "scenes_ref",
-               "ground_truth_ref", "airtest_ref", "scenario_ref", "notes", "enabled")
+_ENV_COLS = (
+    "name",
+    "host",
+    "port",
+    "kind",
+    "protocol",
+    "secret_ref",
+    "secret_kind",
+    "labels",
+    "notes",
+    "enabled",
+)
+_EXEC_COLS = (
+    "name",
+    "python_executable",
+    "cwd",
+    "python_ref",
+    "cwd_root",
+    "allowed_runners",
+    "max_concurrency",
+    "notes",
+    "enabled",
+)
+_ASSET_COLS = (
+    "name",
+    "kind",
+    "dataset_ref",
+    "tpl_ref",
+    "scenes_ref",
+    "ground_truth_ref",
+    "airtest_ref",
+    "scenario_ref",
+    "notes",
+    "enabled",
+)
 
 
 def list_environments(db_path: str) -> list[dict]:
@@ -283,7 +369,8 @@ def _entity_create(db_path: str, table: str, cols: tuple, data: dict) -> int:
     vals = [_json_col(k, data.get(k)) for k in keys[:-2]] + [_now(), _now()]
     with _LOCK, get_conn(db_path) as c:
         cur = c.execute(
-            f"INSERT INTO {table}({','.join(keys)}) VALUES({','.join('?' for _ in keys)})", vals)
+            f"INSERT INTO {table}({','.join(keys)}) VALUES({','.join('?' for _ in keys)})", vals
+        )
         c.commit()
         return cur.lastrowid
 
@@ -314,13 +401,27 @@ def update_environment(db_path: str, eid: int, data: dict) -> bool:
     return _entity_update(db_path, "environments", eid, _ENV_COLS, data)
 
 
-def seed_environment(db_path: str, name: str, host: str, port: int,
-                     kind: str = "http", protocol: str = "http",
-                     labels: Optional[list] = None) -> int:
-    return create_environment(db_path, {
-        "name": name, "host": host, "port": int(port), "kind": kind,
-        "protocol": protocol, "labels": labels or [], "enabled": 1,
-    })
+def seed_environment(
+    db_path: str,
+    name: str,
+    host: str,
+    port: int,
+    kind: str = "http",
+    protocol: str = "http",
+    labels: Optional[list] = None,
+) -> int:
+    return create_environment(
+        db_path,
+        {
+            "name": name,
+            "host": host,
+            "port": int(port),
+            "kind": kind,
+            "protocol": protocol,
+            "labels": labels or [],
+            "enabled": 1,
+        },
+    )
 
 
 def list_executors(db_path: str) -> list[dict]:
@@ -342,17 +443,78 @@ def update_executor(db_path: str, xid: int, data: dict) -> bool:
     return _entity_update(db_path, "executors", xid, _EXEC_COLS, data)
 
 
-def seed_executor(db_path: str, name: str, python: str, cwd: str,
-                  python_ref: str = "", cwd_root: str = "",
-                  allowed_runners: Optional[list] = None) -> int:
-    return create_executor(db_path, {
-        "name": name, "python_executable": python, "cwd": cwd,
-        "python_ref": python_ref, "cwd_root": cwd_root,
-        "allowed_runners": allowed_runners or [], "max_concurrency": 1, "enabled": 1,
-    })
+def seed_executor(
+    db_path: str,
+    name: str,
+    python: str,
+    cwd: str,
+    python_ref: str = "",
+    cwd_root: str = "",
+    allowed_runners: Optional[list] = None,
+) -> int:
+    return create_executor(
+        db_path,
+        {
+            "name": name,
+            "python_executable": python,
+            "cwd": cwd,
+            "python_ref": python_ref,
+            "cwd_root": cwd_root,
+            "allowed_runners": allowed_runners or [],
+            "max_concurrency": 1,
+            "enabled": 1,
+        },
+    )
 
 
 # ---------- AssetSource ----------
+UI_DEVICE_COLS = (
+    "name",
+    "executor_id",
+    "title_match",
+    "match_mode",
+    "process_name",
+    "window_class",
+    "unity_editor",
+    "host",
+    "port",
+    "smoke_selector",
+    "smoke_result",
+    "notes",
+    "enabled",
+)
+
+
+def list_ui_devices(db_path: str) -> list[dict]:
+    with _LOCK, get_conn(db_path) as c:
+        return [dict(r) for r in c.execute("SELECT * FROM ui_devices ORDER BY id")]
+
+
+def get_ui_device(db_path: str, did: int) -> Optional[dict]:
+    with _LOCK, get_conn(db_path) as c:
+        r = c.execute("SELECT * FROM ui_devices WHERE id=?", (did,)).fetchone()
+        return dict(r) if r else None
+
+
+def create_ui_device(db_path: str, data: dict) -> int:
+    return _entity_create(db_path, "ui_devices", UI_DEVICE_COLS, data)
+
+
+def update_ui_device(db_path: str, did: int, data: dict) -> bool:
+    fields = {k: data[k] for k in UI_DEVICE_COLS if k in data}
+    if not fields:
+        return False
+    fields["updated_at"] = _now()
+    with _LOCK, get_conn(db_path) as c:
+        cur = c.execute(
+            "UPDATE ui_devices SET "
+            + ",".join(f"{k}=?" for k in fields)
+            + ",revision=revision+1 WHERE id=?",
+            (*fields.values(), did),
+        )
+        return cur.rowcount > 0
+
+
 def list_asset_sources(db_path: str) -> list[dict]:
     with _LOCK, get_conn(db_path) as c:
         return [dict(r) for r in c.execute("SELECT * FROM asset_sources ORDER BY id")]
@@ -381,8 +543,18 @@ def update_asset_source(db_path: str, aid: int, data: dict) -> bool:
 # ---------- TestCase（v0.2 定义层） ----------
 # 定义层实体：只描述"要跑什么"，不描述"在哪儿跑/用谁跑/用哪份数据跑"（属 Plan）。
 # revision 语义与 plans.revision 完全一致：用户编辑定义字段才 +1；预置/回填必须 bump_revision=False。
-_TC_COLS = ("name", "description", "engine", "params", "requires_exclusive",
-            "asset_kind", "fingerprint", "tags", "owner", "enabled")
+_TC_COLS = (
+    "name",
+    "description",
+    "engine",
+    "params",
+    "requires_exclusive",
+    "asset_kind",
+    "fingerprint",
+    "tags",
+    "owner",
+    "enabled",
+)
 
 
 def _test_case_row(r: sqlite3.Row) -> dict:
@@ -411,7 +583,8 @@ def list_test_cases(db_path: str, engine: str = "", enabled_only: bool = False) 
     sql = "SELECT * FROM test_cases"
     where, args = [], []
     if engine:
-        where.append("engine=?"); args.append(str(engine))
+        where.append("engine=?")
+        args.append(str(engine))
     if enabled_only:
         where.append("enabled=1")
     if where:
@@ -441,7 +614,8 @@ def create_test_case(db_path: str, data: dict) -> int:
     vals[_TC_COLS.index("requires_exclusive")] = int(bool(data.get("requires_exclusive")))
     with _LOCK, get_conn(db_path) as c:
         cur = c.execute(
-            f"INSERT INTO test_cases({','.join(cols)}) VALUES({','.join('?' * len(cols))})", vals)
+            f"INSERT INTO test_cases({','.join(cols)}) VALUES({','.join('?' * len(cols))})", vals
+        )
         c.commit()
         return cur.lastrowid
 
@@ -450,8 +624,18 @@ def update_test_case(db_path: str, cid: int, data: dict, bump_revision: bool = T
     """编辑 TestCase：只接受受控字段。
     定义字段变化时由调用方决定 bump_revision；默认递增（版本化），
     预置/回填等非用户编辑必须显式 bump_revision=False。"""
-    allowed = ("name", "description", "engine", "params", "requires_exclusive",
-               "asset_kind", "fingerprint", "tags", "owner", "enabled")
+    allowed = (
+        "name",
+        "description",
+        "engine",
+        "params",
+        "requires_exclusive",
+        "asset_kind",
+        "fingerprint",
+        "tags",
+        "owner",
+        "enabled",
+    )
     fields: dict = {}
     for k in allowed:
         if k in data:
@@ -481,8 +665,10 @@ def update_test_case(db_path: str, cid: int, data: dict, bump_revision: bool = T
 def set_test_case_enabled(db_path: str, cid: int, enabled: int) -> bool:
     """启停：可用性开关，不属"定义"，因此不递增 revision。"""
     with _LOCK, get_conn(db_path) as c:
-        cur = c.execute("UPDATE test_cases SET enabled=?, updated_at=? WHERE id=?",
-                        (int(bool(enabled)), _now(), cid))
+        cur = c.execute(
+            "UPDATE test_cases SET enabled=?, updated_at=? WHERE id=?",
+            (int(bool(enabled)), _now(), cid),
+        )
         c.commit()
         return cur.rowcount > 0
 
@@ -525,8 +711,7 @@ def normalize_suite_cases(v) -> list:
             rev = int(c.get("revision") or 1)
         except (TypeError, ValueError):
             rev = 1
-        out.append({"id": cid, "revision": rev,
-                    "fingerprint": str(c.get("fingerprint") or "")})
+        out.append({"id": cid, "revision": rev, "fingerprint": str(c.get("fingerprint") or "")})
     return out
 
 
@@ -563,14 +748,17 @@ def get_suite_by_name(db_path: str, name: str) -> Optional[dict]:
 def create_suite(db_path: str, data: dict) -> int:
     cols = _SUITE_COLS + ("revision", "created_at", "updated_at")
     vals = [data.get(k) for k in _SUITE_COLS] + [1, _now(), _now()]
-    vals[_SUITE_COLS.index("cases")] = json.dumps(normalize_suite_cases(data.get("cases")),
-                                                  ensure_ascii=False)
-    vals[_SUITE_COLS.index("tags")] = json.dumps(_json_or_list(data.get("tags")),
-                                                 ensure_ascii=False)
+    vals[_SUITE_COLS.index("cases")] = json.dumps(
+        normalize_suite_cases(data.get("cases")), ensure_ascii=False
+    )
+    vals[_SUITE_COLS.index("tags")] = json.dumps(
+        _json_or_list(data.get("tags")), ensure_ascii=False
+    )
     vals[_SUITE_COLS.index("enabled")] = int(bool(data.get("enabled", 1)))
     with _LOCK, get_conn(db_path) as c:
         cur = c.execute(
-            f"INSERT INTO test_suites({','.join(cols)}) VALUES({','.join('?' * len(cols))})", vals)
+            f"INSERT INTO test_suites({','.join(cols)}) VALUES({','.join('?' * len(cols))})", vals
+        )
         c.commit()
         return cur.lastrowid
 
@@ -609,8 +797,10 @@ def update_suite(db_path: str, sid: int, data: dict, bump_revision: bool = True)
 def set_suite_enabled(db_path: str, sid: int, enabled: int) -> bool:
     """启停：可用性开关，不属"定义"，因此不递增 revision（与 TestCase 一致）。"""
     with _LOCK, get_conn(db_path) as c:
-        cur = c.execute("UPDATE test_suites SET enabled=?, updated_at=? WHERE id=?",
-                        (int(bool(enabled)), _now(), sid))
+        cur = c.execute(
+            "UPDATE test_suites SET enabled=?, updated_at=? WHERE id=?",
+            (int(bool(enabled)), _now(), sid),
+        )
         c.commit()
         return cur.rowcount > 0
 
@@ -637,9 +827,11 @@ def suites_referencing_case(db_path: str, cid: int) -> list[int]:
 
 
 # ---------- Plan ----------
-def list_plans(db_path: str) -> list[dict]:
+def list_plans(db_path: str, archived: Optional[bool] = None) -> list[dict]:
+    # Internal reference/seed scans must include archived definitions by default.
+    where, args = ("", ()) if archived is None else (" WHERE archived=?", (int(archived),))
     with _LOCK, get_conn(db_path) as c:
-        rows = c.execute("SELECT * FROM plans ORDER BY id").fetchall()
+        rows = c.execute("SELECT * FROM plans" + where + " ORDER BY id", args).fetchall()
         return [_plan_row(r) for r in rows]
 
 
@@ -653,7 +845,35 @@ def _plan_row(r: sqlite3.Row) -> dict:
     d = dict(r)
     d["steps"] = json.loads(d.get("steps") or "[]")
     d["revision"] = int(d.get("revision") or 1)
+    d["archived"] = bool(d.get("archived", 0))
     return d
+
+
+def set_plan_archived(db_path: str, pid: int, archived: bool) -> bool:
+    """Management-only transition, atomic with new runs/retries; history stays intact."""
+    with _LOCK, get_conn(db_path) as c:
+        c.execute("BEGIN IMMEDIATE")
+        row = c.execute("SELECT archived FROM plans WHERE id=?", (pid,)).fetchone()
+        if not row:
+            return False
+        if bool(row["archived"]) == archived:
+            return True
+        if archived:
+            for table, terminal in (("plan_runs", RUN_TERMINAL), ("jobs", TERMINAL)):
+                marks = ",".join("?" for _ in terminal)
+                live = c.execute(
+                    f"SELECT id FROM {table} WHERE plan_id=? AND status NOT IN ({marks}) LIMIT 1",
+                    (pid, *sorted(terminal)),
+                ).fetchone()
+                if live:
+                    raise PlanLifecycleConflict(
+                        "该计划仍有未结束的执行或任务，请等待结束或取消后再归档"
+                    )
+        c.execute(
+            "UPDATE plans SET archived=?,archived_at=? WHERE id=?",
+            (int(archived), _now() if archived else None, pid),
+        )
+        return True
 
 
 def create_plan(db_path: str, p: Plan) -> int:
@@ -664,9 +884,19 @@ def create_plan(db_path: str, p: Plan) -> int:
         cur = c.execute(
             "INSERT INTO plans(name,description,environment_id,executor_id,asset_source_id,steps,fail_fast,owner,revision,created_at,updated_at)"
             " VALUES(?,?,?,?,?,?,?,?,?,?,?)",
-            (p.name, p.description, p.environment_id, p.executor_id,
-             getattr(p, "asset_source_id", 0) or None, steps,
-             int(p.fail_fast), p.owner, 1, _now(), _now()),
+            (
+                p.name,
+                p.description,
+                p.environment_id,
+                p.executor_id,
+                getattr(p, "asset_source_id", 0) or None,
+                steps,
+                int(p.fail_fast),
+                p.owner,
+                1,
+                _now(),
+                _now(),
+            ),
         )
         c.commit()
         return cur.lastrowid
@@ -675,8 +905,16 @@ def create_plan(db_path: str, p: Plan) -> int:
 def update_plan(db_path: str, pid: int, data: dict, bump_revision: bool = True) -> bool:
     """编辑计划：只允许受控字段（名称/描述/引用 ID/步骤/失败即停）。
     用户编辑默认递增 revision（版本化）；迁移回填等非用户编辑可 bump_revision=False。"""
-    allowed = ("name", "description", "environment_id", "executor_id",
-               "asset_source_id", "steps", "fail_fast", "owner")
+    allowed = (
+        "name",
+        "description",
+        "environment_id",
+        "executor_id",
+        "asset_source_id",
+        "steps",
+        "fail_fast",
+        "owner",
+    )
     fields = {}
     for k in allowed:
         if k in data:
@@ -690,18 +928,26 @@ def update_plan(db_path: str, pid: int, data: dict, bump_revision: bool = True) 
     if bump_revision:
         sets.append("revision=COALESCE(revision,1)+1")
     with _LOCK, get_conn(db_path) as c:
+        c.execute("BEGIN IMMEDIATE")
+        _require_active_plan(c, pid)
         cur = c.execute(f"UPDATE plans SET {', '.join(sets)} WHERE id=?", (*vals, pid))
         c.commit()
         return cur.rowcount > 0
 
 
 # ---------- PlanRun ----------
-def create_run(db_path: str, plan_id: int, plan_revision: Optional[int] = None,
-               plan_snapshot: Optional[dict] = None) -> int:
+def create_run(
+    db_path: str,
+    plan_id: int,
+    plan_revision: Optional[int] = None,
+    plan_snapshot: Optional[dict] = None,
+) -> int:
     """创建 PlanRun 并固化"执行时的计划版本 + 不可变计划快照"。
     后续编辑 Plan 不会改变已创建 PlanRun 的结构/参数/引用。"""
     snap = json.dumps(plan_snapshot, ensure_ascii=False) if plan_snapshot else None
     with _LOCK, get_conn(db_path) as c:
+        c.execute("BEGIN IMMEDIATE")
+        _require_active_plan(c, plan_id)
         cur = c.execute(
             "INSERT INTO plan_runs(plan_id,plan_revision,plan_snapshot,status,started_at)"
             " VALUES(?,?,?,?,?)",
@@ -735,9 +981,14 @@ def get_run(db_path: str, run_id: int) -> Optional[dict]:
 def list_runs_meta(db_path: str, limit: int = 10, offset: int = 0) -> list[dict]:
     """运行记录元信息（倒序）。offset 用于「加载更多」式的历史浏览。"""
     with _LOCK, get_conn(db_path) as c:
-        return [dict(r) for r in c.execute(
-            "SELECT id,plan_id,plan_revision,plan_snapshot,status,started_at,ended_at FROM plan_runs "
-            "ORDER BY id DESC LIMIT ? OFFSET ?", (int(limit), max(0, int(offset or 0))))]
+        return [
+            dict(r)
+            for r in c.execute(
+                "SELECT id,plan_id,plan_revision,plan_snapshot,status,started_at,ended_at FROM plan_runs "
+                "ORDER BY id DESC LIMIT ? OFFSET ?",
+                (int(limit), max(0, int(offset or 0))),
+            )
+        ]
 
 
 def update_run_status(db_path: str, run_id: int, status: str, ended: bool = False) -> None:
@@ -752,28 +1003,33 @@ def update_run_status(db_path: str, run_id: int, status: str, ended: bool = Fals
         c.commit()
 
 
-def _run_aggregate(db_path, run_id):
-    with _LOCK, get_conn(db_path) as c:
-        run = c.execute("SELECT * FROM plan_runs WHERE id=?", (run_id,)).fetchone()
-        if not run:
-            return None, []
-        jobs = c.execute("SELECT * FROM jobs WHERE plan_run_id=? ORDER BY id", (run_id,)).fetchall()
-        return dict(run), [dict(j) for j in jobs]
-
-
 # ---------- Job ----------
 def insert_job(db_path: str, job: Job) -> int:
     snap = getattr(job, "config_snapshot", None)
     with _LOCK, get_conn(db_path) as c:
+        c.execute("BEGIN IMMEDIATE")
+        _require_active_plan(c, job.plan_id)
         cur = c.execute(
             "INSERT INTO jobs(plan_run_id,plan_id,engine,name,environment_id,executor_id,timeout_sec,"
             "requires_exclusive,params,status,cancel_requested,parent_job_id,retry_of,attempt,config_snapshot)"
             " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (job.plan_run_id, job.plan_id, job.engine, job.name, job.environment_id,
-             job.executor_id, job.timeout_sec, int(job.requires_exclusive),
-             json.dumps(job.params, ensure_ascii=False), job.status,
-             job.cancel_requested, job.parent_job_id, job.retry_of, job.attempt,
-             json.dumps(snap, ensure_ascii=False) if snap else None),
+            (
+                job.plan_run_id,
+                job.plan_id,
+                job.engine,
+                job.name,
+                job.environment_id,
+                job.executor_id,
+                job.timeout_sec,
+                int(job.requires_exclusive),
+                json.dumps(job.params, ensure_ascii=False),
+                job.status,
+                job.cancel_requested,
+                job.parent_job_id,
+                job.retry_of,
+                job.attempt,
+                json.dumps(snap, ensure_ascii=False) if snap else None,
+            ),
         )
         c.commit()
         return cur.lastrowid
@@ -830,16 +1086,26 @@ def mark_cancel_requested(db_path: str, job_id: int) -> None:
 
 
 def set_job_running(db_path: str, job_id: int, log_path: str, junit_path: str) -> None:
-    update_job(db_path, job_id, {
-        "status": "running", "started_at": _now(), "log_path": log_path, "junit_path": junit_path
-    })
+    update_job(
+        db_path,
+        job_id,
+        {"status": "running", "started_at": _now(), "log_path": log_path, "junit_path": junit_path},
+    )
 
 
-def set_job_terminal(db_path: str, job_id: int, status: str, exit_code: int,
-                     error: Optional[str], ended: bool = True) -> None:
-    update_job(db_path, job_id, {
-        "status": status, "exit_code": exit_code, "error": error, "ended_at": _now() if ended else None
-    })
+def set_job_terminal(
+    db_path: str, job_id: int, status: str, exit_code: int, error: Optional[str], ended: bool = True
+) -> None:
+    update_job(
+        db_path,
+        job_id,
+        {
+            "status": status,
+            "exit_code": exit_code,
+            "error": error,
+            "ended_at": _now() if ended else None,
+        },
+    )
 
 
 def cancel_remaining_in_run(db_path: str, run_id: int) -> None:
@@ -854,9 +1120,7 @@ def cancel_remaining_in_run(db_path: str, run_id: int) -> None:
 
 def find_queued_job(db_path: str) -> Optional[dict]:
     with _LOCK, get_conn(db_path) as c:
-        r = c.execute(
-            "SELECT * FROM jobs WHERE status='queued' ORDER BY id LIMIT 1"
-        ).fetchone()
+        r = c.execute("SELECT * FROM jobs WHERE status='queued' ORDER BY id LIMIT 1").fetchone()
         return _job_row(r) if r else None
 
 
@@ -891,8 +1155,9 @@ def get_report(db_path: str, job_id: int) -> Optional[dict]:
         return dict(r) if r else None
 
 
-def save_report(db_path: str, job_id: int, plan_run_id: int, report_path: str,
-                report_json: dict) -> int:
+def save_report(
+    db_path: str, job_id: int, plan_run_id: int, report_path: str, report_json: dict
+) -> int:
     with _LOCK, get_conn(db_path) as c:
         cur = c.execute(
             "INSERT INTO reports(job_id,plan_run_id,report_path,report_json,created_at)"
@@ -906,10 +1171,26 @@ def save_report(db_path: str, job_id: int, plan_run_id: int, report_path: str,
 # ---------- 报告中心读模型（report_index） ----------
 # report.json 仍为唯一事实源；本表仅是派生查询索引，兼容旧记录：缺字段置空 + 标记 incomplete。
 _REPORT_INDEX_COLS = [
-    "plan_id", "plan_run_id", "plan_name", "engine", "engine_data_schema",
-    "schema_main_version", "status", "env_id", "env_name", "env_host", "started_at",
-    "ended_at", "duration_ms", "comparator", "compare_key", "metrics", "summary",
-    "metadata_incomplete", "extra", "created_at",
+    "plan_id",
+    "plan_run_id",
+    "plan_name",
+    "engine",
+    "engine_data_schema",
+    "schema_main_version",
+    "status",
+    "env_id",
+    "env_name",
+    "env_host",
+    "started_at",
+    "ended_at",
+    "duration_ms",
+    "comparator",
+    "compare_key",
+    "metrics",
+    "summary",
+    "metadata_incomplete",
+    "extra",
+    "created_at",
 ]
 
 
@@ -925,31 +1206,44 @@ def upsert_report_index(db_path: str, row: dict) -> None:
         c.commit()
 
 
-def list_report_index(db_path: str, filters: Optional[dict] = None,
-                      page: int = 1, page_size: int = 20) -> dict:
+def list_report_index(
+    db_path: str, filters: Optional[dict] = None, page: int = 1, page_size: int = 20
+) -> dict:
     """分页查询报告索引。filters: plan_id/engine/status/env_name, time_from/time_to。
     返回 {total, page, page_size, rows}。"""
     filters = filters or {}
     where, args = [], []
     if filters.get("plan_id"):
-        where.append("plan_id=?"); args.append(int(filters["plan_id"]))
+        where.append("plan_id=?")
+        args.append(int(filters["plan_id"]))
     if filters.get("engine"):
-        where.append("engine=?"); args.append(str(filters["engine"]))
+        where.append("engine=?")
+        args.append(str(filters["engine"]))
     if filters.get("status"):
-        where.append("status=?"); args.append(str(filters["status"]))
+        where.append("status=?")
+        args.append(str(filters["status"]))
     if filters.get("env_name"):
-        where.append("env_name=?"); args.append(str(filters["env_name"]))
+        where.append("env_name=?")
+        args.append(str(filters["env_name"]))
     if filters.get("time_from"):
-        where.append("started_at>=?"); args.append(str(filters["time_from"]))
+        where.append("started_at>=?")
+        args.append(str(filters["time_from"]))
     if filters.get("time_to"):
-        where.append("started_at<=?"); args.append(str(filters["time_to"]))
+        where.append("started_at<=?")
+        args.append(str(filters["time_to"]))
     where_sql = ("WHERE " + " AND ".join(where)) if where else ""
-    page = max(1, int(page)); page_size = min(200, max(1, int(page_size)))
+    page = max(1, int(page))
+    page_size = min(200, max(1, int(page_size)))
     with _LOCK, get_conn(db_path) as c:
         total = c.execute(f"SELECT COUNT(*) FROM report_index {where_sql}", args).fetchone()[0]
-        rows = [dict(r) for r in c.execute(
-            f"SELECT * FROM report_index {where_sql} ORDER BY started_at DESC, id DESC "
-            f"LIMIT ? OFFSET ?", args + [page_size, (page - 1) * page_size])]
+        rows = [
+            dict(r)
+            for r in c.execute(
+                f"SELECT * FROM report_index {where_sql} ORDER BY started_at DESC, id DESC "
+                f"LIMIT ? OFFSET ?",
+                args + [page_size, (page - 1) * page_size],
+            )
+        ]
     for r in rows:
         r["metrics"] = json.loads(r["metrics"]) if r["metrics"] else {}
         r["summary"] = json.loads(r["summary"]) if r["summary"] else {}
@@ -972,37 +1266,82 @@ def get_report_index(db_path: str, job_id: int) -> Optional[dict]:
 def report_index_options(db_path: str) -> dict:
     """报告中心筛选下拉：可用计划/引擎/环境/状态。仅统计已成功聚合进索引的报告。"""
     with _LOCK, get_conn(db_path) as c:
-        plans = [dict(r) for r in c.execute(
-            "SELECT plan_id AS id, plan_name AS name, COUNT(*) AS n FROM report_index "
-            "WHERE plan_name IS NOT NULL GROUP BY plan_id ORDER BY plan_name")]
-        engines = [r[0] for r in c.execute(
-            "SELECT DISTINCT engine FROM report_index ORDER BY engine")]
-        envs = [dict(r) for r in c.execute(
-            "SELECT env_name AS name, COUNT(*) AS n FROM report_index "
-            "WHERE env_name IS NOT NULL GROUP BY env_name ORDER BY env_name")]
-        statuses = [r[0] for r in c.execute(
-            "SELECT DISTINCT status FROM report_index ORDER BY status")]
+        plans = [
+            dict(r)
+            for r in c.execute(
+                "SELECT plan_id AS id, plan_name AS name, COUNT(*) AS n FROM report_index "
+                "WHERE plan_name IS NOT NULL GROUP BY plan_id ORDER BY plan_name"
+            )
+        ]
+        engines = [
+            r[0] for r in c.execute("SELECT DISTINCT engine FROM report_index ORDER BY engine")
+        ]
+        envs = [
+            dict(r)
+            for r in c.execute(
+                "SELECT env_name AS name, COUNT(*) AS n FROM report_index "
+                "WHERE env_name IS NOT NULL GROUP BY env_name ORDER BY env_name"
+            )
+        ]
+        statuses = [
+            r[0] for r in c.execute("SELECT DISTINCT status FROM report_index ORDER BY status")
+        ]
     return {"plans": plans, "engines": engines, "envs": envs, "statuses": statuses}
 
 
-def report_index_history(db_path: str, comparator: str,
-                         limit: int = 30) -> list[dict]:
+def report_index_history(db_path: str, comparator: str, limit: int = 30) -> list[dict]:
     """同一可比性分组下的历史成功报告（按开始时间升序），用于趋势。"""
     rows = []
     with _LOCK, get_conn(db_path) as c:
         if comparator:
             rs = c.execute(
                 "SELECT * FROM report_index WHERE comparator=? AND status='success' "
-                "ORDER BY started_at ASC, id ASC LIMIT ?", (comparator, limit))
+                "ORDER BY started_at ASC, id ASC LIMIT ?",
+                (comparator, limit),
+            )
         else:
             rs = c.execute(
                 "SELECT * FROM report_index WHERE status='success' "
-                "ORDER BY started_at ASC, id ASC LIMIT ?", (limit,))
+                "ORDER BY started_at ASC, id ASC LIMIT ?",
+                (limit,),
+            )
         for r in rs:
             d = dict(r)
             d["metrics"] = json.loads(d["metrics"]) if d["metrics"] else {}
             rows.append(d)
     return rows
+
+
+# ---------- 可复用的公共运行要求 ----------
+def list_runtime_requirements(path):
+    with _LOCK, get_conn(path) as c:
+        rows = [dict(r) for r in c.execute("SELECT * FROM runtime_requirements ORDER BY id")]
+    for row in rows:
+        row["modules"] = json.loads(row["modules"])
+    return rows
+
+
+def get_runtime_requirement(path, rid):
+    return next((r for r in list_runtime_requirements(path) if r["id"] == rid), None)
+
+
+def save_runtime_requirement(path, data, rid=None):
+    keys = ("name", "suite", "modules", "mongo_ref", "notes", "enabled")
+    values = [json.dumps(data[k]) if k == "modules" else data[k] for k in keys]
+    with _LOCK, get_conn(path) as c:
+        if rid is None:
+            cur = c.execute(
+                "INSERT INTO runtime_requirements(name,suite,modules,mongo_ref,notes,enabled,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                [*values, _now(), _now()],
+            )
+            return cur.lastrowid
+        c.execute(
+            "UPDATE runtime_requirements SET name=?,suite=?,modules=?,mongo_ref=?,notes=?,enabled=?,"
+            "revision=revision+1,updated_at=? WHERE id=?",
+            [*values, _now(), rid],
+        )
+        return rid
 
 
 # ---------- 执行机独占锁（UI/Unity 类任务预留） ----------

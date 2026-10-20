@@ -1,0 +1,49 @@
+{
+  "format": "unified-test-platform/config",
+  "version": 1,
+  "resources": [
+    {"id": "own-env", "type": "environment", "name": "离线校准环境"},
+    {"id": "own-executor", "type": "executor", "name": "pytest 执行机"},
+    {"id": "own-pass-entry", "type": "pytest_entry", "name": "成功测试入口"},
+    {"id": "own-fail-entry", "type": "pytest_entry", "name": "故意失败测试入口"}
+  ],
+  "cases": [
+    {
+      "id": "own-pass",
+      "name": "异机校准：成功用例",
+      "description": "验证目标机工作目录与 offline 环境注入，预期 success。",
+      "engine": "pytest",
+      "params": {"entry": {"$resource": "own-pass-entry"}, "timeout_sec": 60}
+    },
+    {
+      "id": "own-fail",
+      "name": "异机校准：故意失败用例",
+      "description": "验证失败日志与报告，预期 failed；符合此预期时该验收项通过。",
+      "engine": "pytest",
+      "params": {"entry": {"$resource": "own-fail-entry"}, "timeout_sec": 60}
+    }
+  ],
+  "suites": [
+    {
+      "id": "own-suite",
+      "name": "异机校准套件（含故意失败）",
+      "cases": ["own-pass", "own-fail"]
+    }
+  ],
+  "plans": [
+    {
+      "id": "own-pass-plan",
+      "name": "异机校准：成功计划",
+      "environment": "own-env",
+      "executor": "own-executor",
+      "steps": [{"case": "own-pass"}]
+    },
+    {
+      "id": "own-fail-plan",
+      "name": "异机校准：故意失败计划",
+      "environment": "own-env",
+      "executor": "own-executor",
+      "steps": [{"case": "own-fail"}]
+    }
+  ]
+}

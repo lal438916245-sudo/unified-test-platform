@@ -3,249 +3,48 @@
 配置中心约束：前端与 Plan 只提交 ID/key；API 一律返回脱敏视图；
 不返回明文密钥/绝对路径；非法 ID/key 直接拒绝。
 """
+
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from .. import db
-from ..config_center import (ASSET_KINDS, ENGINES, build_config_snapshot,
-                             build_content_fingerprint, build_plan_snapshot,
-                             engine_readiness, mask_asset_source, mask_environment,
-                             mask_executor, precheck_asset_source, precheck_environment,
-                             precheck_executor, precheck_plan, plan_snapshot_name,
-                             public_catalog, resolve_workdir, suite_fingerprint,
-                             test_case_fingerprint,
-                             validate_asset_input, validate_environment_input,
-                             validate_executor_input, validate_plan_refs,
-                             validate_step_params)
+from .. import db, project_registry as registry
+from ..config_center import (
+    ASSET_KINDS,
+    ENGINES,
+    build_config_snapshot,
+    build_content_fingerprint,
+    build_plan_snapshot,
+    plan_snapshot_name,
+    precheck_plan,
+    resolve_workdir,
+    suite_fingerprint,
+    test_case_fingerprint,
+    validate_plan_refs,
+    validate_step_params,
+)
 from ..domain import Job, Plan, PlanStep
 from ..orchestration.scheduler import DATA_DIR
+from ..ui_config import device_binding_errors, get_device, pytest_ui_errors
+from .configuration import router as configuration_router
 
 router = APIRouter(prefix="/api")
+router.include_router(configuration_router)
 
 
 def _app(request: Request):
     return request.app.state
 
 
-# ---------- 资源（脱敏视图） ----------
-@router.get("/environments")
-def list_environments(request: Request):
-    return [mask_environment(e) for e in db.list_environments(_app(request).db_path)]
-
-
-@router.get("/executors")
-def list_executors(request: Request):
-    return [mask_executor(x) for x in db.list_executors(_app(request).db_path)]
-
-
-@router.get("/asset-sources")
-def list_asset_sources(request: Request):
-    return [mask_asset_source(a) for a in db.list_asset_sources(_app(request).db_path)]
-
-
-# ---------- 配置中心：目录 / 就绪度 ----------
-@router.get("/config/catalog")
-def config_catalog():
-    return public_catalog()
-
-
-@router.get("/config/readiness")
-def config_readiness(request: Request):
-    st = _app(request)
-    return {"engines": engine_readiness(db, st.db_path)}
-
-
-# ---------- 配置中心：Environment CRUD / 启停 / 预检 ----------
-@router.post("/config/environments")
-def create_environment(payload: dict, request: Request):
-    st = _app(request)
-    errs = validate_environment_input(payload, partial=False)
-    if errs:
-        raise HTTPException(400, "；".join(errs))
-    data = _env_payload(payload)
-    eid = db.create_environment(st.db_path, data)
-    return mask_environment(db.get_environment(st.db_path, eid))
-
-
-@router.put("/config/environments/{eid}")
-def update_environment(eid: int, payload: dict, request: Request):
-    st = _app(request)
-    if not db.get_environment(st.db_path, eid):
-        raise HTTPException(404, "environment not found")
-    errs = validate_environment_input(payload, partial=True)
-    if errs:
-        raise HTTPException(400, "；".join(errs))
-    db.update_environment(st.db_path, eid, _env_payload(payload, partial=True))
-    return mask_environment(db.get_environment(st.db_path, eid))
-
-
-@router.post("/config/environments/{eid}/toggle")
-def toggle_environment(eid: int, request: Request):
-    st = _app(request)
-    e = db.get_environment(st.db_path, eid)
-    if not e:
-        raise HTTPException(404, "environment not found")
-    db.update_environment(st.db_path, eid, {"enabled": 0 if int(e.get("enabled", 1)) else 1})
-    return mask_environment(db.get_environment(st.db_path, eid))
-
-
-@router.post("/config/environments/{eid}/precheck")
-def precheck_env(eid: int, request: Request):
-    st = _app(request)
-    e = db.get_environment(st.db_path, eid)
-    if not e:
-        raise HTTPException(404, "environment not found")
-    return precheck_environment(e)
-
-
-def _env_payload(payload: dict, partial: bool = False) -> dict:
-    keys = ("name", "host", "port", "kind", "protocol", "secret_ref", "secret_kind",
-            "labels", "notes", "enabled")
-    out = {}
-    for k in keys:
-        if k in payload:
-            out[k] = payload[k]
-        elif not partial:
-            out[k] = {"host": "", "port": 0, "kind": "http", "protocol": "http",
-                      "secret_ref": "", "secret_kind": "", "labels": [], "notes": "",
-                      "enabled": 1}.get(k)
-    if "port" in out and out["port"] is not None:
-        out["port"] = int(out["port"])
-    if "enabled" in out and out["enabled"] is not None:
-        out["enabled"] = int(out["enabled"])
-    return {k: v for k, v in out.items() if v is not None}
-
-
-# ---------- 配置中心：Executor CRUD / 启停 / 预检 ----------
-@router.post("/config/executors")
-def create_executor(payload: dict, request: Request):
-    st = _app(request)
-    errs = validate_executor_input(payload, partial=False)
-    if errs:
-        raise HTTPException(400, "；".join(errs))
-    xid = db.create_executor(st.db_path, _exec_payload(payload))
-    return mask_executor(db.get_executor(st.db_path, xid))
-
-
-@router.put("/config/executors/{xid}")
-def update_executor(xid: int, payload: dict, request: Request):
-    st = _app(request)
-    if not db.get_executor(st.db_path, xid):
-        raise HTTPException(404, "executor not found")
-    errs = validate_executor_input(payload, partial=True)
-    if errs:
-        raise HTTPException(400, "；".join(errs))
-    db.update_executor(st.db_path, xid, _exec_payload(payload, partial=True))
-    return mask_executor(db.get_executor(st.db_path, xid))
-
-
-@router.post("/config/executors/{xid}/toggle")
-def toggle_executor(xid: int, request: Request):
-    st = _app(request)
-    x = db.get_executor(st.db_path, xid)
-    if not x:
-        raise HTTPException(404, "executor not found")
-    db.update_executor(st.db_path, xid, {"enabled": 0 if int(x.get("enabled", 1)) else 1})
-    return mask_executor(db.get_executor(st.db_path, xid))
-
-
-@router.post("/config/executors/{xid}/precheck")
-def precheck_exec(xid: int, request: Request):
-    st = _app(request)
-    x = db.get_executor(st.db_path, xid)
-    if not x:
-        raise HTTPException(404, "executor not found")
-    return precheck_executor(x)
-
-
-def _exec_payload(payload: dict, partial: bool = False) -> dict:
-    keys = ("name", "python_ref", "cwd_root", "allowed_runners", "max_concurrency",
-            "notes", "enabled")
-    out = {}
-    for k in keys:
-        if k in payload:
-            out[k] = payload[k]
-        elif not partial:
-            out[k] = {"python_ref": "", "cwd_root": "", "allowed_runners": [],
-                      "max_concurrency": 1, "notes": "", "enabled": 1}.get(k)
-    if "max_concurrency" in out and out["max_concurrency"] is not None:
-        out["max_concurrency"] = int(out["max_concurrency"])
-    if "enabled" in out and out["enabled"] is not None:
-        out["enabled"] = int(out["enabled"])
-    if not partial:
-        # legacy 列必须满足 NOT NULL；新配置一律走受控引用（python_ref/cwd_root），legacy 留空
-        out.setdefault("python_executable", "")
-        out.setdefault("cwd", "")
-    return {k: v for k, v in out.items() if v is not None}
-
-
-# ---------- 配置中心：AssetSource CRUD / 启停 / 预检 ----------
-@router.post("/config/asset-sources")
-def create_asset_source(payload: dict, request: Request):
-    st = _app(request)
-    errs = validate_asset_input(payload, partial=False)
-    if errs:
-        raise HTTPException(400, "；".join(errs))
-    aid = db.create_asset_source(st.db_path, _asset_payload(payload))
-    return mask_asset_source(db.get_asset_source(st.db_path, aid))
-
-
-@router.put("/config/asset-sources/{aid}")
-def update_asset_source(aid: int, payload: dict, request: Request):
-    st = _app(request)
-    if not db.get_asset_source(st.db_path, aid):
-        raise HTTPException(404, "asset source not found")
-    errs = validate_asset_input(payload, partial=True)
-    if errs:
-        raise HTTPException(400, "；".join(errs))
-    db.update_asset_source(st.db_path, aid, _asset_payload(payload, partial=True))
-    return mask_asset_source(db.get_asset_source(st.db_path, aid))
-
-
-@router.post("/config/asset-sources/{aid}/toggle")
-def toggle_asset_source(aid: int, request: Request):
-    st = _app(request)
-    a = db.get_asset_source(st.db_path, aid)
-    if not a:
-        raise HTTPException(404, "asset source not found")
-    db.update_asset_source(st.db_path, aid, {"enabled": 0 if int(a.get("enabled", 1)) else 1})
-    return mask_asset_source(db.get_asset_source(st.db_path, aid))
-
-
-@router.post("/config/asset-sources/{aid}/precheck")
-def precheck_asset(aid: int, request: Request):
-    st = _app(request)
-    a = db.get_asset_source(st.db_path, aid)
-    if not a:
-        raise HTTPException(404, "asset source not found")
-    return precheck_asset_source(a)
-
-
-def _asset_payload(payload: dict, partial: bool = False) -> dict:
-    keys = ("name", "kind", "dataset_ref", "tpl_ref", "scenes_ref",
-            "ground_truth_ref", "airtest_ref", "scenario_ref", "notes", "enabled")
-    out = {}
-    for k in keys:
-        if k in payload:
-            out[k] = payload[k]
-        elif not partial:
-            out[k] = {"dataset_ref": "", "tpl_ref": "", "scenes_ref": "",
-                      "ground_truth_ref": "", "airtest_ref": "", "scenario_ref": "",
-                      "notes": "", "enabled": 1}.get(k)
-    if "enabled" in out and out["enabled"] is not None:
-        out["enabled"] = int(out["enabled"])
-    return {k: v for k, v in out.items() if v is not None}
-
-
 # ---------- TestCase（v0.2 定义层） ----------
 # 只描述"要跑什么"；不绑定 Environment / Executor / AssetSource（那三项属 Plan）。
 # 参数校验复用 Plan 步骤的同一套白名单，绝不新造第二套规则。
+
 
 class TestCaseIn(BaseModel):
     name: str
@@ -260,7 +59,12 @@ class TestCaseIn(BaseModel):
 
 
 # 引擎 -> 允许的资产种类（'' = 不需要受控资产）
-_ASSET_KIND_BY_ENGINE = {"pytest": "", "locust": "locust", "matcheval": "matcheval"}
+_ASSET_KIND_BY_ENGINE = {
+    "pytest": "",
+    "locust": "locust",
+    "matcheval": "matcheval",
+    "airtest": "airtest",
+}
 
 
 def _tc_payload(body: TestCaseIn) -> dict:
@@ -269,8 +73,8 @@ def _tc_payload(body: TestCaseIn) -> dict:
         "description": body.description or "",
         "engine": body.engine,
         "params": dict(body.params or {}),
-        "requires_exclusive": bool(body.requires_exclusive),
-        "asset_kind": (body.asset_kind or "").strip(),
+        "requires_exclusive": body.engine == "airtest" or bool(body.requires_exclusive),
+        "asset_kind": (body.asset_kind or ("airtest" if body.engine == "airtest" else "")).strip(),
         "owner": body.owner or "local",
         "tags": list(body.tags or []),
         "enabled": int(bool(body.enabled)),
@@ -294,13 +98,17 @@ def _tc_errors(request: Request, body: TestCaseIn, cid: Optional[int] = None) ->
             if p["asset_kind"] not in ASSET_KINDS:
                 errs.append(f"asset_kind 必须是 '' 或 {list(ASSET_KINDS)} 之一")
             elif p["asset_kind"] != expect:
-                errs.append(f"asset_kind={p['asset_kind']!r} 与 engine={p['engine']!r} 不相容"
-                            f"（该引擎应为 {expect!r}）")
+                errs.append(
+                    f"asset_kind={p['asset_kind']!r} 与 engine={p['engine']!r} 不相容"
+                    f"（该引擎应为 {expect!r}）"
+                )
         # asset_source_id 属计划/执行级，不是用例级 —— 显式拒绝，避免与计划级兜底注入打架
         if "asset_source_id" in p["params"]:
-            errs.append("params 不允许包含 asset_source_id（属计划/执行级，请在 Plan 上指定 AssetSource）")
+            errs.append(
+                "params 不允许包含 asset_source_id（属计划/执行级，请在 Plan 上指定 AssetSource）"
+            )
         if p["engine"] in ENGINES:
-            errs += validate_step_params(p["engine"], p["params"])
+            errs += validate_step_params(p["engine"], p["params"], st.db_path)
     if not isinstance(p["tags"], list) or any(not isinstance(t, str) for t in p["tags"]):
         errs.append("tags 必须是字符串数组")
     # 名称唯一：全库无 UNIQUE 约束，沿用应用层校验的既有风格
@@ -311,8 +119,9 @@ def _tc_errors(request: Request, body: TestCaseIn, cid: Optional[int] = None) ->
 
 
 def _tc_fingerprint(p: dict) -> str:
-    return test_case_fingerprint(p["name"], p["engine"], p["params"],
-                                 p["requires_exclusive"], p["asset_kind"])
+    return test_case_fingerprint(
+        p["name"], p["engine"], p["params"], p["requires_exclusive"], p["asset_kind"]
+    )
 
 
 @router.get("/test-cases")
@@ -330,6 +139,7 @@ def get_test_case(cid: int, request: Request):
 
 
 @router.post("/test-cases")
+@registry.locked
 def create_test_case(body: TestCaseIn, request: Request):
     st = _app(request)
     errs = _tc_errors(request, body)
@@ -342,6 +152,7 @@ def create_test_case(body: TestCaseIn, request: Request):
 
 
 @router.put("/test-cases/{cid}")
+@registry.locked
 def update_test_case(cid: int, body: TestCaseIn, request: Request):
     """编辑 TestCase。
 
@@ -400,14 +211,16 @@ def delete_test_case(cid: int, request: Request):
     refs = _plans_referencing_case(st, cid)
     if refs:
         raise HTTPException(
-            409, f"该 TestCase 仍被计划引用：{refs}；请先解除引用，或改用停用（toggle）")
+            409, f"该 TestCase 仍被计划引用：{refs}；请先解除引用，或改用停用（toggle）"
+        )
     # v0.2 TestSuite：补齐引用保护的另一半。
     # 此前只扫 plans，Suite 引用用例后删掉该用例会留下指向不存在用例的悬空 case_ref
     # → 那个 Suite 将永久无法展开，且用户看不到原因。
     srefs = db.suites_referencing_case(st.db_path, cid)
     if srefs:
         raise HTTPException(
-            409, f"该 TestCase 仍被测试套件引用：{srefs}；请先从套件中移除，或改用停用（toggle）")
+            409, f"该 TestCase 仍被测试套件引用：{srefs}；请先从套件中移除，或改用停用（toggle）"
+        )
     db.delete_test_case(st.db_path, cid)
     return {"deleted": cid}
 
@@ -434,7 +247,7 @@ def _expand_case_steps(request: Request, steps: list) -> tuple[list, list[str]]:
     for i, s in enumerate(steps or []):
         cr = s.get("case_ref")
         if not cr:
-            out.append(dict(s))                      # legacy：原样透传
+            out.append(dict(s))  # legacy：原样透传
             continue
         tag = f"steps[{i}].case_ref"
         if not isinstance(cr, dict):
@@ -458,41 +271,57 @@ def _expand_case_steps(request: Request, steps: list) -> tuple[list, list[str]]:
         except (TypeError, ValueError):
             rev_ok = False
         if not rev_ok:
-            errs.append(f"{tag}.revision 与用例当前版本不一致：引用={rev} 当前={tc.get('revision')}"
-                        f"；用例已被修改，请重新保存计划以更新引用")
+            errs.append(
+                f"{tag}.revision 与用例当前版本不一致：引用={rev} 当前={tc.get('revision')}"
+                f"；用例已被修改，请重新保存计划以更新引用"
+            )
             continue
-        if not cr.get("fingerprint") or str(cr.get("fingerprint")) != str(tc.get("fingerprint") or ""):
-            errs.append(f"{tag}.fingerprint 与用例不一致：引用={cr.get('fingerprint')} "
-                        f"当前={tc.get('fingerprint')}；用例定义已被修改，请重新保存计划")
+        if not cr.get("fingerprint") or str(cr.get("fingerprint")) != str(
+            tc.get("fingerprint") or ""
+        ):
+            errs.append(
+                f"{tag}.fingerprint 与用例不一致：引用={cr.get('fingerprint')} "
+                f"当前={tc.get('fingerprint')}；用例定义已被修改，请重新保存计划"
+            )
             continue
         engine = tc.get("engine")
         if s.get("engine") and s.get("engine") != engine:
-            errs.append(f"{tag} 所在步骤 engine={s.get('engine')!r} 与用例 engine={engine!r} 不一致")
+            errs.append(
+                f"{tag} 所在步骤 engine={s.get('engine')!r} 与用例 engine={engine!r} 不一致"
+            )
             continue
         override = s.get("override_params") or {}
         if not isinstance(override, dict):
             errs.append(f"steps[{i}].override_params 必须是对象")
             continue
-        banned = [k for k in ("engine", "asset_source_id", "environment_id", "executor_id")
-                  if k in override]
+        banned = [
+            k
+            for k in ("engine", "asset_source_id", "environment_id", "executor_id")
+            if k in override
+        ]
         if banned:
             errs.append(f"steps[{i}].override_params 不允许覆盖：{banned}")
             continue
         merged = {**dict(tc.get("params") or {}), **override}
-        perr = validate_step_params(engine, merged)
+        perr = validate_step_params(engine, merged, st.db_path)
         if perr:
             errs += [f"steps[{i}] {e}" for e in perr]
             continue
-        out.append({
-            "engine": engine,
-            "name": s.get("name") or tc.get("name"),
-            "requires_exclusive": bool(s.get("requires_exclusive",
-                                             tc.get("requires_exclusive"))),
-            "params": merged,
-            "case_ref": {"id": cid, "revision": int(tc.get("revision") or 1),
-                         "fingerprint": str(tc.get("fingerprint") or "")},
-            "override_params": dict(override),
-        })
+        out.append(
+            {
+                "engine": engine,
+                "name": s.get("name") or tc.get("name"),
+                "requires_exclusive": engine == "airtest"
+                or bool(s.get("requires_exclusive", tc.get("requires_exclusive"))),
+                "params": merged,
+                "case_ref": {
+                    "id": cid,
+                    "revision": int(tc.get("revision") or 1),
+                    "fingerprint": str(tc.get("fingerprint") or ""),
+                },
+                "override_params": dict(override),
+            }
+        )
     return out, errs
 
 
@@ -505,6 +334,7 @@ def _expand_case_steps(request: Request, steps: list) -> tuple[list, list[str]]:
 # ⚠️ I1 不变量（架构审计 §2.2）：Suite 不含任何执行作用域字段。
 #    下面四个字段**仅为显式拒绝而声明** —— 若不声明，pydantic 会静默丢弃客户端发来的这些键，
 #    客户端会误以为生效；这与本项目"绝不静默"的原则冲突，故显式捕获并报 400。
+
 
 class SuiteIn(BaseModel):
     name: str
@@ -551,8 +381,10 @@ def _suite_errors(request: Request, body: SuiteIn, sid: Optional[int] = None) ->
     # I1：执行作用域字段一律拒绝（显式报错，不静默丢弃）
     banned = [k for k in _SUITE_FORBIDDEN_KEYS if getattr(body, k, None) is not None]
     if banned:
-        errs.append(f"Suite 不接受执行作用域字段：{banned}"
-                    f"（环境 / 执行机 / 资产来源 / fail_fast 属 Plan）")
+        errs.append(
+            f"Suite 不接受执行作用域字段：{banned}"
+            f"（环境 / 执行机 / 资产来源 / fail_fast 属 Plan）"
+        )
 
     if not p["name"]:
         errs.append("name 必填")
@@ -566,14 +398,18 @@ def _suite_errors(request: Request, body: SuiteIn, sid: Optional[int] = None) ->
         errs.append("cases 必须是数组")
     else:
         if len(p["cases"]) != len(raw):
-            errs.append("cases 的元素必须是形如 {id, revision, fingerprint} 的对象"
-                        "（缺 id 或非对象的条目会被拒绝）")
+            errs.append(
+                "cases 的元素必须是形如 {id, revision, fingerprint} 的对象"
+                "（缺 id 或非对象的条目会被拒绝）"
+            )
         seen: set = set()
         for i, c in enumerate(p["cases"]):
             cid = int(c.get("id"))
             if cid in seen:
-                errs.append(f"cases[{i}] 重复引用同一用例：id={cid}"
-                            f"（如需重复执行同一用例，请在计划中重复添加步骤）")
+                errs.append(
+                    f"cases[{i}] 重复引用同一用例：id={cid}"
+                    f"（如需重复执行同一用例，请在计划中重复添加步骤）"
+                )
                 continue
             seen.add(cid)
             tc = db.get_test_case(st.db_path, cid)
@@ -684,16 +520,31 @@ def delete_suite(sid: int, request: Request):
         raise HTTPException(404, "test suite not found")
     refs = _plans_referencing_suite(st, sid)
     if refs:
-        raise HTTPException(
-            409, f"该 TestSuite 仍被计划引用（provenance）：{refs}；请先解除引用")
+        raise HTTPException(409, f"该 TestSuite 仍被计划引用（provenance）：{refs}；请先解除引用")
     db.delete_suite(st.db_path, sid)
     return {"deleted": sid}
 
 
 # ---------- 计划 ----------
 @router.get("/plans")
-def list_plans(request: Request):
-    return db.list_plans(_app(request).db_path)
+def list_plans(request: Request, status: Literal["active", "archived", "all"] = "active"):
+    return db.list_plans(
+        _app(request).db_path, {"active": False, "archived": True, "all": None}[status]
+    )
+
+
+@router.post("/plans/{pid}/archive")
+def archive_plan(pid: int, request: Request):
+    if not db.set_plan_archived(_app(request).db_path, pid, True):
+        raise HTTPException(404, "plan not found")
+    return db.get_plan(_app(request).db_path, pid)
+
+
+@router.post("/plans/{pid}/restore")
+def restore_plan(pid: int, request: Request):
+    if not db.set_plan_archived(_app(request).db_path, pid, False):
+        raise HTTPException(404, "plan not found")
+    return db.get_plan(_app(request).db_path, pid)
 
 
 @router.get("/plans/{pid}")
@@ -717,8 +568,9 @@ class PlanIn(BaseModel):
 
 def _plan_errors(request: Request, body: PlanIn) -> list[str]:
     st = _app(request)
-    errs = validate_plan_refs(db, st.db_path, body.environment_id, body.executor_id,
-                              body.asset_source_id or None)
+    errs = validate_plan_refs(
+        db, st.db_path, body.environment_id, body.executor_id, body.asset_source_id or None
+    )
     if not body.steps:
         errs.append("plan 至少需要一个执行单元")
     # v0.2：先展开 TestCase 引用（含 id/revision/fingerprint/enabled/engine 一致性检查与
@@ -731,7 +583,26 @@ def _plan_errors(request: Request, body: PlanIn) -> list[str]:
         if eng not in ENGINES:
             errs.append(f"steps[{i}].engine 非法：{eng!r}")
             continue
-        errs += [f"steps[{i}] {e}" for e in validate_step_params(eng, s.get("params") or {})]
+        errs += [
+            f"steps[{i}] {e}" for e in validate_step_params(eng, s.get("params") or {}, st.db_path)
+        ]
+        if eng == "airtest":
+            errs += device_binding_errors(
+                get_device((s.get("params") or {}).get("device"), st.db_path),
+                body.executor_id,
+                st.db_path,
+            )
+        if eng == "airtest" and body.asset_source_id:
+            asset = db.get_asset_source(st.db_path, body.asset_source_id) or {}
+            if asset.get("kind") != "airtest" or asset.get("scenario_ref") != (
+                s.get("params") or {}
+            ).get("suite"):
+                errs.append("UI 步骤的套件与计划 AssetSource 不一致")
+        if eng == "pytest":
+            ex = db.get_executor(st.db_path, body.executor_id) or {}
+            p = s.get("params") or {}
+            root = p.get("cwd_root") or p.get("cwd") or ex.get("cwd_root") or ex.get("cwd", "")
+            errs += pytest_ui_errors(p, resolve_workdir(root) or root)
     return errs
 
 
@@ -742,33 +613,43 @@ def _plan_from_body(body: PlanIn) -> Plan:
         if cr:
             # 引用形态：name / requires_exclusive 是**可选覆盖**，缺省表示"继承用例"，
             # 因此这里绝不替客户端编造默认值（否则会把用例的取值静默盖掉）。
-            steps.append(PlanStep(
-                engine=s.get("engine") or "",
-                name=s.get("name") or "",
-                requires_exclusive=bool(s.get("requires_exclusive", False)),
-                params=s.get("params") or {},
-                case_ref=dict(cr),
-                override_params=dict(s.get("override_params") or {}),
-                name_set=bool(s.get("name")),
-                exclusive_set=("requires_exclusive" in s),
-            ))
+            steps.append(
+                PlanStep(
+                    engine=s.get("engine") or "",
+                    name=s.get("name") or "",
+                    requires_exclusive=s.get("engine") == "airtest"
+                    or bool(s.get("requires_exclusive", False)),
+                    params=s.get("params") or {},
+                    case_ref=dict(cr),
+                    override_params=dict(s.get("override_params") or {}),
+                    name_set=bool(s.get("name")),
+                    exclusive_set=("requires_exclusive" in s),
+                )
+            )
         else:
-            steps.append(PlanStep(
-                engine=s.get("engine") or "pytest",
-                name=s.get("name") or s.get("engine") or "job",
-                requires_exclusive=bool(s.get("requires_exclusive", False)),
-                params=s.get("params") or {},
-            ))
+            steps.append(
+                PlanStep(
+                    engine=s.get("engine") or "pytest",
+                    name=s.get("name") or s.get("engine") or "job",
+                    requires_exclusive=s.get("engine") == "airtest"
+                    or bool(s.get("requires_exclusive", False)),
+                    params=s.get("params") or {},
+                )
+            )
     return Plan(
-        name=body.name, description=body.description,
-        environment_id=body.environment_id, executor_id=body.executor_id,
+        name=body.name,
+        description=body.description,
+        environment_id=body.environment_id,
+        executor_id=body.executor_id,
         asset_source_id=body.asset_source_id,
-        fail_fast=bool(body.fail_fast), owner=body.owner or "local",
+        fail_fast=bool(body.fail_fast),
+        owner=body.owner or "local",
         steps=steps,
     )
 
 
 @router.post("/plans")
+@registry.locked
 def create_plan(body: PlanIn, request: Request):
     """创建计划：只接受受控配置 ID 与白名单步骤参数；仅启用的配置可被引用。"""
     st = _app(request)
@@ -780,21 +661,33 @@ def create_plan(body: PlanIn, request: Request):
 
 
 @router.put("/plans/{pid}")
+@registry.locked
 def update_plan(pid: int, body: PlanIn, request: Request):
     st = _app(request)
-    if not db.get_plan(st.db_path, pid):
+    current = db.get_plan(st.db_path, pid)
+    if not current:
         raise HTTPException(404, "plan not found")
+    if current.get("archived"):
+        raise db.PlanLifecycleConflict("该测试计划已归档，请先恢复后再编辑")
     errs = _plan_errors(request, body)
     if errs:
         raise HTTPException(400, "；".join(errs))
     p = _plan_from_body(body)
-    db.update_plan(st.db_path, pid, {
-        "name": p.name, "description": p.description, "environment_id": p.environment_id,
-        "executor_id": p.executor_id, "asset_source_id": p.asset_source_id or None,
-        "fail_fast": int(p.fail_fast), "owner": p.owner,
-        # 走 PlanStep.to_dict()：保证 case_ref / override_params 不被丢弃（透传点 3/9）
-        "steps": [s.to_dict() for s in p.steps],
-    })
+    db.update_plan(
+        st.db_path,
+        pid,
+        {
+            "name": p.name,
+            "description": p.description,
+            "environment_id": p.environment_id,
+            "executor_id": p.executor_id,
+            "asset_source_id": p.asset_source_id or None,
+            "fail_fast": int(p.fail_fast),
+            "owner": p.owner,
+            # 走 PlanStep.to_dict()：保证 case_ref / override_params 不被丢弃（透传点 3/9）
+            "steps": [s.to_dict() for s in p.steps],
+        },
+    )
     return db.get_plan(st.db_path, pid)
 
 
@@ -803,17 +696,17 @@ class PlanCopyIn(BaseModel):
 
 
 @router.post("/plans/precheck")
-def precheck_plan_draft(body: PlanIn, request: Request):
+def precheck_plan_draft(body: PlanIn, request: Request, realtime: bool = True):
     """草稿计划预检/执行预览：不落库、不创建 PlanRun/Job、不跑测试。
 
     v0.2：先把 case_ref 展开为有效步骤，再交给 precheck —— 保证预览结果与真实执行一致。"""
     st = _app(request)
-    return precheck_plan(db, st.db_path, _precheck_ready_dict(request, body))
+    return precheck_plan(db, st.db_path, _precheck_ready_dict(request, body), realtime=realtime)
 
 
 @router.post("/plans/{pid}/precheck")
-def precheck_plan_saved(pid: int, request: Request):
-    """已保存计划预检/执行预览：复用与执行相同的校验逻辑，不产生任何副作用。
+def precheck_plan_saved(pid: int, request: Request, realtime: bool = True):
+    """已保存计划预检：只读探测业务依赖，不创建运行，不执行用例。
 
     v0.2：先把 case_ref 展开为有效步骤（含一致性检查），再交给 precheck。"""
     st = _app(request)
@@ -823,26 +716,31 @@ def precheck_plan_saved(pid: int, request: Request):
     expanded, errs = _expand_case_steps(request, plan.get("steps") or [])
     if errs:
         raise HTTPException(400, "；".join(errs))
-    return precheck_plan(db, st.db_path, {**plan, "steps": expanded})
+    return precheck_plan(db, st.db_path, {**plan, "steps": expanded}, realtime=realtime)
 
 
 @router.post("/plans/{pid}/copy")
+@registry.locked
 def copy_plan(pid: int, request: Request, body: Optional[PlanCopyIn] = None):
     """复制计划：以受控字段创建新计划（revision 重置为 1）。复制仍需通过引用/步骤校验。"""
     st = _app(request)
     src = db.get_plan(st.db_path, pid)
     if not src:
         raise HTTPException(404, "plan not found")
-    name = (body.name.strip() if body and body.name and body.name.strip()
-            else f"{src['name']} (副本)")
+    name = (
+        body.name.strip() if body and body.name and body.name.strip() else f"{src['name']} (副本)"
+    )
     plan_in = PlanIn(
-        name=name, description=src.get("description") or "",
-        environment_id=src["environment_id"], executor_id=src["executor_id"],
+        name=name,
+        description=src.get("description") or "",
+        environment_id=src["environment_id"],
+        executor_id=src["executor_id"],
         asset_source_id=src.get("asset_source_id") or 0,
         # 原样透传已存的 steps（含 case_ref / override_params）——
         # v0.1 这里重建了 4 个键，会把用例引用丢掉（透传点 5/9）
         steps=[dict(s) for s in (src.get("steps") or [])],
-        fail_fast=bool(src.get("fail_fast", 1)), owner=src.get("owner") or "local",
+        fail_fast=bool(src.get("fail_fast", 1)),
+        owner=src.get("owner") or "local",
     )
     errs = _plan_errors(request, plan_in)
     if errs:
@@ -856,10 +754,15 @@ def _plan_dict_from_body(body: PlanIn) -> dict:
     注意：返回的是**存储形态** steps；预检前调用方必须用展开后的步骤覆盖它。"""
     p = _plan_from_body(body)
     return {
-        "id": None, "name": p.name, "description": p.description,
-        "environment_id": p.environment_id, "executor_id": p.executor_id,
-        "asset_source_id": p.asset_source_id, "fail_fast": int(p.fail_fast),
-        "owner": p.owner, "revision": 0,
+        "id": None,
+        "name": p.name,
+        "description": p.description,
+        "environment_id": p.environment_id,
+        "executor_id": p.executor_id,
+        "asset_source_id": p.asset_source_id,
+        "fail_fast": int(p.fail_fast),
+        "owner": p.owner,
+        "revision": 0,
         "steps": [s.to_dict() for s in p.steps],
     }
 
@@ -880,21 +783,32 @@ class RunOut(BaseModel):
 
 @router.post("/plans/{pid}/run")
 def run_plan(pid: int, request: Request) -> RunOut:
+    with registry.bindings_lock:
+        return _run_plan_bound(pid, request)
+
+
+def _run_plan_bound(pid: int, request: Request) -> RunOut:
     st = _app(request)
     plan = db.get_plan(st.db_path, pid)
     if not plan:
         raise HTTPException(404, "plan not found")
+    if plan.get("archived"):
+        raise db.PlanLifecycleConflict("该测试计划已归档，请先恢复后再执行")
     if not plan["steps"]:
         raise HTTPException(400, "plan 没有执行单元")
     # 仅启用的 Environment / Executor / AssetSource 可被引用（只认 ID）
-    ref_errors = validate_plan_refs(db, st.db_path, plan["environment_id"],
-                                    plan["executor_id"], plan.get("asset_source_id"))
+    ref_errors = validate_plan_refs(
+        db, st.db_path, plan["environment_id"], plan["executor_id"], plan.get("asset_source_id")
+    )
     if ref_errors:
         raise HTTPException(400, "；".join(ref_errors))
     env = db.get_environment(st.db_path, plan["environment_id"])
     exec_ = db.get_executor(st.db_path, plan["executor_id"])
-    asset = db.get_asset_source(st.db_path, plan["asset_source_id"]) \
-        if plan.get("asset_source_id") else None
+    asset = (
+        db.get_asset_source(st.db_path, plan["asset_source_id"])
+        if plan.get("asset_source_id")
+        else None
+    )
 
     # ---- v0.2：在生成快照之前展开 TestCase 引用 ----
     # 展开失败必须**不产生任何 PlanRun / Job**（与上面的引用校验同等保证）。
@@ -902,14 +816,42 @@ def run_plan(pid: int, request: Request) -> RunOut:
     if case_errs:
         raise HTTPException(400, "；".join(case_errs))
 
+    # Revalidate legacy inline steps and executor default cwd before creating facts.
+    for step in steps:
+        eng, p = step.get("engine"), step.get("params") or {}
+        if eng == "pytest":
+            try:
+                p = registry.pytest_params(p)
+            except ValueError as exc:
+                raise HTTPException(400, str(exc)) from None
+            step["params"] = p
+        errors = validate_step_params(eng, p, st.db_path)
+        if eng == "airtest":
+            errors += device_binding_errors(
+                get_device(p.get("device"), st.db_path), plan["executor_id"], st.db_path
+            )
+        if eng == "airtest" and asset:
+            if asset.get("kind") != "airtest" or asset.get("scenario_ref") != p.get("suite"):
+                errors.append("UI 步骤的套件与计划 AssetSource 不一致")
+        if eng == "pytest":
+            root = (
+                p.get("cwd_root") or p.get("cwd") or exec_.get("cwd_root") or exec_.get("cwd", "")
+            )
+            errors += pytest_ui_errors(p, resolve_workdir(root) or root)
+        if errors:
+            raise HTTPException(400, "；".join(errors))
+        if eng == "airtest":
+            step["requires_exclusive"] = True
+
     # Job 创建时固化脱敏配置快照：后续编辑配置不改变历史 Job / report.json / 比较结论
     base_snapshot = build_config_snapshot(env, exec_, asset)
     # PlanRun 固化"执行时的计划版本 + 不可变计划快照"：后续编辑 Plan 不改变本次执行。
     # 快照存**展开后的有效步骤**（另附 case_ref/override_params 供溯源）→ 自包含、不可变。
     plan_snapshot = build_plan_snapshot({**plan, "steps": steps})
 
-    run_id = db.create_run(st.db_path, pid, plan_revision=plan.get("revision") or 1,
-                           plan_snapshot=plan_snapshot)
+    run_id = db.create_run(
+        st.db_path, pid, plan_revision=plan.get("revision") or 1, plan_snapshot=plan_snapshot
+    )
     for step in steps:
         engine = step.get("engine", "pytest")
         params = _resolve_step_params(step, engine, base_snapshot, asset)
@@ -917,14 +859,29 @@ def run_plan(pid: int, request: Request) -> RunOut:
         # 只在 PlanRun 创建阶段计算（按受控 key + 廉价签名做进程内缓存，不重复读盘），
         # 与 TestCase 的"定义指纹"严格分离、互不代替。
         snapshot = dict(base_snapshot)
-        snapshot["content"] = build_content_fingerprint(engine, params)
+        registrations = registry.snapshot(params, exec_)
+        if registrations:
+            snapshot["registration"] = registrations
+        if engine == "airtest":
+            snapshot["ui_device"] = dict(get_device(params.get("device"), st.db_path) or {})
+            from ..runtime_requirements import resolve_requirement
+
+            snapshot["runtime_requirements"] = resolve_requirement(params, st.db_path)
+        snapshot["content"] = build_content_fingerprint(
+            engine, params, st.db_path, snapshot.get("ui_device")
+        )
         job = Job(
-            plan_run_id=run_id, plan_id=pid, engine=engine,
+            plan_run_id=run_id,
+            plan_id=pid,
+            engine=engine,
             name=step.get("name") or engine,
-            environment_id=plan["environment_id"], executor_id=plan["executor_id"],
+            environment_id=plan["environment_id"],
+            executor_id=plan["executor_id"],
             timeout_sec=int(params.get("timeout_sec", 300)),
-            requires_exclusive=bool(step.get("requires_exclusive", 0)),
-            params=params, status="queued", config_snapshot=snapshot,
+            requires_exclusive=engine == "airtest" or bool(step.get("requires_exclusive", 0)),
+            params=params,
+            status="queued",
+            config_snapshot=snapshot,
         )
         db.insert_job(st.db_path, job)
     return RunOut(run_id=run_id)
@@ -933,8 +890,21 @@ def run_plan(pid: int, request: Request) -> RunOut:
 def _resolve_step_params(step: dict, engine: str, snapshot: dict, asset) -> dict:
     """把步骤参数规范为运行参数：受控 cwd_root -> 绝对 cwd（仅后端）；按需注入受控资产 key。"""
     params = dict(step.get("params") or {})
-    if params.get("cwd_root"):
-        params["cwd"] = resolve_workdir(params.pop("cwd_root")) or params.get("cwd")
+    if engine == "pytest":
+        params = registry.pytest_params(params)
+        if params.get("cwd") and not params.get("cwd_root"):
+            from ..config_center import WORKDIR_ROOTS, infer_workdir_root
+
+            root = (
+                params["cwd"]
+                if params["cwd"] in WORKDIR_ROOTS
+                else infer_workdir_root(params["cwd"])
+            )
+            if root:
+                params["cwd_root"] = root
+                params.pop("cwd")
+    # Keep stable references for both registered and legacy roots. Resolve only
+    # under the scheduler's binding lock, so pending jobs cannot switch paths.
     asset_id = params.pop("asset_source_id", None)
     key = ""
     if asset_id and asset and int(asset_id) == int(asset.get("id") or -1):
@@ -946,6 +916,10 @@ def _resolve_step_params(step: dict, engine: str, snapshot: dict, asset) -> dict
             params["dataset"] = key
         if engine == "locust" and not params.get("locustfile"):
             params["locustfile"] = key
+    if engine == "matcheval":
+        params.setdefault("dataset", "fixture-small")
+    elif engine == "locust":
+        params.setdefault("locustfile", "http-fixture")
     return params
 
 
@@ -967,7 +941,8 @@ def list_runs(request: Request, limit: int = 10, offset: int = 0):
         # 计划名优先取执行时的 PlanRun 快照：后续改名不影响历史执行记录展示
         snap_name = plan_snapshot_name(d.get("plan_snapshot"))
         d["plan_name"] = snap_name or (
-            (db.get_plan(st.db_path, d["plan_id"]) or {}).get("name") or f"plan#{d['plan_id']}")
+            (db.get_plan(st.db_path, d["plan_id"]) or {}).get("name") or f"plan#{d['plan_id']}"
+        )
         d.pop("plan_snapshot", None)
         rows.append(d)
     return rows
@@ -980,7 +955,8 @@ def get_run(run_id: int, request: Request):
     if not run:
         raise HTTPException(404, "run not found")
     jobs = db.list_jobs_by_run(st.db_path, run_id)
-    return {"run": run, "jobs": jobs}
+    plan = db.get_plan(st.db_path, run["plan_id"])
+    return {"run": run, "jobs": jobs, "plan_archived": bool((plan or {}).get("archived"))}
 
 
 @router.get("/jobs/{job_id}")
@@ -1010,6 +986,8 @@ def retry_job(job_id: int, request: Request):
         raise HTTPException(404, "job not found")
     try:
         new_id = st.orchestrator.retry(job)
+    except db.PlanLifecycleConflict:
+        raise
     except ValueError as e:
         raise HTTPException(400, str(e))
     return {"ok": True, "new_job_id": new_id}
@@ -1027,15 +1005,31 @@ def get_report(job_id: int, request: Request):
 
 # ---------- 报告中心（读模型查询 + 筛选分页 + 对比 + 趋势） ----------
 @router.get("/report-center")
-def report_center(request: Request, plan_id: int = 0, engine: str = "",
-                  status: str = "", env_name: str = "", time_from: str = "",
-                  time_to: str = "", page: int = 1, page_size: int = 20):
+def report_center(
+    request: Request,
+    plan_id: int = 0,
+    engine: str = "",
+    status: str = "",
+    env_name: str = "",
+    time_from: str = "",
+    time_to: str = "",
+    page: int = 1,
+    page_size: int = 20,
+):
     st = _app(request)
-    return db.list_report_index(st.db_path, {
-        "plan_id": plan_id or None, "engine": engine or None, "status": status or None,
-        "env_name": env_name or None, "time_from": time_from or None,
-        "time_to": time_to or None,
-    }, page, page_size)
+    return db.list_report_index(
+        st.db_path,
+        {
+            "plan_id": plan_id or None,
+            "engine": engine or None,
+            "status": status or None,
+            "env_name": env_name or None,
+            "time_from": time_from or None,
+            "time_to": time_to or None,
+        },
+        page,
+        page_size,
+    )
 
 
 @router.get("/report-center/options")
@@ -1061,15 +1055,19 @@ class CompareReq(BaseModel):
 def report_center_compare(req: CompareReq, request: Request):
     """严格对比：仅同 engine/schema主版本/场景/环境/关键输入 才有效对比。
     返回兼容性结论 + 引擎专项指标差值 + 历史趋势。"""
-    from ..report_center import (compare_compatibility, metric_deltas, build_trend)
+    from ..report_center import build_trend, compare_compatibility, metric_deltas
+
     st = _app(request)
     a = db.get_report_index(st.db_path, req.baseline_job_id)
     b = db.get_report_index(st.db_path, req.candidate_job_id)
     if not a or not b:
         raise HTTPException(404, "baseline 或 candidate 报告索引不存在")
     compat = compare_compatibility(a, b)
-    deltas = metric_deltas(a, b) if compat["compatible"] else {
-        "engine": b.get("engine"), "items": [], "skipped": True}
+    deltas = (
+        metric_deltas(a, b)
+        if compat["compatible"]
+        else {"engine": b.get("engine"), "items": [], "skipped": True}
+    )
     history = db.report_index_history(st.db_path, a.get("comparator") or "", limit=30)
     trend = build_trend(history)
     return {
@@ -1085,24 +1083,34 @@ def report_center_compare(req: CompareReq, request: Request):
 
 def _summarize_idx(idx: dict) -> dict:
     return {
-        "job_id": idx.get("job_id"), "plan_name": idx.get("plan_name"),
-        "engine": idx.get("engine"), "status": idx.get("status"),
-        "env_name": idx.get("env_name"), "started_at": idx.get("started_at"),
+        "job_id": idx.get("job_id"),
+        "plan_name": idx.get("plan_name"),
+        "engine": idx.get("engine"),
+        "status": idx.get("status"),
+        "env_name": idx.get("env_name"),
+        "started_at": idx.get("started_at"),
         "schema_main_version": idx.get("schema_main_version"),
         "metadata_incomplete": idx.get("metadata_incomplete"),
         "metrics": idx.get("metrics") or {},
     }
 
 
-@router.get("/artifacts/{job_id}/{filename}")
+@router.get("/artifacts/{job_id}/{filename:path}")
 def get_artifact(job_id: int, filename: str, request: Request):
     st = _app(request)
     job = db.get_job(st.db_path, job_id)
     if not job:
         raise HTTPException(404, "job not found")
-    safe = os.path.basename(filename)
-    path = os.path.join(DATA_DIR, "reports", f"run_{job['plan_run_id']}",
-                        f"job_{job_id}", safe)
+    from pathlib import Path
+
+    root = Path(DATA_DIR, "reports", f"run_{job['plan_run_id']}", f"job_{job_id}").resolve()
+    parts = filename.replace("\\", "/").split("/")
+    if any(p.startswith(".") or ":" in p for p in parts):
+        raise HTTPException(404, "artifact not found")
+    target = root.joinpath(*parts).resolve()
+    if root not in target.parents or not target.is_file():
+        raise HTTPException(404, "artifact not found")
+    path = str(target)
     if not os.path.exists(path):
         raise HTTPException(404, "artifact not found")
     return FileResponse(path)

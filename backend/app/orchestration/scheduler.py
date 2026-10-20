@@ -1,5 +1,6 @@
 """编排调度器：单编排线程串行拉起独立子进程并流式收日志，单看门狗线程负责超时。
 测试执行永远发生在子进程里，本线程只做编排/读取/轮询。"""
+
 from __future__ import annotations
 
 import os
@@ -8,19 +9,30 @@ import threading
 import time
 from typing import Optional
 
-from .. import db
-from ..config_center import (build_config_snapshot, resolve_runtime_env,
-                             resolve_runtime_executor, snapshot_env_view)
-from ..domain import (TERMINAL, STATUS_CANCELLING, STATUS_CANCELLED, STATUS_TIMEDOUT,
-                      STATUS_FAILED, aggregate_run_status, latest_attempt_statuses)
+from .. import db, project_registry as registry
+from ..config_center import (
+    build_config_snapshot,
+    resolve_runtime_env,
+    resolve_runtime_executor,
+    snapshot_env_view,
+)
+from ..domain import (
+    STATUS_CANCELLED,
+    STATUS_CANCELLING,
+    STATUS_FAILED,
+    STATUS_TIMEDOUT,
+    TERMINAL,
+    aggregate_run_status,
+    latest_attempt_statuses,
+)
 from ..executors import get_runner
 from ..executors.base import RunnerResult, kill_proc_tree
 from ..schemas import build_report, validate_report, write_report
 
 # 平台数据根目录：platform/data（db.sqlite、logs/、reports/）
-BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))      # app
-PLATFORM = os.path.dirname(BACKEND)                                        # backend
-BASE = os.path.dirname(PLATFORM)                                           # platform
+BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # app
+PLATFORM = os.path.dirname(BACKEND)  # backend
+BASE = os.path.dirname(PLATFORM)  # platform
 DATA_DIR = os.environ.get("PLATFORM_DATA_DIR") or os.path.join(BASE, "data")
 
 SLEEP = 0.4
@@ -49,8 +61,7 @@ class Orchestrator(threading.Thread):
         self._stop.set()
 
     def run(self) -> None:
-        watchdog = threading.Thread(target=self._watchdog_loop, daemon=True,
-                                    name="sched-watchdog")
+        watchdog = threading.Thread(target=self._watchdog_loop, daemon=True, name="sched-watchdog")
         watchdog.start()
         while not self._stop.is_set():
             try:
@@ -77,16 +88,14 @@ class Orchestrator(threading.Thread):
         status = job["status"]
         if status == "queued":
             # 尚未启动：直接置终态 cancelled，无需触碰子进程
-            db.update_job(self.db_path, job_id,
-                          {"status": "cancelled", "ended_at": now_ts()})
+            db.update_job(self.db_path, job_id, {"status": "cancelled", "ended_at": now_ts()})
             self._finalize_run(job["plan_run_id"])
             return
         if status == "running":
             # 中间态：置 cancelling（非终态），登记取消并终止进程树，等待 Runner 回收后落 cancelled
             with self._lock:
                 self._cancel.add(job_id)
-            db.update_job(self.db_path, job_id,
-                          {"status": "cancelling", "cancel_requested": 1})
+            db.update_job(self.db_path, job_id, {"status": "cancelling", "cancel_requested": 1})
             self._kill_current(job_id)
             return
         # status ∈ {running 已被置 cancelling, 终态}：多播取消请求视为幂等，忽略
@@ -104,15 +113,20 @@ class Orchestrator(threading.Thread):
         """重试：创建新的 Job 实例（新 id），严格复用原 Job 的 PlanRun 配置快照。
         保留原 Job 与报告；新 Job 记录 retry_of（原始 job id）与 attempt（原+1）。"""
         from ..domain import Job
+
         if job["status"] not in TERMINAL:
             raise ValueError("只有终态 Job 可重试")
         nj = Job(
-            plan_run_id=job["plan_run_id"], plan_id=job["plan_id"], engine=job["engine"],
+            plan_run_id=job["plan_run_id"],
+            plan_id=job["plan_id"],
+            engine=job["engine"],
             name=job.get("name", "job"),
-            environment_id=job["environment_id"], executor_id=job["executor_id"],
+            environment_id=job["environment_id"],
+            executor_id=job["executor_id"],
             timeout_sec=job.get("timeout_sec", 300),
             requires_exclusive=bool(job.get("requires_exclusive", 0)),
-            params=job.get("params") or {}, status="queued",
+            params=job.get("params") or {},
+            status="queued",
             config_snapshot=job.get("config_snapshot"),
             parent_job_id=job["id"],
             retry_of=job.get("retry_of") or job["id"],
@@ -126,6 +140,14 @@ class Orchestrator(threading.Thread):
 
     # ---------- 执行单个 Job ----------
     def _process(self, job: dict) -> None:
+        with registry.registry_scope(self.db_path):
+            self._process_scoped(job)
+
+    def _process_scoped(self, job: dict) -> None:
+        job = {
+            **job,
+            "_db_path": self.db_path,
+        }  # Per-instance device registry; never a global cache.
         job_id = job["id"]
         # Runner 只使用后端解析后的受控配置，绝不信任前端/DB 中的任意路径或命令。
         env = resolve_runtime_env(db.get_environment(self.db_path, job["environment_id"]) or {})
@@ -134,7 +156,7 @@ class Orchestrator(threading.Thread):
 
         # UI/Unity 类任务先抢执行机独占锁；抢不到则保持 queued，绝不并发启动
         lock_id = None
-        if job.get("requires_exclusive", 0):
+        if job.get("engine") == "airtest" or job.get("requires_exclusive", 0):
             lock_id = db.acquire_executor_lock(self.db_path, executor.get("id", 0), job_id)
             if not lock_id:
                 return  # 锁被占用 → 保持 queued，留待下一轮调度
@@ -167,6 +189,7 @@ class Orchestrator(threading.Thread):
         fh = open(log_path, "a", encoding="utf-8")
 
         def log_sink(line: str) -> None:
+            line = registry.redact(line)
             buf = self._logs.setdefault(job_id, [])
             if len(buf) >= MAX_LOG_LINES:
                 buf.pop(0)
@@ -174,36 +197,65 @@ class Orchestrator(threading.Thread):
             fh.write(line)
             fh.flush()
 
+        binding_locked = False
+
+        def release_binding():
+            nonlocal binding_locked
+            if binding_locked:
+                binding_locked = False
+                registry.bindings_lock.release()
+
         def register_proc(proc: subprocess.Popen) -> None:
             with self._lock:
                 self._proc = proc
+            release_binding()  # All runtime paths are resolved before starting the child.
 
         started = time.monotonic()
-        with self._lock:            # 与看门狗线程共享的状态一律在锁内写入（此前部分在锁外）
+        with self._lock:  # 与看门狗线程共享的状态一律在锁内写入（此前部分在锁外）
             self._job_id = job_id
             self._job_started = started
             self._job_timeout = float(job.get("timeout_sec", 300))
             self._timedout = False
 
         try:
+            if (job.get("config_snapshot") or {}).get("registration"):
+                registry.bindings_lock.acquire()
+                binding_locked = True
             pre_errors = self._config_errors(job, executor)
             if pre_errors:
                 # 受控配置不满足：诚实失败并给出可行动提示，绝不用模拟成功掩盖配置问题
                 log_sink("\n[config] " + "；".join(pre_errors) + "\n")
-                result = RunnerResult(status="failed", exit_code=-1,
-                                      error="配置不可用: " + "；".join(pre_errors))
+                result = RunnerResult(
+                    status="failed", exit_code=-1, error="配置不可用: " + "；".join(pre_errors)
+                )
             else:
-                result = runner.run(job, env, executor, junit_path, log_sink,
-                                    lambda: self._is_cancelled(job_id), register_proc)
+                result = runner.run(
+                    job,
+                    env,
+                    executor,
+                    junit_path,
+                    log_sink,
+                    lambda: self._is_cancelled(job_id),
+                    register_proc,
+                )
         except Exception as e:  # noqa: BLE001
             log_sink(f"\n[runner-error] {type(e).__name__}: {e}\n")
             result = RunnerResult(status="failed", exit_code=-1, error=str(e))
         finally:
+            release_binding()
             fh.close()
             with self._lock:
                 self._proc = None
                 self._job_id = None
                 self._cancel_pending.discard(job_id)
+
+        if job.get("engine") == "airtest" and result.engine_data is None:
+            result.engine_data = {
+                "phase": "prepare",
+                "failure_kind": "infrastructure",
+                "error": result.error,
+            }
+            result.engine_data_schema = "airtest/1.0"
 
         # 终态裁决：**用户显式取消优先**，其次看门狗超时，最后按 Runner 结果。
         #   顺序不能反：看门狗到点就置 _timedout，若同时用户已请求取消，
@@ -220,17 +272,22 @@ class Orchestrator(threading.Thread):
         db.set_job_terminal(self.db_path, job_id, status, result.exit_code, result.error)
 
         report = build_report(
-            plan_run_id=job["plan_run_id"], job_id=job_id, engine=job["engine"] or "pytest",
-            status=status, started_at=start_wall, ended_at=now_ts(),
+            plan_run_id=job["plan_run_id"],
+            job_id=job_id,
+            engine=job["engine"] or "pytest",
+            status=status,
+            started_at=start_wall,
+            ended_at=now_ts(),
             environment_snapshot=self._env_snapshot(job, env),
-            summary=result.summary, metrics=result.metrics,
-            artifacts=result.artifacts, engine_data=result.engine_data,
+            summary=result.summary,
+            metrics=result.metrics,
+            artifacts=result.artifacts,
+            engine_data=result.engine_data,
             engine_data_schema=result.engine_data_schema,
         )
         errors = validate_report(report)
         if errors:
-            db.update_job(self.db_path, job_id,
-                          {"error": "report 校验失败: " + "; ".join(errors)})
+            db.update_job(self.db_path, job_id, {"error": "report 校验失败: " + "; ".join(errors)})
         rdir, report_path = write_report(report_dir, job["plan_run_id"], job_id, report)
         rel = os.path.relpath(report_path, DATA_DIR)
         db.save_report(self.db_path, job_id, job["plan_run_id"], rel, report)
@@ -240,7 +297,8 @@ class Orchestrator(threading.Thread):
             self._index_report(job, env, report)
         except Exception as e:  # noqa: BLE001
             self._logs.setdefault(job_id, []).append(
-                f"[report-center] 索引派生失败(报告仍已归档): {e}\n")
+                f"[report-center] 索引派生失败(报告仍已归档): {e}\n"
+            )
 
         # 失败即停：本 Job 失败且计划 fail_fast => 后继 queued Job 置 skipped（不覆盖历史）
         if status == "failed":
@@ -256,11 +314,16 @@ class Orchestrator(threading.Thread):
         """把已归档的 report 派生为报告中心索引行（读模型）。兼容旧/缺字段。
         环境身份优先取 Job 固化快照、计划名优先取 PlanRun 计划快照，
         保证后续编辑配置实体/计划定义不会改变历史比较结论。"""
-        from ..report_center import build_index_row
         from ..config_center import plan_snapshot_name
+        from ..report_center import build_index_row
+
         run = db.get_run(self.db_path, job.get("plan_run_id")) or {}
         snap_name = plan_snapshot_name(run.get("plan_snapshot"))
-        plan = {"name": snap_name} if snap_name else (db.get_plan(self.db_path, job.get("plan_id")) or {})
+        plan = (
+            {"name": snap_name}
+            if snap_name
+            else (db.get_plan(self.db_path, job.get("plan_id")) or {})
+        )
         env_for_index = snapshot_env_view(job.get("config_snapshot")) or env
         row = build_index_row(report, job, plan, env_for_index, now_ts())
         db.upsert_report_index(self.db_path, row)
@@ -268,14 +331,35 @@ class Orchestrator(threading.Thread):
     def _config_errors(self, job: dict, executor: dict) -> list[str]:
         """Runner 启动前的受控配置校验：执行机是否允许该 Runner、解释器是否可用。"""
         errors: list[str] = []
+        saved = (job.get("config_snapshot") or {}).get("registration")
+        if saved:
+            current = registry.snapshot(job.get("params") or {}, executor)
+            if current != saved:
+                errors.append("项目、测试入口或运行环境配置已变化；请重新预检并新建执行")
+            from ..config_center import build_content_fingerprint, precheck_executor
+
+            original_content = (job.get("config_snapshot") or {}).get("content")
+            if original_content and build_content_fingerprint(
+                job.get("engine"), job.get("params") or {}, self.db_path
+            ).get("fingerprint") != original_content.get("fingerprint"):
+                errors.append("登记入口的脚本或资产内容已变化；请新建执行")
+            check = precheck_executor(
+                {**executor, "allowed_runners": [job.get("engine") or "pytest"]}
+            )
+            if check.get("ok") is False:
+                errors.extend(check.get("missing") or ["登记运行环境不可用"])
         engine = job.get("engine") or "pytest"
         allowed = executor.get("allowed_runners") or []
         if allowed and engine not in allowed:
-            errors.append(f"执行机 {executor.get('name') or '-'} 不允许运行 {engine}"
-                          f"（允许：{', '.join(allowed)}）；请在 Executor 中调整允许的 Runner")
+            errors.append(
+                f"执行机 {executor.get('name') or '-'} 不允许运行 {engine}"
+                f"（允许：{', '.join(allowed)}）；请在 Executor 中调整允许的 Runner"
+            )
         if not executor.get("python_executable"):
-            errors.append("执行机解释器不可用（受控引用不可解析且无 legacy 路径）；"
-                          "请在 Executor 选择可用的解释器引用并做预检")
+            errors.append(
+                "执行机解释器不可用（受控引用不可解析且无 legacy 路径）；"
+                "请在 Executor 选择可用的解释器引用并做预检"
+            )
         return errors
 
     def _env_snapshot(self, job: dict, env: dict) -> dict:
@@ -288,7 +372,7 @@ class Orchestrator(threading.Thread):
         return {
             "env_id": (snap.get("environment") or {}).get("name") or env.get("name", "-"),
             "host": (snap.get("environment") or {}).get("target")
-                    or f"{env.get('host', '-')}:{env.get('port', '-')}",
+            or f"{env.get('host', '-')}:{env.get('port', '-')}",
             "config_snapshot": snap,
         }
 
@@ -340,7 +424,7 @@ def decide_terminal_status(job_status_now: str, hit_timeout: bool, runner_status
     """Job 终态裁决（抽成纯函数，便于回归）。
     优先级：**用户显式取消 > 看门狗超时 > Runner 结果**。
 
-    ⚠️ 顺序不可颠倒：看门狗到点即置 ``_timedout``，若用户同时也请求了取消，
+    顺序不可颠倒：看门狗到点即置 ``_timedout``，若用户同时也请求了取消，
     先判超时就会把"用户主动取消"记成 ``timedout`` —— 用户意图被吞掉。
     """
     if job_status_now == STATUS_CANCELLING:
