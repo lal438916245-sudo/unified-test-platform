@@ -278,7 +278,9 @@ def test_readiness_accepts_registered_assets_and_checks_runtime_modules(setup,mo
     engines={e['engine']:e for e in c.get('/api/config/readiness').json()['engines']}
     assert engines['locust']['runnable'] and engines['matcheval']['runnable']
     assert c.put(f"/api/config/project-resources/{r['id']}",json=dict(config=dict(python_path=sys.executable,modules=['missing_registered_module']))).status_code==200
-    engines={e['engine']:e for e in c.get('/api/config/readiness').json()['engines']}
+    cached=c.get('/api/config/readiness').json()
+    assert cached['cached'] and cached['stale']
+    engines={e['engine']:e for e in c.post('/api/config/readiness/refresh').json()['engines']}
     assert engines['pytest']['runnable'] is False
 
 

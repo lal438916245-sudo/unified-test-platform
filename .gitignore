@@ -97,3 +97,12 @@ credentials*
 # 保留：backend/tests/（平台单测）、_ci/（平台 CI）、_v0.3_baseline/（回归测试台，pytest 依赖）
 /*.html
 /verify*.py
+
+# Delivery layout excludes developer memory, diagnosis reports and example kits.
+/PROJECT_MEMORY.md
+/POCO_RPC_DIAGNOSIS.md
+/PrivaHigh-素材拼版核对.png
+/docs/build_*.py
+/docs/user-guide-manifest.json
+/docs/user-guide-preview.png
+/docs/异机验收材料/

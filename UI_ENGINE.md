@@ -94,7 +94,7 @@ python -B _ci/ui_worker_lifecycle_probe.py production --db data/db.sqlite --devi
 
 ### 复位对照复跑（2026-10-13）
 
-后续专项诊断已定位 RPC 超时的具体链路：worker 未显式关闭连接，连接重置异常触发 Unity Error Pause，导致主线程暂停。保持初始页面的只读 pytest 同样复现；仅取消暂停即可恢复。详见 [POCO_RPC_DIAGNOSIS.md](POCO_RPC_DIAGNOSIS.md)。显式关闭连接的诊断对照通过，生产 Runner 已于 2026-10-14 接入关闭处理。
+后续专项诊断已定位 RPC 超时的具体链路：worker 未显式关闭连接，连接重置异常触发 Unity Error Pause，导致主线程暂停。保持初始页面的只读 pytest 同样复现；仅取消暂停即可恢复。开发期诊断报告不随精简仓库交付。显式关闭连接的诊断对照通过，生产 Runner 已于 2026-10-14 接入关闭处理。
 
 保留原 Job #2/#3 的参数和配置快照，以新的重试 Job 验证：
 

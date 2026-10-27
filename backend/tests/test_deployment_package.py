@@ -18,10 +18,11 @@ def test_deployment_archive_is_allowlisted_and_manifest_matches(tmp_path):
         assert 'platform/install.ps1' in names and 'platform/frontend/migration.js' in names
         assert 'platform/backend/app/config_migration.py' in names
         assert 'platform/frontend/help/cross-pc-acceptance.html' in names
-        assert 'platform/docs/异机完整验收检查清单.md' in names
-        example=json.loads(z.read('platform/docs/异机验收材料/自有用例与计划示例.json'))
-        assert len(example['cases'])==2 and len(example['plans'])==2
-        assert 'platform/docs/异机验收材料/示例项目/tests/test_acceptance.py' in names
+        assert {n for n in names if n.startswith('platform/docs/') and n.endswith('.md')} == {
+            'platform/docs/安装与配置迁移.md', 'platform/docs/新项目登记与执行.md',
+            'platform/docs/换电脑与路径配置.md', 'platform/docs/平台使用说明.md',
+        }
+        assert not any(n.startswith('platform/docs/异机验收材料/') for n in names)
         forbidden=('platform/data/','platform/.venv','platform/backend/tests/','platform/_v0.','platform/_ci_out/')
         assert not any(n.startswith(forbidden) for n in names)
         assert not any(n.endswith(('.sqlite','.pyc','.log')) for n in names)

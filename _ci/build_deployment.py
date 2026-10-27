@@ -12,13 +12,12 @@ ROOT=Path(__file__).resolve().parents[1]
 def sources():
     files={ROOT/name for name in ('README.md','UI_ENGINE.md','RUNTIME_REQUIREMENTS.md','start.ps1','start.bat','install.ps1','install.bat','requirements-core.txt',
         'requirements-ui.txt','requirements-locust.txt','requirements-vision.txt','backend/run.py','backend/preset.py','backend/platform_ui_guard.py')}
-    for directory in ('backend/app','backend/demo','frontend','docs/images','docs/异机验收材料'):
+    for directory in ('backend/app','backend/demo','frontend','docs/images'):
         for path in (ROOT/directory).rglob('*'):
             if path.is_file() and not any(p.startswith('.') or p in ('__pycache__','reports','logs') for p in path.relative_to(ROOT).parts) and path.suffix not in ('.pyc','.log','.sqlite'):
                 if not path.resolve().is_relative_to(ROOT): raise ValueError('Package source escapes the platform directory')
                 files.add(path)
-    for name in ('安装与配置迁移.md','新项目登记与执行.md','换电脑与路径配置.md',
-                 '平台使用说明.md','异机完整验收操作手册.md','异机完整验收检查清单.md'):
+    for name in ('安装与配置迁移.md','新项目登记与执行.md','换电脑与路径配置.md','平台使用说明.md'):
         if (ROOT/'docs'/name).is_file(): files.add(ROOT/'docs'/name)
     return sorted(files)
 
