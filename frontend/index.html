@@ -24,6 +24,13 @@
   table{width:100%;border-collapse:collapse}
   th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
   th{color:var(--muted);font-weight:600;font-size:12px;background:var(--bg2)}
+  .pr-entry-scroll{max-width:100%;overflow-x:auto}
+  .pr-entry-table{table-layout:fixed;min-width:880px}
+  .pr-entry-table th,.pr-entry-table td{overflow-wrap:anywhere}
+  .pr-entry-table code{white-space:normal;overflow-wrap:anywhere}
+  .pr-entry-table th:nth-child(4),.pr-entry-table td:nth-child(4){white-space:nowrap}
+  .pr-entry-actions{display:flex;flex-wrap:wrap;gap:6px}
+  .pr-entry-actions button{white-space:nowrap;flex:0 0 auto}
   button{cursor:pointer;border:1px solid var(--rule);background:#fff;border-radius:6px;padding:5px 12px;font-size:13px}
   button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
   button:hover{filter:brightness(.97)}
@@ -85,11 +92,28 @@
 <script>
 const API='';
 const $=id=>document.getElementById(id);
-async function j(path,opt){if(opt)opt={...opt,headers:{"X-Platform-Config":"1",...(opt.headers||{})}};const r=await fetch(API+path,opt);if(!r.ok)throw new Error(r.status+' '+await r.text());return r.json();}
+const jInFlight=new Map();
+async function j(path,opt){
+  if(opt)opt={...opt,headers:{"X-Platform-Config":"1",...(opt.headers||{})}};
+  const load=async()=>{const r=await fetch(API+path,opt);if(!r.ok)throw new Error(r.status+' '+await r.text());return r.json();};
+  if(opt){
+    // A write must not let its following GET join an older, pre-write request.
+    const write=(opt.method||'GET').toUpperCase()!=='GET';
+    if(write)jInFlight.clear();
+    try{return await load();}finally{if(write)jInFlight.clear();}
+  }
+  let pending=jInFlight.get(path);
+  if(!pending){
+    pending=load().finally(()=>{if(jInFlight.get(path)===pending)jInFlight.delete(path);});
+    jInFlight.set(path,pending);
+  }
+  // Callers may edit form data; sharing a request must not share mutable objects.
+  return structuredClone(await pending);
+}
 function chip(s){return `<span class="chip c-${s}">${s}</span>`;}
 function esc(s){s=String(s==null?'':s);return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function term(status){return ['success','failed','cancelled','timedout','skipped'].includes(status);}
-let timer=null, pollBusy=false;
+let timer=null, pollBusy=false, routeVersion=0;
 // ---------- 报告对比选择（基线/候选，存会话，跨页保持） ----------
 function pickBaseline(jobId){sessionStorage.setItem('rc_base',String(jobId));alert('已设为基线报告 #'+jobId);router();}
 function pickCandidate(jobId){sessionStorage.setItem('rc_cand',String(jobId));alert('已设为候选报告 #'+jobId);router();}
@@ -103,6 +127,7 @@ function compareSel(){
 }
 
 function router(){
+  routeVersion++;
   clearInterval(timer); timer=null;
   const h=location.hash||'#/plans';
   if(!h.startsWith('#/env')){cfgForm=null;cfgFocusPending=false;}
@@ -142,9 +167,11 @@ async function heartbeat(){try{const[e,x]=await Promise.all([j('/api/environment
 // ---------- 计划列表 ----------
 let plListMode='active', plArchiveBusy=false, plArchiveMessage='';
 async function renderPlans(){
+  const view=routeVersion;
   const app=$('app'); app.innerHTML='<h1>测试计划</h1><div class="card"><p class="muted">加载中…</p></div>';
   try{
     const plans=await j('/api/plans?status='+plListMode);
+    if(view!==routeVersion)return;
     const rows=plans.map(p=>`
       <tr>
         <td><strong>${esc(p.name)}</strong>${p.archived?' <span class="chip c-skipped">已归档</span>':''}<div class="muted">${esc(p.description||'')}</div>${p.archived_at?`<div class="muted">归档于 ${esc(p.archived_at)}</div>`:''}</td>
@@ -173,7 +200,7 @@ async function renderPlans(){
       <div id="pl-precheck-host"></div>
       <div class="card"><h2>最近执行记录</h2><div id="recent"></div></div>`;
     loadRecent();
-  }catch(e){app.innerHTML=`<div class="card err">加载计划失败：${esc(e.message)}</div>`;}
+  }catch(e){if(view===routeVersion)app.innerHTML=`<div class="card err">加载计划失败：${esc(e.message)}</div>`;}
 }
 function plSetListMode(mode){plListMode=mode;plArchiveMessage='';renderPlans();}
 async function plChangeArchive(id,archived,editor=false){
@@ -190,16 +217,18 @@ async function plChangeArchive(id,archived,editor=false){
 }
 let recentLimit=8;   // 最近执行记录的显示条数（「加载更多」每次 +16）
 async function loadRecent(){
+  const host=$('recent');if(!host)return;
   try{
     const runs=await j(`/api/runs?limit=${recentLimit}`);
+    if($('recent')!==host)return;
     const body=runs.map(r=>`<tr><td>${r.id}</td><td>${esc(r.plan_name||r.plan_id)}</td><td>${chip(r.status)}</td>
         <td class=muted>${esc(r.started_at||'-')}</td><td><a href="#/run/${r.id}">查看</a></td></tr>`).join('')||
         '<tr><td colspan=5 class=muted>暂无执行记录</td></tr>';
-    $('recent').innerHTML=`<table><thead><tr><th>#</th><th>计划</th><th>状态</th><th>开始</th><th></th></tr></thead>
+    host.innerHTML=`<table><thead><tr><th>#</th><th>计划</th><th>状态</th><th>开始</th><th></th></tr></thead>
       <tbody>${body}</tbody></table>
       <div class="row" style="margin-top:10px"><span class="muted">显示最近 ${runs.length} 条</span>
         ${runs.length>=recentLimit?`<button style="margin-left:auto" onclick="recentLimit+=16;loadRecent()">加载更多</button>`:''}</div>`;
-  }catch(e){$('recent').innerHTML='<span class="muted">加载执行记录失败</span>';}
+  }catch(e){if($('recent')===host)host.innerHTML='<span class="muted">加载执行记录失败</span>';}
 }
 async function trigger(id){
   if(!confirm('确认触发该计划？'))return;
@@ -383,22 +412,28 @@ function spark(series,title){
 
 // ---------- 资源与环境（配置中心：CRUD / 启停 / 预检 / 就绪度；不显示密钥、不提供任意路径浏览器） ----------
 let cfgCatalog=null, cfgData={envs:[],execs:[],assets:[],devices:[],requirements:[]}, cfgForm=null, cfgPrecheck=null, cfgWindows=[], cfgFocusPending=false;
+let cfgRenderSeq=0, cfgReadinessSeq=0, cfgReadinessData=null;
 const CFG_TYPE_LABEL={environment:'Environment',executor:'Executor',asset:'AssetSource',device:'UI 设备',requirement:'公共运行要求'};
 const CFG_BASE={environment:'/api/config/environments',executor:'/api/config/executors',asset:'/api/config/asset-sources',device:'/api/config/ui-devices',requirement:'/api/config/runtime-requirements'};
 
 async function renderEnv(){
   const app=$('app');
-  app.innerHTML='<h1>资源与环境</h1><div class="card"><p class="muted">加载中…</p></div>';
+  const seq=++cfgRenderSeq;
+  cfgReadinessData=null;
+  app.innerHTML=`<h1>资源与环境 <span class="muted">配置中心</span></h1>
+    <div class="card"><h2>项目、运行环境与本机路径</h2><p>登记项目、Python、外部引擎与资产；更换电脑后可重新绑定已有引用的本机路径。</p><a href="#/projects">管理项目与测试入口 →</a></div>
+    <div id="cfg-readiness" role="region" aria-label="引擎配置就绪度"></div>
+    <div id="cfg-resources"><div class="card">资源列表加载中…</div></div>`;
+  const host=$('cfg-resources');
+  cfgLoadReadiness();
   try{
-    const[envs,execs,assets,cat,ready,devices]=await Promise.all([
+    const[envs,execs,assets,cat,devices]=await Promise.all([
       j('/api/environments'),j('/api/executors'),j('/api/asset-sources'),
-      j('/api/config/catalog'),j('/api/config/readiness'),j('/api/ui-devices')]);
+      j('/api/config/catalog'),j('/api/ui-devices')]);
+    if(seq!==cfgRenderSeq||$('cfg-resources')!==host)return;
     cfgCatalog=cat;
     cfgData={envs,execs,assets,devices,requirements:cat.runtime_requirements||[]};
-    app.innerHTML=`<h1>资源与环境 <span class="muted">配置中心</span></h1>
-      <div class="card"><h2>项目、运行环境与本机路径</h2><p>登记项目、Python、外部引擎与资产；更换电脑后可重新绑定已有引用的本机路径。</p><a href="#/projects">管理项目与测试入口 →</a></div>
-      ${cfgReadinessCard(ready.engines)}
-      <div id="cfg-precheck">${cfgPrecheck?cfgPrecheckHtml(cfgPrecheck):''}</div>
+    host.innerHTML=`<div id="cfg-precheck">${cfgPrecheck?cfgPrecheckHtml(cfgPrecheck):''}</div>
       ${cfgEnvCard(envs)}
       ${cfgExecCard(execs)}
       ${cfgDeviceCard(devices)}
@@ -409,20 +444,34 @@ async function renderEnv(){
       <div class="card muted">项目与测试入口页面允许登记本机路径；用例和计划只引用登记后的 ID/key，不接受命令或临时绝对路径；密钥只保存引用名（环境变量名 / 外部 secret 引用），平台不保存明文；本机配置页展示登记路径，执行快照和报告使用引用与指纹。预检只做低风险探测，不发起压测或完整测试。</div>`;
     cfgRenderForm();
     if(cfgFocusPending){cfgFocusPending=false;focusForm('cfg-form');}
-  }catch(e){app.innerHTML=`<div class="card err">加载配置失败：${esc(e.message)}</div>`;}
+  }catch(e){if($('cfg-resources')===host)host.innerHTML=`<div class="card err">加载配置失败：${esc(e.message)} <button onclick="renderEnv()">重试</button></div>`;}
 }
 
 // ---------- 引擎就绪度：可运行 / 缺少什么配置（下一步指引） ----------
-function cfgReadinessCard(engines){
-  const rows=(engines||[]).map(e=>`<tr>
+async function cfgLoadReadiness(refresh=false){
+  const host=$('cfg-readiness');if(!host)return;
+  const seq=++cfgReadinessSeq;
+  host.innerHTML=cfgReadinessCard(cfgReadinessData,true);
+  try{
+    const result=await j(refresh?'/api/config/readiness/refresh':'/api/config/readiness',refresh?{method:'POST'}:undefined);
+    if(seq!==cfgReadinessSeq||$('cfg-readiness')!==host)return;
+    cfgReadinessData=result;host.innerHTML=cfgReadinessCard(result);
+  }catch(e){if(seq===cfgReadinessSeq&&$('cfg-readiness')===host)host.innerHTML=cfgReadinessCard(cfgReadinessData,false,e.message);}
+}
+function cfgReadinessCard(result,busy=false,error=''){
+  const rows=(result?.engines||[]).map(e=>`<tr>
     <td><strong>${esc(e.engine)}</strong></td>
     <td>${e.runnable?'<span class="chip c-success">可运行</span>':'<span class="chip c-failed">缺少配置</span>'}</td>
     <td class="muted">${esc((e.usable_executors||[]).join('、')||'—')}</td>
     <td class="muted">${esc((e.missing||[]).join('；')||'—')}</td>
     <td class="muted">${(e.next_steps||[]).map(esc).join('<br>')||'—'}</td>
-  </tr>`).join('')||'<tr><td colspan=5 class="muted">无</td></tr>';
-  return `<div class="card"><h2>引擎配置就绪度 <span class="muted">（配置就绪不代表客户端在线；实时状态请在计划预检中查看）</span></h2>
-    <table><thead><tr><th>引擎</th><th>状态</th><th>可用执行机</th><th>缺失项</th><th>下一步</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  </tr>`).join('');
+  return `<div class="card"><div class="row"><h2 style="margin:0">引擎配置就绪度</h2><button style="margin-left:auto" onclick="cfgLoadReadiness(true)" ${busy?'disabled':''}>${busy?'读取 / 检测中…':'重新检测'}</button></div>
+    <p class="muted">配置就绪不代表客户端在线；实时状态请在计划预检中查看。已有结果直接展示，点击“重新检测”才更新。</p>
+    ${result?`<p class="muted">上次检测：${esc(new Date(result.checked_at).toLocaleString())}${result.cached?' · 已保存结果':''}</p>${result.stale?'<p class="st-warn">配置已变化，当前显示上次结果，请点击“重新检测”。</p>':''}`:''}
+    ${error?`<p class="err" role="alert">就绪度加载失败：${esc(error)}</p>`:''}
+    ${busy?'<p class="muted" role="status">正在读取已保存结果；首次无结果时进行检测，不影响下方资源列表使用。</p>':''}
+    ${rows?`<table><thead><tr><th>引擎</th><th>状态</th><th>可用执行机</th><th>缺失项</th><th>下一步</th></tr></thead><tbody>${rows}</tbody></table>`:''}</div>`;
 }
 
 // ---------- 旧环境变量兼容层（过渡，已弃用） ----------
@@ -785,9 +834,11 @@ const PL_ALGOS=['tpl','mstpl','kaze','brisk','akaze','orb'];
 let plCatalog=null, plRefs={envs:[],execs:[],assets:[],cases:[],suites:[]}, plForm=null, plPrecheck=null, plMsg='', plBusy=false;
 
 async function plEnsureRefs(){
+  const view=routeVersion;
   const[envs,execs,assets,cases,suites,cat]=await Promise.all([
     j('/api/environments'),j('/api/executors'),j('/api/asset-sources'),
     j('/api/test-cases?enabled=1'),j('/api/suites?enabled=1'),j('/api/config/catalog')]);
+  if(view!==routeVersion)return;
   plCatalog=cat;
   plRefs={envs:envs.filter(e=>e.enabled),execs:execs.filter(e=>e.enabled),
           assets:assets.filter(a=>a.enabled),cases:cases,suites:suites};
@@ -800,16 +851,17 @@ function plEmptyCaseStep(cid){return {kind:'case',case_ref:cid||null,override_pa
 
 async function renderPlanEditor(idStr){
   const app=$('app');
+  const view=routeVersion;
   app.innerHTML='<h1>计划编辑器</h1><div class="card"><p class="muted">加载中…</p></div>';
   try{
-    await plEnsureRefs();
     const isNew=(!idStr||idStr==='new');
+    const [,p]=await Promise.all([plEnsureRefs(),isNew?Promise.resolve(null):j('/api/plans/'+idStr)]);
+    if(view!==routeVersion)return;
     if(isNew){
       plForm={id:null,revision:null,created_at:null,updated_at:null,
         data:{name:'',description:'',environment_id:0,executor_id:0,asset_source_id:0,
           fail_fast:true,steps:[plEmptyStep('pytest')]}};
     }else{
-      const p=await j('/api/plans/'+idStr);
       plForm={id:p.id,revision:p.revision??1,created_at:p.created_at,updated_at:p.updated_at,archived:!!p.archived,
         data:{name:p.name||'',description:p.description||'',environment_id:p.environment_id||0,
           executor_id:p.executor_id||0,asset_source_id:p.asset_source_id||0,
@@ -825,7 +877,7 @@ async function renderPlanEditor(idStr){
     }
     plPrecheck=null; plMsg='';
     plRenderEditor();
-  }catch(e){app.innerHTML=`<div class="card err">加载计划失败：${esc(e.message)}</div>`;}
+  }catch(e){if(view===routeVersion)app.innerHTML=`<div class="card err">加载计划失败：${esc(e.message)}</div>`;}
 }
 
 function plRenderEditor(){
@@ -1323,16 +1375,19 @@ function planSnapshotCard(snap){
 }
 
 // ---------- 测试用例（v0.2 定义层：只描述"要跑什么"，不绑定环境/执行机/资产） ----------
-let tcList=[], tcEdit=null, tcMsg='', tcBusy=false;
+let tcList=[], tcEdit=null, tcMsg='', tcBusy=false, tcFormSeq=0;
 const TC_ASSET_KIND={pytest:'',locust:'locust',matcheval:'matcheval',airtest:'airtest'};
 
 async function renderCases(){
+  const view=routeVersion;
+  tcEdit=null;tcFormSeq++;
   const app=$('app'); app.innerHTML='<h1>测试用例</h1><div class="card"><p class="muted">加载中…</p></div>';
   try{
-    await plEnsureRefs();
-    tcList=await j('/api/test-cases');
+    const cases=await j('/api/test-cases');
+    if(view!==routeVersion)return;
+    tcList=cases;
     tcRender();
-  }catch(e){app.innerHTML=`<div class="card err">加载失败：${esc(e.message)}</div>`;}
+  }catch(e){if(view===routeVersion)app.innerHTML=`<div class="card err">加载失败：${esc(e.message)}</div>`;}
 }
 function tcBlank(){
   return {id:null,name:'',description:'',engine:'pytest',params:{},requires_exclusive:false,
@@ -1386,13 +1441,20 @@ function tcRender(){
 }
 function tcSetEngine(v){ plCollectTc(); tcEdit.engine=v; tcEdit.params={};
   tcEdit.asset_kind=TC_ASSET_KIND[v]||''; tcRender(); }
-function tcNew(){ tcEdit=tcBlank(); tcMsg=''; tcRender(); focusForm('tc-form'); }
-function tcCancel(){ tcEdit=null; tcMsg=''; tcRender(); }
-function tcLoad(id){
+function tcNew(){return tcOpen(null);}
+function tcCancel(){tcFormSeq++;tcEdit=null;tcMsg='';tcRender();}
+function tcLoad(id){return tcOpen(id);}
+async function tcOpen(id){
+  const view=routeVersion,seq=++tcFormSeq;
   plCollectTc();
-  const c=tcList.find(x=>x.id===id); if(!c)return;
-  tcEdit=JSON.parse(JSON.stringify(c));
-  tcMsg=''; tcRender(); focusForm('tc-form');
+  tcMsg='加载表单配置中…';tcRender();
+  try{
+    const catalog=await j('/api/config/catalog');
+    if(view!==routeVersion||seq!==tcFormSeq)return;
+    const c=id?tcList.find(x=>x.id===id):tcBlank();if(!c)return;
+    plCatalog=catalog;tcEdit=structuredClone(c);
+    tcMsg='';tcRender();focusForm('tc-form');
+  }catch(e){if(view===routeVersion&&seq===tcFormSeq){tcMsg='表单配置加载失败，请重新点击新建或编辑：'+e.message;tcRender();}}
 }
 function plCollectTc(){
   if(!tcEdit)return;
@@ -1440,7 +1502,7 @@ async function tcDelete(id){
 // Suite 只描述「引用哪些用例、按什么顺序」；不绑定环境 / 执行机 / 资产，**不参与执行链**
 // （不产生 PlanRun / Job / 报告，也没有任何"执行套件"入口）。
 // 它只在**计划编辑阶段**被展开成普通的用例步骤。
-let tsList=[], tsEdit=null, tsMsg='', tsBusy=false;
+let tsList=[], tsEdit=null, tsMsg='', tsBusy=false, tsFormSeq=0;
 
 function tsBlank(){
   return {id:null,name:'',description:'',cases:[],owner:'local',tags:[],
@@ -1448,12 +1510,15 @@ function tsBlank(){
 }
 
 async function renderSuites(){
+  const view=routeVersion;
+  tsEdit=null;tsFormSeq++;
   const app=$('app'); app.innerHTML='<h1>测试套件</h1><div class="card"><p class="muted">加载中…</p></div>';
   try{
-    await plEnsureRefs();               // 复用：需要已启用的 TestCase 列表供选择
-    tsList=await j('/api/suites');
+    const suites=await j('/api/suites');
+    if(view!==routeVersion)return;
+    tsList=suites;
     tsRender();
-  }catch(e){app.innerHTML=`<div class="card err">加载失败：${esc(e.message)}</div>`;}
+  }catch(e){if(view===routeVersion)app.innerHTML=`<div class="card err">加载失败：${esc(e.message)}</div>`;}
 }
 
 function tsCaseRows(){
@@ -1550,12 +1615,19 @@ function tsCollect(){
   tsEdit.owner=($('ts-owner')||{}).value||'local';
   tsEdit.tags=(($('ts-tags')||{}).value||'').split(',').map(s=>s.trim()).filter(Boolean);
 }
-function tsNew(){tsEdit=tsBlank();tsMsg='';tsRender();focusForm('ts-form');}
-function tsCancel(){tsEdit=null;tsMsg='';tsRender();}
-function tsLoad(id){
+function tsNew(){return tsOpen(null);}
+function tsCancel(){tsFormSeq++;tsEdit=null;tsMsg='';tsRender();}
+function tsLoad(id){return tsOpen(id);}
+async function tsOpen(id){
+  const view=routeVersion,seq=++tsFormSeq;
   tsCollect();
-  const s=tsList.find(x=>x.id===id); if(!s)return;
-  tsEdit=JSON.parse(JSON.stringify(s)); tsMsg=''; tsRender();focusForm('ts-form');
+  tsMsg='加载可选用例中…';tsRender();
+  try{
+    const cases=await j('/api/test-cases?enabled=1');
+    if(view!==routeVersion||seq!==tsFormSeq)return;
+    const s=id?tsList.find(x=>x.id===id):tsBlank();if(!s)return;
+    plRefs.cases=cases;tsEdit=structuredClone(s);tsMsg='';tsRender();focusForm('ts-form');
+  }catch(e){if(view===routeVersion&&seq===tsFormSeq){tsMsg='用例加载失败，请重新点击新建或编辑：'+e.message;tsRender();}}
 }
 function tsAddCase(){
   tsCollect();

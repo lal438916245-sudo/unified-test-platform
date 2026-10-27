@@ -105,11 +105,15 @@ def initialize(conn):
 
 
 def records():
-    from .project_registry import _database
+    from .project_registry import _database, request_cached
 
     path = _database.get()
     if not path:
         return []
+    return [dict(r) for r in request_cached(("machine_paths",), lambda: _records(path))]
+
+
+def _records(path):
     with db._LOCK, db.get_conn(path) as conn:
         return [dict(r) for r in conn.execute("SELECT * FROM machine_paths ORDER BY key")]
 

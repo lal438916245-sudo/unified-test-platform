@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+import hashlib
+import json
+import time
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from .. import db, project_registry as registry
 from ..config_center import (
@@ -25,6 +30,7 @@ from .payloads import (
     environment_payload as _env_payload,
     executor_payload as _exec_payload,
 )
+from .projects import local_config
 
 router = APIRouter()
 
@@ -57,8 +63,56 @@ def config_catalog(request: Request):
 
 @router.get("/config/readiness")
 def config_readiness(request: Request):
+    return _readiness(request)
+
+
+def _readiness_signature(path):
+    # Configuration only: jobs, logs and reports must not stale this display cache.
+    tables = ("projects", "project_resources", "machine_paths", "environments",
+              "executors", "asset_sources", "ui_devices", "runtime_requirements")
+    with db._LOCK, db.get_conn(path) as conn:
+        rows = {table: [dict(r) for r in conn.execute(
+            "SELECT * FROM " + table + " ORDER BY " + ("key" if table == "machine_paths" else "id")
+        )] for table in tables}
+    return hashlib.sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()
+
+
+def _readiness(request, refresh=False):
     st = _app(request)
-    return {"engines": engine_readiness(db, st.db_path)}
+    entered = time.monotonic()
+    if not refresh:
+        with db._LOCK, db.get_conn(st.db_path) as conn:
+            row = conn.execute("SELECT * FROM configuration_readiness WHERE id=1").fetchone()
+        if row is not None:
+            # A manual probe in another tab must not delay displaying history.
+            return dict(engines=json.loads(row["engines"]), checked_at=row["checked_at"],
+                        cached=True, stale=row["config_signature"] != _readiness_signature(st.db_path))
+    with st.readiness_lock:
+        with db._LOCK, db.get_conn(st.db_path) as conn:
+            row = conn.execute("SELECT * FROM configuration_readiness WHERE id=1").fetchone()
+        cached = row is not None and (not refresh or getattr(st, "readiness_completed_at", 0) >= entered)
+        if not cached:
+            # Concurrent first-load requests share one probe. Manual refresh also
+            # joins a probe that finished while this request waited for the lock.
+            signature = _readiness_signature(st.db_path)
+            engines = engine_readiness(db, st.db_path)
+            checked_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            with db._LOCK, db.get_conn(st.db_path) as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO configuration_readiness "
+                    "(id,engines,checked_at,config_signature) VALUES (1,?,?,?)",
+                    (json.dumps(engines, ensure_ascii=False), checked_at, signature),
+                )
+            st.readiness_completed_at = time.monotonic()
+        else:
+            engines, checked_at, signature = json.loads(row["engines"]), row["checked_at"], row["config_signature"]
+        return dict(engines=engines, checked_at=checked_at, cached=cached,
+                    stale=signature != _readiness_signature(st.db_path))
+
+
+@router.post("/config/readiness/refresh", dependencies=[Depends(local_config)])
+def refresh_readiness(request: Request):
+    return _readiness(request, refresh=True)
 
 
 # ---------- 配置中心：Environment CRUD / 启停 / 预检 ----------

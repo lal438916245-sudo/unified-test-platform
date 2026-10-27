@@ -2,9 +2,11 @@
 let mgCatalog=null,mgPreview=null,mgBatch=null,mgEditRevision=0;
 const mgTypeNames={environment:'被测环境',executor:'执行机',asset_source:'资产源',workdir:'项目工作目录',pytest_entry:'pytest 测试入口',ui_suite:'UI 套件 / 入口',ui_device:'UI 设备',runtime_requirement:'公共运行要求',locust_scenario:'Locust 场景',dataset:'视觉数据集'};
 async function renderMigration(id){
+  const view=routeVersion;
   $('app').innerHTML='<h1>安装与配置迁移</h1><div class="card">加载中…</div>';mgPreview=null;mgBatch=null;
   try{
-    const [catalog,batches]=await Promise.all([j('/api/config/migration/catalog'),j('/api/config/migration/imports')]);mgCatalog=catalog;
+    const [catalog,batches]=await Promise.all([j('/api/config/migration/catalog'),j('/api/config/migration/imports')]);
+    if(view!==routeVersion)return;mgCatalog=catalog;
     const choices=(group,label)=>`<h3>${label}</h3>${catalog[group].map(r=>`<label class="inline" style="display:block"><input type="checkbox" class="mg-export-${group}" value="${r.id}" checked> ${esc(r.name)} ${r.archived?'（归档）':r.enabled===false||r.enabled===0?'（停用）':''}</label>`).join('')||'<p class="muted">暂无记录</p>'}`;
     $('app').innerHTML=`<h1>安装与配置迁移</h1>
       <div class="card"><p>另一台电脑解压平台包后运行 <code>install.bat</code> 安装，再用 <code>start.bat</code> 启动。需要 64 位 Python 3.11 或以上。</p><p><a href="/static/help/deployment.html" target="_blank" rel="noopener">安装与迁移说明 →</a> · <a href="#/projects">登记本机项目、Python 与测试入口 →</a></p><p class="muted">迁移的是用例、套件与计划定义。源码、测试依赖、真实资产和历史报告独立保管；新安装默认空白配置。导入不会连接设备或运行测试。</p></div>
@@ -14,7 +16,7 @@ async function renderMigration(id){
       <div class="card"><h2>导入批次</h2><table><thead><tr><th>批次</th><th>状态</th><th>操作</th></tr></thead><tbody>${batches.map(b=>`<tr><td>${esc(b.name)} <span class="muted">#${b.id}</span></td><td>${b.status==='committed'?'已提交':'待关联 / 待确认'}</td><td><button onclick="location.hash='#/migration/${b.id}'">${b.status==='committed'?'查看回执':'关联 / 继续导入'}</button>${b.status==='pending'?` <button onclick="mgDiscard(${b.id})">放弃待导入批次</button>`:''}</td></tr>`).join('')||'<tr><td colspan="3">暂无导入批次</td></tr>'}</tbody></table></div>
       <div id="mg-batch"></div>`;
     if(id)await mgOpenBatch(id);
-  }catch(e){$('app').innerHTML=`<div class="card err">迁移页面加载失败：${esc(e.message)}。更新后请重启原平台服务并刷新。</div>`;}
+  }catch(e){if(view===routeVersion)$('app').innerHTML=`<div class="card err">迁移页面加载失败：${esc(e.message)}。更新后请重启原平台服务并刷新。</div>`;}
 }
 function mgMessage(text){$('mg-message').textContent=text;$('mg-message').scrollIntoView({block:'center'});}
 function mgDownload(data,name){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}

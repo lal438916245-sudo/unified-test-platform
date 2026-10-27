@@ -1,4 +1,5 @@
 import os
+import threading
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -10,6 +11,7 @@ from .router import router as api_router
 
 def build_app(static_dir: str) -> FastAPI:
     app = FastAPI(title="统一游戏测试平台 MVP")
+    app.state.readiness_lock = threading.Lock()
     from ..project_registry import registry_scope
     from .migration import router as migration_router
     from .projects import router as project_router

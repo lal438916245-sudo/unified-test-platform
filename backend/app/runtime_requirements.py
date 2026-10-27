@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from pathlib import Path
 
 from . import db
 
@@ -72,7 +73,12 @@ def validate_record(data):
     if data.get("mongo_ref") not in ("", "gameautotest"):
         errors.append("MongoDB 配置来源必须是受控项目引用")
     if data.get("mongo_ref") and data.get("suite") != "gameautotest-ui":
-        errors.append("GameAutoTest MongoDB 配置仅适用于 GameAutoTest UI 套件")
+        # Registered UI entries use the same project-owned config.py contract.
+        # The suite root is resolved by the ordinary registration catalog.
+        suite = UI_SUITES.get(data.get("suite"), {})
+        root = suite.get("root")
+        if not str(data.get("suite", "")).startswith("entry-") or not root or not (Path(root) / "config.py").is_file():
+            errors.append("MongoDB 配置需要关联带 config.py 的已登记 UI 项目")
     if not isinstance(data.get("notes", ""), str) or len(data.get("notes", "")) > 1000:
         errors.append("备注最多 1000 字符")
     if type(data.get("enabled")) not in (bool, int) or data.get("enabled") not in (0, 1):

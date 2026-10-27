@@ -38,13 +38,20 @@ class _ClosingConnection(sqlite3.Connection):
 
     def __exit__(self, exc_type, exc, tb):  # type: ignore[override]
         try:
-            return super().__exit__(exc_type, exc, tb)
+            result = super().__exit__(exc_type, exc, tb)
+            if exc_type is None and self.total_changes:
+                # Covers registry CRUD, machine bindings and bulk import SQL alike.
+                from .project_registry import invalidate_snapshot
+
+                invalidate_snapshot(self._platform_db_path)
+            return result
         finally:
             self.close()
 
 
 def get_conn(db_path: str) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path, factory=_ClosingConnection)
+    conn._platform_db_path = str(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -56,6 +63,11 @@ def init_db(db_path: str) -> None:
         initialize(conn)
         conn.executescript(
             """
+            CREATE TABLE IF NOT EXISTS configuration_readiness (
+                id INTEGER PRIMARY KEY CHECK(id=1),
+                engines TEXT NOT NULL, checked_at TEXT NOT NULL,
+                config_signature TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS environments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,

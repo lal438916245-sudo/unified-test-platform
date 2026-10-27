@@ -9,8 +9,10 @@ import functools
 import hashlib
 import inspect
 import json
+import os
 import re
 import threading
+from copy import deepcopy
 from collections.abc import MutableMapping
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -19,6 +21,7 @@ from pathlib import Path, PureWindowsPath
 from . import db
 
 _database = ContextVar("project_registry_database", default=None)
+_request_snapshot = ContextVar("project_registry_snapshot", default=None)
 bindings_lock = threading.RLock()
 KINDS = ("runtime", "pytest", "airtest", "locust", "matcheval")
 
@@ -38,11 +41,37 @@ def locked(function):
 
 @contextmanager
 def registry_scope(path):
-    token = _database.set(str(path) if path else None)
+    path = str(path) if path else None
+    token = _database.set(path)
+    state = _request_snapshot.get()
+    key = os.path.normcase(os.path.abspath(path)) if path else None
+    snapshot_token = None
+    if state is None or state["path"] != key:
+        snapshot_token = _request_snapshot.set({"path": key, "values": {}})
     try:
         yield
     finally:
+        if snapshot_token is not None:
+            _request_snapshot.reset(snapshot_token)
         _database.reset(token)
+
+
+def request_cached(key, load, path=None):
+    """Reuse work only inside this request/scope, including its nested calls."""
+    state = _request_snapshot.get()
+    path = path or _database.get()
+    if state is None or not path or state["path"] != os.path.normcase(os.path.abspath(path)):
+        return load()
+    if key not in state["values"]:
+        state["values"][key] = load()
+    return state["values"][key]
+
+
+def invalidate_snapshot(path):
+    """Called after a successful DB write, before any subsequent read."""
+    state = _request_snapshot.get()
+    if state is not None and path and state["path"] == os.path.normcase(os.path.abspath(path)):
+        state["values"].clear()
 
 
 def scoped(function):
@@ -79,6 +108,10 @@ def records(table, path=None):
     path = path or _database.get()
     if not path:
         return []
+    return deepcopy(request_cached(("records", table), lambda: _records(table, path), path))
+
+
+def _records(table, path):
     with db._LOCK, db.get_conn(path) as conn:
         rows = [dict(r) for r in conn.execute("SELECT * FROM " + table + " ORDER BY id")]
     for row in rows:
@@ -286,6 +319,10 @@ def visual_path(root, value, directory=False):
 
 
 def catalog(category):
+    return deepcopy(request_cached(("catalog", category), lambda: _catalog(category)))
+
+
+def _catalog(category):
     projects = {
         p["id"]: p for p in records("projects") if p["enabled"] and Path(p["root_path"]).is_dir()
     }
@@ -296,6 +333,13 @@ def catalog(category):
         if not row["enabled"]:
             continue
         key, kind, c = row["key"], row["kind"], row["config"]
+        categories = {
+            "runtime": ("interpreters",), "pytest": ("pytest",),
+            "airtest": ("ui",), "locust": ("locust",),
+            "matcheval": ("datasets", "templates", "scenes"),
+        }
+        if category not in categories.get(kind, ()):
+            continue
         if kind == "runtime":
             if category == "interpreters":
                 out[key] = dict(
@@ -362,9 +406,23 @@ class RegisteredMap(MutableMapping):
 
     def __setitem__(self, key, value):
         self.builtin[key] = value
+        invalidate_snapshot(_database.get())
 
     def __delitem__(self, key):
         del self.builtin[key]
+        invalidate_snapshot(_database.get())
+
+    def _resolved(self):
+        from .machine_paths import overlay
+
+        return {**{k: overlay(self.category, k, v) for k, v in self.builtin.items()},
+                **catalog(self.category)}
+
+    def items(self):
+        return self._resolved().items()
+
+    def values(self):
+        return self._resolved().values()
 
     def __iter__(self):
         return iter({**self.builtin, **catalog(self.category)})

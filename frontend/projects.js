@@ -1,16 +1,18 @@
 // Local project registration; general case/plan forms keep controlled references.
 let prData={projects:[],resources:[],paths:[]}, prProjectId=null, prResourceId=null,prResourceReferenceSeq=0;
 async function renderProjects(){
+  const view=routeVersion;
   $('app').innerHTML='<h1>项目与测试入口</h1><div class="card">加载中…</div>';
   try{
     const [projects,resources,paths]=await Promise.all([j('/api/config/projects'),j('/api/config/project-resources'),j('/api/config/machine-paths')]);
+    if(view!==routeVersion)return;
     prData={projects,resources,paths};prProjectId=null;prResourceId=null;
     const state=r=>r.enabled?'启用':'停用';
     const actions=(r,type)=>`<button onclick="prEdit('${type}',${r.id})">编辑</button> <button onclick="prCheck('${type}',${r.id})">检查配置</button>`;
     const projectRows=projects.map(p=>`<tr><td><strong>${esc(p.name)}</strong><div class="muted">${esc(p.key)} · rev ${p.revision}</div></td><td><code>${esc(p.root_path)}</code></td><td>${state(p)}</td><td>${actions(p,'project')} <button onclick="prDiscover(${p.id})">发现 pytest / UI 用例</button> <button onclick="prProjectReferences(${p.id})">查看引用</button> <button onclick="prProjectReferences(${p.id},true)">删除登记</button></td></tr>`).join('');
     const resourceActions=r=>`<button onclick="prResourceReferences(${r.id})">查看引用</button> <button onclick="prResourceReferences(${r.id},true)">删除登记</button>`;
     const runtimeRows=resources.filter(r=>r.kind==='runtime').map(r=>`<tr><td><strong>${esc(r.name)}</strong><div class="muted">${esc(r.key)} · rev ${r.revision}</div></td><td><code>${esc(r.config.python_path)}</code><div class="muted">${esc((r.config.modules||[]).join(', '))}</div></td><td>${state(r)}</td><td>${actions(r,'resource')} <button onclick="prUseRuntime(${r.id})">关联执行机</button> ${resourceActions(r)}</td></tr>`).join('');
-    const entryRows=resources.filter(r=>r.kind!=='runtime').map(r=>`<tr><td><strong>${esc(r.name)}</strong><div class="muted">${esc(r.key)} · rev ${r.revision}</div></td><td>${esc((projects.find(p=>p.id===r.project_id)||{}).name||'项目不可用')} · ${esc(r.kind)}</td><td><code>${esc(r.kind==='matcheval'?r.config.tpl_dir+' / '+r.config.scenes_dir:r.config.path)}</code></td><td>${state(r)}</td><td>${actions(r,'resource')} ${resourceActions(r)}</td></tr>`).join('');
+    const entryRows=resources.filter(r=>r.kind!=='runtime').map(r=>`<tr><td><strong>${esc(r.name)}</strong><div class="muted">${esc(r.key)} · rev ${r.revision}</div></td><td>${esc((projects.find(p=>p.id===r.project_id)||{}).name||'项目不可用')} · ${esc(r.kind)}</td><td><code>${esc(r.kind==='matcheval'?r.config.tpl_dir+' / '+r.config.scenes_dir:r.config.path)}</code></td><td>${state(r)}</td><td><div class="pr-entry-actions">${actions(r,'resource')} ${resourceActions(r)}</div></td></tr>`).join('');
     $('app').innerHTML=`<h1>项目与测试入口</h1>
       <div class="card"><p>在平台所在电脑登记项目目录与 Python。测试入口使用项目内相对路径；视觉脚本与图片资产还可填写本机绝对路径。保存后立即生效。</p><p class="muted">配置目录属于当前运行平台的电脑。登记与静态发现不会运行测试或 fixture；执行自己信任的测试代码。已使用的引用可停用，历史定义与报告保留。</p><a href="#/env">返回资源与环境 →</a> · <a href="#/cases">管理测试用例 →</a> · <a href="#/projects" onclick="document.getElementById('pr-machine-paths').scrollIntoView();return false">本机路径配置 ↓</a></div>
       <div id="pr-message" role="status" aria-live="polite"></div>
@@ -20,11 +22,11 @@ async function renderProjects(){
       <div id="pr-discovery"></div>
       <div class="card"><div class="row"><h2>运行环境</h2><button onclick="prNewRuntime()">新增运行环境</button></div><p class="muted">登记 Python 与补充依赖后，点击“关联执行机”选择允许的引擎和默认项目。依赖填写导入模块名，例如 requests、pymongo，不填写 pip 命令。</p><table><thead><tr><th>运行环境</th><th>解释器 / 依赖</th><th>状态</th><th>操作</th></tr></thead><tbody>${runtimeRows||'<tr><td colspan="4">暂无登记运行环境</td></tr>'}</tbody></table></div>
       <div id="pr-runtime-form-host"></div>
-      <div class="card"><div class="row"><h2>测试入口与资产</h2><button onclick="prEdit('resource',null)">新增测试入口</button></div><p class="muted">pytest 可登记具体文件::类::函数，airtest 登记使用 platform_poco 的 UI 文件，locust 登记脚本，matcheval 登记图片目录与兼容评估脚本。入口登记后，还需在“测试用例”保存业务用例定义。</p><table><thead><tr><th>入口</th><th>项目 / 引擎</th><th>相对路径</th><th>状态</th><th>操作</th></tr></thead><tbody>${entryRows||'<tr><td colspan="5">暂无测试入口</td></tr>'}</tbody></table></div>
+      <div class="card"><div class="row"><h2>测试入口与资产</h2><button onclick="prEdit('resource',null)">新增测试入口</button></div><p class="muted">pytest 可登记具体文件::类::函数，airtest 登记使用 platform_poco 的 UI 文件，locust 登记脚本，matcheval 登记图片目录与兼容评估脚本。入口登记后，还需在“测试用例”保存业务用例定义。</p><div class="pr-entry-scroll" role="region" aria-label="测试入口与资产列表" tabindex="0"><table class="pr-entry-table"><colgroup><col style="width:20%"><col style="width:17%"><col style="width:33%"><col style="width:7%"><col style="width:23%"></colgroup><thead><tr><th>入口</th><th>项目 / 引擎</th><th>相对路径</th><th>状态</th><th>操作</th></tr></thead><tbody>${entryRows||'<tr><td colspan="5">暂无测试入口</td></tr>'}</tbody></table></div></div>
       <div id="pr-resource-references" role="status" aria-live="polite"></div>
       <div id="pr-entry-form-host"></div>
       <div class="card" id="pr-machine-paths"><h2>本机路径配置（兼容已有用例）</h2><p>更换电脑或移动目录后，在此重新绑定旧引用。无需修改已有用例和计划；新项目仍使用上方的项目与入口登记。</p><p class="muted">路径保存到当前平台数据库，优先于旧环境变量。留空表示未配置；保存只检查文件 / 目录，不执行脚本。修改后请重新预检，已排队任务会校验配置变化。启动平台本身的 Python 由启动脚本参数或当前 Python 命令选择。</p><table><thead><tr><th>类别 / 引用</th><th>本机文件 / 目录</th><th>状态</th><th>操作</th></tr></thead><tbody>${paths.map((p,i)=>`<tr><td>${esc(p.group)} · ${esc(p.label)}<div class="muted">${esc(p.key)} · rev ${p.revision}</div></td><td><input id="pr-machine-${i}" aria-label="${esc(p.label)}" value="${esc(p.path)}" style="min-width:240px;width:100%"></td><td>${p.available?'可用':p.path?'路径已失效':'未配置'}</td><td><button onclick="prSavePath(${i})">保存路径</button><span id="pr-machine-result-${i}" role="status"></span></td></tr>`).join('')}</tbody></table></div>`;
-  }catch(e){$('app').innerHTML=`<div class="card err">项目配置加载失败：${esc(e.message)}。如刚更新平台，请重启原平台进程后刷新。</div>`;}
+  }catch(e){if(view===routeVersion)$('app').innerHTML=`<div class="card err">项目配置加载失败：${esc(e.message)}。如刚更新平台，请重启原平台进程后刷新。</div>`;}
 }
 function prFields(config={}){
   const kind=$('pr-kind').value;
