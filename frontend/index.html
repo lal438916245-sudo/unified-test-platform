@@ -67,6 +67,15 @@
   .form-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
   .form-grid label.inline{flex-direction:row;align-items:center;gap:6px}
   .form-grid input,.form-grid select{border:1px solid var(--rule);border-radius:6px;padding:6px 8px;font-size:13px;background:#fff;color:var(--ink)}
+  .mg-export-scroll{max-width:100%;overflow-x:auto}
+  .mg-export-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));min-width:768px;gap:24px;align-items:start}
+  .mg-export-group{min-width:0}
+  .mg-export-group h3{margin:0 0 12px;font-size:14px;line-height:20px;white-space:nowrap}
+  .mg-export-items{display:flex;flex-direction:column;gap:8px}
+  .mg-export-items label{display:flex;align-items:flex-start;gap:8px;line-height:20px}
+  .mg-export-items input{flex:0 0 auto;width:16px;height:16px;margin:2px 0 0;padding:0}
+  .mg-export-items span{min-width:0;overflow-wrap:anywhere}
+  .mg-export-empty{margin:0;line-height:20px}
   .pre{background:var(--bg2);border:1px solid var(--rule);border-radius:8px;padding:12px}
   .pre .ok{color:var(--ok);font-weight:700}
   .pre .bad{color:var(--fail);font-weight:700}
